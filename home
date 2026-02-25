@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wildu Partner Hub</title>
     
-    <link rel="apple-touch-icon" href="LINK_AL_TUO_LOGO_SQUADRATO.png">
     <meta name="theme-color" content="#121212">
 
     <style>
@@ -14,14 +13,14 @@
             padding: 0;
             height: 100%;
             background-color: #121212;
-            overflow: hidden; /* Blocca il doppio scroll */
+            overflow: hidden; /* Evita lo scroll della pagina principale */
         }
         
-        /* LA MAGIA CHE NASCONDE IL BANNER */
+        /* LA MAGIA: Spinge l'app in su di 36px per far sparire il banner di Google */
         .app-container {
             width: 100%;
-            height: calc(100% + 36px); /* Recupera lo spazio tolto */
-            margin-top: -36px; /* Spinge il banner fuori dallo schermo */
+            height: calc(100% + 36px); 
+            margin-top: -36px; 
         }
         
         iframe {
@@ -34,7 +33,7 @@
 <body>
 
     <div class="app-container">
-        <iframe src="https://script.google.com/macros/s/IL_TUO_LINK/exec"></iframe>
+        <iframe src="https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec"></iframe>
     </div>
 
 </body>
