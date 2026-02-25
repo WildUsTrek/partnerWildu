@@ -1,11 +1,16 @@
 {
   "name": "Wildu Partner Hub",
   "short_name": "Wildu Hub",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#121212",
   "icons": [
+    {
+      "src": "iconpart.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
     {
       "src": "iconpart.png",
       "sizes": "512x512",
