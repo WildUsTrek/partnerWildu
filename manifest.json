@@ -1,6 +1,6 @@
 {
   "name": "Wildu Partner Hub",
-  "short_name": "Wildu Hub",
+  "short_name": "Wildu Partner",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#121212",
