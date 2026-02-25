@@ -2,47 +2,46 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Wildu Partner Hub</title>
-    
-    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #121212;
-            overflow: hidden; /* Blocca il doppio scroll */
-        }
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; background-color: #121212; overflow: hidden; }
         
-        /* Contenitore blindato e assoluto */
+        /* La tua maschera blindata */
         .app-container {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; right: 0; bottom: 0;
             overflow: hidden;
+            background-color: #121212;
         }
-        
-        /* Iframe inchiodato a -38px dal soffitto in modo permanente */
+
+        /* L'Iframe dentro la maschera */
         iframe {
             position: absolute;
-            top: -38px; 
             left: 0;
             width: 100%;
-            height: calc(100% + 38px);
             border: none;
+            /* TAGLIO STANDARD (Browser) */
+            top: -45px; 
+            height: calc(100% + 45px);
+        }
+
+        /* FIX CHIRURGICO PER IOS SALVATO IN HOME SCREEN */
+        /* Quando l'app è "Standalone", il taglio deve essere più profondo */
+        @media (display-mode: standalone) {
+            iframe {
+                top: -65px !important; 
+                height: calc(100% + 65px) !important;
+            }
         }
     </style>
 </head>
 <body>
-
     <div class="app-container">
         <iframe src="https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec"></iframe>
     </div>
-
 </body>
 </html>
