@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+    <script>
+  (function() {
+    // Verifica se l'utente sta usando un dispositivo Apple (iPhone/iPad)
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    // Se è iOS e non abbiamo ancora fatto il "refresh magico" in questa sessione
+    if (isIOS && !sessionStorage.getItem('ios_fix_loaded')) {
+      sessionStorage.setItem('ios_fix_loaded', 'true');
+      window.location.reload();
+    }
+  })();
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Wildu Partner Hub</title>
