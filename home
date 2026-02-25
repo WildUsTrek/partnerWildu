@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wildu Partner Hub</title>
+    
+    <link rel="apple-touch-icon" href="LINK_AL_TUO_LOGO_SQUADRATO.png">
+    <meta name="theme-color" content="#121212">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #121212;
+            overflow: hidden; /* Blocca il doppio scroll */
+        }
+        
+        /* LA MAGIA CHE NASCONDE IL BANNER */
+        .app-container {
+            width: 100%;
+            height: calc(100% + 36px); /* Recupera lo spazio tolto */
+            margin-top: -36px; /* Spinge il banner fuori dallo schermo */
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <iframe src="https://script.google.com/macros/s/IL_TUO_LINK/exec"></iframe>
+    </div>
+
+</body>
+</html>
