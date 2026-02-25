@@ -11,23 +11,29 @@
         body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
             height: 100%;
             background-color: #121212;
-            overflow: hidden; 
+            overflow: hidden; /* Blocca il doppio scroll */
         }
         
-        /* LA MASCHERA: Grande esattamente quanto lo schermo. Blocca tutto ciò che esce. */
+        /* Contenitore blindato e assoluto */
         .app-container {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden; 
+            overflow: hidden;
         }
         
-        /* L'IFRAME: Viene spinto in su e "ghigliottinato" dalla maschera */
+        /* Iframe inchiodato a -38px dal soffitto in modo permanente */
         iframe {
+            position: absolute;
+            top: -38px; 
+            left: 0;
             width: 100%;
-            height: calc(100% + 36px); 
-            margin-top: -36px; 
+            height: calc(100% + 38px);
             border: none;
         }
     </style>
