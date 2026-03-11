@@ -608,13 +608,6 @@ function renderEquipmentSteps() {
         // SUCCESSO: Salviamo i dati
         localStorage.setItem('wildu_p_nome', payload.guidaNome);
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
-
-
-        .then(res => {
-      if(res.success) {
-        // SUCCESSO: Salviamo i dati
-        localStorage.setItem('wildu_p_nome', payload.guidaNome);
-        localStorage.setItem('wildu_p_tel', payload.guidaTel);
         
         // ========================================================
         // IL TOCCO MAGICO: DISTRUGGIAMO LA CACHE DELLE PROPOSTE!
