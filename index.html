@@ -356,5 +356,25 @@ function showInstallInfo() {
   new bootstrap.Modal(document.getElementById('installModal')).show(); 
 }
 </script>
+
+  <div class="modal fade" id="installModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered text-dark">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <div class="modal-body text-center p-4">
+        <h5 class="fw-bold mb-3">📱 Salva l'App sulla Home</h5>
+        <p class="text-muted small mb-4">Per usare Wildu Partner come una vera App:</p>
+        <div class="text-start bg-light p-3 rounded-3 small">
+          <strong>Su iPhone (Safari):</strong><br>
+          1. Clicca l'icona "Condividi" (quadrato con freccia) in basso.<br>
+          2. Seleziona <strong>"Aggiungi alla schermata Home"</strong>.<br><br>
+          <strong>Su Android (Chrome):</strong><br>
+          1. Clicca i tre puntini in alto.<br>
+          2. Seleziona <strong>"Installa App"</strong> o "Aggiungi a Home".
+        </div>
+        <button type="button" class="btn btn-dark rounded-pill mt-4 w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
