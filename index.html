@@ -18,29 +18,38 @@
     .menu-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
     .menu-title { color: white; font-weight: 800; font-size: 1.2rem; margin-bottom: 5px; }
     .menu-desc { color: #888; font-size: 0.9rem; }
+    
     .card { background: #1e1e1e; border: 1px solid #333; border-radius: 24px; border-top: 6px solid #0d6efd; overflow: hidden; }
-    .form-control, .form-select { background: #252525; border: 1px solid #444; color: white; border-radius: 10px; padding: 12px; font-size: 0.95rem; }
-    .form-control:focus { background: #2d2d2d; color: white; border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.2); }
+    .form-control, .form-select { background: #252525 !important; border: 1px solid #444 !important; color: white !important; border-radius: 10px; padding: 12px; font-size: 0.95rem; }
+    .form-control:focus { background: #2d2d2d; border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.2); }
+    
     .auto-calculating { border-color: #ffc107 !important; animation: pulse-border 1.5s infinite; }
     @keyframes pulse-border { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    
     label { font-weight: 600; font-size: 0.75rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .section-title { color: #0d6efd; font-weight: 800; font-size: 0.9rem; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 30px; margin-bottom: 5px; text-transform: uppercase; }
-    .section-subtitle { color: #777; font-size: 0.8rem; margin-bottom: 20px; font-style: italic; }
-    .eq-grid { background: #161616; padding: 20px; border-radius: 16px; border: 1px solid #333; }
-    .form-check-input { background-color: #333; border-color: #555; width: 1.3em; height: 1.3em; flex-shrink: 0; margin-top: 0 !important; }
-    .form-check-label { font-size: 0.75rem; font-weight: 600; color: #ddd; white-space: normal; line-height: 1.3; }
-    .note-input { font-size: 0.8rem !important; height: 32px !important; padding: 5px 10px !important; width: 100px !important; flex-shrink: 0; }
+    .section-title { color: #0d6efd; font-weight: 800; font-size: 0.9rem; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 25px; margin-bottom: 15px; text-transform: uppercase; }
+    
+    .eq-category-card { background: #161616; border: 1px solid #333; border-radius: 16px; padding: 15px; margin-bottom: 15px; }
+    .form-check-input { background-color: #333; border-color: #555; width: 1.4em; height: 1.4em; }
+    .form-check-label { font-size: 0.75rem; font-weight: 600; color: #ddd; }
+    .note-input { font-size: 0.8rem !important; height: 32px !important; width: 100px !important; }
+
     .btn-submit { background: #0d6efd; border: none; border-radius: 50px; padding: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
-    .btn-submit:hover { background: #0b5ed7; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(13,110,253,0.3); }
     .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
-    ::placeholder { color: #a0a0a0 !important; }
-    p, h5 { color: #d1d1d1 !important; }
-    h2, h3 { color: #ffffff !important; }
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
-    input[type="date"] { color-scheme: dark; }
+    
+    input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+    input[type="date"], input[type="time"] { color-scheme: dark; }
+
+    /* Wizard Transitions */
+    .step-content { display: none; animation: fadeIn 0.4s ease; }
+    .step-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .step-header { font-size: 0.7rem; color: #0d6efd; font-weight: 800; margin-bottom: 10px; display: block; }
 
     @media (max-width: 576px) {
-      .eq-item { flex-direction: column !important; align-items: stretch !important; gap: 8px; padding-bottom: 15px; border-bottom: 1px solid #2a2a2a; }
+      .eq-item { flex-direction: column !important; align-items: stretch !important; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #2a2a2a; }
+      .eq-item:last-child { border-bottom: none; }
       .note-input { width: 100% !important; margin-left: 0 !important; }
     }
   </style>
@@ -48,15 +57,14 @@
 <body>
 
 <script>
-  // 1. INCOLLA QUI L'URL DELLA TUA WEB APP GOOGLE
   const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
 </script>
 
 <div class="util-nav d-flex justify-content-between align-items-center">
-  <span class="text-white fw-bold" onclick="showPage('home')" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
+  <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
   <div>
     <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" onclick="copyAppLink()">🔗 Copia Link</button>
-    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="showInstallInfo()">📱 Salva in Home</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="showInstallInfo()">📱 Info</button>
   </div>
 </div>
 
@@ -68,92 +76,100 @@
 <div id="home-view" class="container" style="max-width: 500px;">
   <div class="mb-5 mt-4">
     <h1 class="fw-bold text-white">Ciao! 👋</h1>
-    <p class="text-muted">Benvenuto nell'Area Partner Wildu.</p>
+    <p class="text-muted">Pronto a proporre un nuovo Open Day?</p>
   </div>
   <div class="menu-card shadow-sm" onclick="showPage('form')">
     <span class="menu-icon">🗓️</span>
-    <div class="menu-title">Proponi Open Day</div>
-    <div class="menu-desc">Inserisci i dettagli del tuo prossimo evento gratuito da inviare in revisione.</div>
+    <div class="menu-title">Nuova Proposta</div>
+    <div class="menu-desc">Segui i passi per configurare l'evento.</div>
   </div>
   <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm">
     <span class="menu-icon">💬</span>
-    <div class="menu-title">Assistenza Wildu</div>
-    <div class="menu-desc">Hai dubbi o vuoi modificare un evento inviato? Scrivici.</div>
+    <div class="menu-title">Assistenza</div>
   </a>
-  <p class="text-muted small mt-5">Sistema Partner Hub v2.0</p>
 </div>
 
 <div id="form-view" class="container pb-5 pt-3" style="max-width: 850px; display:none;">
-  <button class="btn btn-link text-primary p-0 mb-4 text-decoration-none fw-bold" onclick="showPage('home')">← Torna alla Dashboard</button>
   
   <div class="text-center mb-4">
-    <h2 class="fw-bold text-white mb-0">PROPOSTA <span class="text-primary">OPEN DAY</span></h2>
-    <p class="text-muted small">Compila i dettagli del trekking per la revisione</p>
+    <h2 class="fw-bold text-white mb-0">PROPOSTA <span class="text-primary">EVENTO</span></h2>
   </div>
 
-  <div class="card shadow-lg p-4">
-    <div class="row g-3 mb-2">
-      <div class="col-md-6"><label>Nome e Cognome Guida *</label><input type="text" id="g_nome" class="form-control" placeholder="Es. Marco Rossi"></div>
-      <div class="col-md-6"><label>Cellulare / WhatsApp *</label><input type="text" id="g_tel" class="form-control" placeholder="Es. 333 1234567"></div>
-    </div>
-
-    <div class="section-title">📅 DATE E ORARI</div>
-    <div class="row g-3 mt-1">
-      <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Escursione alle Gole del Furlo"></div>
-      <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
-      <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
-      <div class="col-6"><label>Orario Inizio</label><input type="text" id="od_orario_inizio" class="form-control" placeholder="09:00"></div>
-      <div class="col-6"><label>Orario Fine</label><input type="text" id="od_orario_fine" class="form-control" placeholder="17:30"></div>
-    </div>
-
-    <div class="section-title">📍 LUOGO E GEOLOCALIZZAZIONE</div>
-    <div class="row g-3 mt-1">
-      <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" placeholder="Es. Parcheggio Bar Centrale" onblur="autoFetchRegion()"></div>
-      <div class="col-md-6"><label>Regione *</label>
-        <select id="od_regione" class="form-select">
-          <option value="">🤖 Rilevamento automatico...</option>
-          <option value="Abruzzo">Abruzzo</option><option value="Basilicata">Basilicata</option><option value="Calabria">Calabria</option><option value="Campania">Campania</option><option value="Emilia-Romagna">Emilia-Romagna</option><option value="Friuli-Venezia Giulia">Friuli-Venezia Giulia</option><option value="Lazio">Lazio</option><option value="Liguria">Liguria</option><option value="Lombardia">Lombardia</option><option value="Marche">Marche</option><option value="Molise">Molise</option><option value="Piemonte">Piemonte</option><option value="Puglia">Puglia</option><option value="Sardegna">Sardegna</option><option value="Sicilia">Sicilia</option><option value="Toscana">Toscana</option><option value="Trentino-Alto Adige">Trentino-Alto Adige</option><option value="Umbria">Umbria</option><option value="Valle d'Aosta">Valle d'Aosta</option><option value="Veneto">Veneto</option>
-        </select>
+  <div id="step-1" class="step-content active">
+    <span class="step-header">PASSO 1 DI 3: CHI E QUANDO</span>
+    <div class="card shadow-lg p-4">
+      <div class="row g-3">
+        <div class="col-md-6"><label>Nome e Cognome Guida *</label><input type="text" id="g_nome" class="form-control" placeholder="Es. Marco Rossi"></div>
+        <div class="col-md-6"><label>WhatsApp *</label><input type="text" id="g_tel" class="form-control" placeholder="Es. 333 1234567"></div>
+        
+        <div class="section-title">DETTAGLI TEMPORALI</div>
+        <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Escursione alle Gole del Furlo"></div>
+        <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
+        <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
+        <div class="col-6"><label>Orario Inizio *</label><input type="time" id="od_orario_inizio" class="form-control"></div>
+        <div class="col-6"><label>Orario Fine *</label><input type="time" id="od_orario_fine" class="form-control"></div>
       </div>
-      <div class="col-12 mt-2">
-        <label>Link Google Maps *</label>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-primary px-3 rounded-3 fw-bold" type="button" onclick="openMapsSearch()" style="border-width: 2px;">🧭 Cerca</button>
-          <input type="text" id="od_luogo_link" class="form-control" placeholder="Incolla l'URL qui">
+      <button class="btn btn-submit text-white w-100 mt-4" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
+    </div>
+  </div>
+
+  <div id="step-2" class="step-content">
+    <span class="step-header">PASSO 2 DI 3: DOVE E COM'È</span>
+    <div class="card shadow-lg p-4">
+      <div class="row g-3">
+        <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" placeholder="Es. Parcheggio Bar" onblur="autoFetchRegion()"></div>
+        <div class="col-md-6"><label>Regione *</label>
+          <select id="od_regione" class="form-select">
+            <option value="">Rilevamento automatico...</option>
+            <option value="Abruzzo">Abruzzo</option><option value="Basilicata">Basilicata</option><option value="Calabria">Calabria</option><option value="Campania">Campania</option><option value="Emilia-Romagna">Emilia-Romagna</option><option value="Friuli-Venezia Giulia">Friuli-Venezia Giulia</option><option value="Lazio">Lazio</option><option value="Liguria">Liguria</option><option value="Lombardia">Lombardia</option><option value="Marche">Marche</option><option value="Molise">Molise</option><option value="Piemonte">Piemonte</option><option value="Puglia">Puglia</option><option value="Sardegna">Sardegna</option><option value="Sicilia">Sicilia</option><option value="Toscana">Toscana</option><option value="Trentino-Alto Adige">Trentino-Alto Adige</option><option value="Umbria">Umbria</option><option value="Valle d'Aosta">Valle d'Aosta</option><option value="Veneto">Veneto</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label>Link Google Maps *</label>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-info px-3 fw-bold" type="button" onclick="smartPaste()">📋 Incolla</button>
+            <input type="text" id="od_luogo_link" class="form-control" placeholder="Incolla l'URL qui">
+            <button class="btn btn-dark" type="button" onclick="openMapsSearch()">🧭 Cerca</button>
+          </div>
+        </div>
+        <div class="col-6"><label>Km Totali *</label><input type="number" id="od_km" class="form-control" placeholder="Es. 14"></div>
+        <div class="col-6"><label>Dislivello (m) *</label><input type="number" id="od_dislivello" class="form-control" placeholder="Es. 750"></div>
+        
+        <div class="section-title">DESCRIZIONE EMOZIONALE</div>
+        <div class="col-12">
+          <textarea id="od_descrizione" class="form-control" rows="5" placeholder="Descrivi l'anima di questo trekking..."></textarea>
         </div>
       </div>
-      <div class="col-6 mt-3"><label>Km Totali</label><input type="text" id="od_km" class="form-control" placeholder="Es. 14"></div>
-      <div class="col-6 mt-3"><label>Dislivello (m)</label><input type="text" id="od_dislivello" class="form-control" placeholder="Es. 750"></div>
-    </div>
-
-    <div class="section-title">🎒 ATTREZZATURA CONSIGLIATA</div>
-    <div class="section-subtitle">Spunta quello che serve portare e la sua quantità/dettaglio</div>
-    <div id="eq-container" class="eq-grid row m-0"></div>
-
-    <div class="section-title">📝 DESCRIZIONE EXTRA</div>
-    <textarea id="od_descrizione" class="form-control mt-2" rows="6" placeholder="Aggiungi dettagli sull'itinerario..."></textarea>
-
-    <div class="d-grid mt-5">
-      <button class="btn btn-submit text-white shadow-lg" onclick="sendToWildu()">🚀 Invia Proposta a Wildu</button>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-light w-50" onclick="goToStep(1)">← Indietro</button>
+        <button class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti: Attrezzatura →</button>
+      </div>
     </div>
   </div>
+
+  <div id="step-3" class="step-content">
+    <span class="step-header">PASSO 3 DI 3: EQUIPAGGIAMENTO</span>
+    <div class="card shadow-lg p-4">
+      <div id="eq-wizard-container"></div>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-light w-50" onclick="goToStep(2)">← Indietro</button>
+        <button class="btn btn-success rounded-pill p-3 w-50 fw-bold" onclick="sendToWildu()">🚀 INVIA A WILDU</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div class="modal fade" id="installModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered text-dark">
     <div class="modal-content rounded-4 border-0 shadow">
       <div class="modal-body text-center p-4">
-        <h5 class="fw-bold mb-3">📱 Salva l'App sulla Home</h5>
-        <p class="text-muted small mb-4">Per inviare proposte velocemente come una vera App:</p>
+        <h5 class="fw-bold mb-3">📱 Salva l'App</h5>
         <div class="text-start bg-light p-3 rounded-3 small">
-          <strong>Su iPhone (Safari):</strong><br>
-          1. Clicca l'icona <img src="https://img.icons8.com/ios/20/000000/share.png" width="16"/> in basso.<br>
-          2. Seleziona <strong>"Aggiungi alla schermata Home"</strong>.<br><br>
-          <strong>Su Android (Chrome):</strong><br>
-          1. Clicca i tre puntini in alto.<br>
-          2. Seleziona <strong>"Aggiungi a schermata Home"</strong> o "Installa App".
+          <strong>iOS:</strong> Condividi -> Aggiungi a Home.<br>
+          <strong>Android:</strong> Menu -> Installa App.
         </div>
-        <button type="button" class="btn btn-dark rounded-pill mt-4 w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
+        <button type="button" class="btn btn-dark rounded-pill mt-4 w-100 fw-bold" data-bs-dismiss="modal">Chiudi</button>
       </div>
     </div>
   </div>
@@ -161,61 +177,82 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // CATEGORIE ATTREZZATURA (16 voci preservate)
+  const eqCategories = [
+    { name: "🍎 Nutrizione", items: [{id:'eq1', val:'Acqua', icon:'💧'}, {id:'eq2', val:'Pranzo al sacco', icon:'🥪'}, {id:'eqSnack', val:'Snack', icon:'🍫'}] },
+    { name: "🥾 Abbigliamento", items: [{id:'eq3', val:'Scarpe da trekking', icon:'🥾'}, {id:'eq4', val:'Vestiti a strati', icon:'👕'}, {id:'eq5', val:'Giacca impermeabile', icon:'🧥'}] },
+    { name: "🛡️ Protezione e Luce", items: [{id:'eq6', val:'Torcia frontale', icon:'🔦'}, {id:'eq8', val:'Crema solare', icon:'☀️'}, {id:'eq9', val:'Occhiali da sole', icon:'🕶️'}, {id:'eq7', val:'Cappello/Guanti/Scaldacollo', icon:'🧤'}] },
+    { name: "⛺ Notte e Igiene", items: [{id:'eq11', val:'Tenda', icon:'⛺'}, {id:'eq12', val:'Sacco a pelo', icon:'🛌'}, {id:'eq13', val:'Saponi', icon:'🧼'}, {id:'eq14', val:'Asciugamani', icon:'🧺'}] },
+    { name: "➕ Extra", items: [{id:'eq10', val:'Ciaspole', icon:'❄️'}, {id:'eq15', val:'Altro', icon:'➕'}] }
+  ];
+
   function showPage(page) {
     document.getElementById('home-view').style.display = (page === 'home') ? 'block' : 'none';
     document.getElementById('form-view').style.display = (page === 'form') ? 'block' : 'none';
     window.scrollTo(0,0);
   }
 
+  function goToStep(step) {
+    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-' + step).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  async function smartPaste() {
+    try {
+      const text = await navigator.clipboard.readText();
+      const input = document.getElementById('od_luogo_link');
+      input.value = text;
+      input.style.borderColor = "#0d6efd";
+      setTimeout(() => input.style.borderColor = "#444", 1000);
+    } catch (e) {
+      alert("⚠️ Clicca 'Consenti' per incollare oppure incolla manualmente.");
+    }
+  }
+
   function openMapsSearch() {
-    const ritrovo = document.getElementById('od_luogo_nome').value.trim();
-    if(!ritrovo) return alert("⚠️ Scrivi prima il nome o l'indirizzo nel campo 'Punto di Ritrovo'!");
-    window.open("https://www.google.it/maps/search/" + encodeURIComponent(ritrovo + " Italia"), '_blank');
+    const r = document.getElementById('od_luogo_nome').value.trim();
+    if(!r) return alert("Scrivi il luogo!");
+    window.open("https://www.google.it/maps/search/" + encodeURIComponent(r + " Italia"), '_blank');
   }
 
   function autoFetchRegion() {
-    const luogo = document.getElementById('od_luogo_nome').value.trim();
-    const select = document.getElementById('od_regione');
-    if(!luogo || select.value !== "") return; 
-    select.classList.add('auto-calculating');
-    select.options[0].text = "🔄 Sto cercando la regione...";
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', luogo: luogo }) })
-    .then(res => res.json()).then(data => {
-      select.classList.remove('auto-calculating');
-      if(data.regione) {
-        select.value = data.regione;
-        select.options[0].text = "🤖 Rilevato: " + data.regione + "!";
-      } else { select.options[0].text = "⚠️ Non trovata"; }
+    const l = document.getElementById('od_luogo_nome').value.trim();
+    const s = document.getElementById('od_regione');
+    if(!l || s.value !== "") return; 
+    s.classList.add('auto-calculating');
+    s.options[0].text = "🔄 Rilevamento...";
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', luogo: l }) })
+    .then(r => r.json()).then(d => {
+      s.classList.remove('auto-calculating');
+      if(d.regione) { s.value = d.regione; s.options[0].text = "🤖 Rilevato!"; }
+      else { s.options[0].text = "⚠️ Manuale"; }
     });
   }
-
-  const eqItems = [
-    { id: 'eq1', val: 'Acqua', icon: '💧' }, { id: 'eq2', val: 'Pranzo al sacco', icon: '🥪' },
-    { id: 'eqSnack', val: 'Snack', icon: '🍫' }, { id: 'eq3', val: 'Scarpe da trekking', icon: '🥾' },
-    { id: 'eq4', val: 'Vestiti a strati', icon: '👕' }, { id: 'eq5', val: 'Giacca impermeabile', icon: '🧥' },
-    { id: 'eq6', val: 'Torcia frontale', icon: '🔦' }, { id: 'eq7', val: 'Cappello/Guanti/Scaldacollo', icon: '🧤' },
-    { id: 'eq8', val: 'Crema solare', icon: '☀️' }, { id: 'eq9', val: 'Occhiali da sole', icon: '🕶️' },
-    { id: 'eq10', val: 'Ciaspole', icon: '❄️' }, { id: 'eq11', val: 'Tenda', icon: '⛺' },
-    { id: 'eq12', val: 'Sacco a pelo', icon: '🛌' }, { id: 'eq13', val: 'Saponi', icon: '🧼' },
-    { id: 'eq14', val: 'Asciugamani', icon: '🧺' }, { id: 'eq15', val: 'Altro', icon: '➕' }
-  ];
 
   window.onload = function() {
     try {
       document.getElementById('g_nome').value = localStorage.getItem('wildu_p_nome') || '';
       document.getElementById('g_tel').value = localStorage.getItem('wildu_p_tel') || '';
     } catch(e){}
+
     let html = '';
-    eqItems.forEach(it => {
-      html += `<div class="col-12 col-md-6 d-flex align-items-center mb-3 eq-item">
-          <div class="d-flex align-items-center flex-grow-1 pe-2">
-            <input class="form-check-input od-eq m-0" type="checkbox" value="${it.val}" id="${it.id}">
-            <label class="form-check-label ms-2 mb-0" for="${it.id}">${it.icon} ${it.val}</label>
-          </div>
-          <input type="text" class="form-control form-control-sm note-input" id="note_${it.id}" placeholder="Note">
-        </div>`;
+    eqCategories.forEach(cat => {
+      html += `<div class="eq-category-card">
+        <div class="fw-bold mb-3 text-primary" style="font-size:0.8rem">${cat.name}</div>
+        <div class="row m-0">
+          ${cat.items.map(it => `
+            <div class="col-12 d-flex align-items-center mb-3 eq-item">
+              <div class="d-flex align-items-center flex-grow-1 pe-2">
+                <input class="form-check-input od-eq m-0" type="checkbox" value="${it.val}" id="${it.id}">
+                <label class="form-check-label ms-2 mb-0" for="${it.id}">${it.icon} ${it.val}</label>
+              </div>
+              <input type="text" class="form-control form-control-sm note-input" id="note_${it.id}" placeholder="Note">
+            </div>`).join('')}
+        </div>
+      </div>`;
     });
-    document.getElementById('eq-container').innerHTML = html;
+    document.getElementById('eq-wizard-container').innerHTML = html;
   };
 
   function formatToItalianDate(dateStr) {
@@ -225,39 +262,44 @@
   }
 
   function sendToWildu() {
-    const loader = document.getElementById('loader');
-    let eqArray = [];
-    document.querySelectorAll('.od-eq').forEach(cb => {
-      let noteVal = document.getElementById('note_' + cb.id).value.trim();
-      if(cb.checked || noteVal !== "") eqArray.push({ item: cb.value, note: noteVal });
-    });
-
     const payload = {
       guidaNome: document.getElementById('g_nome').value.trim(),
       guidaTel: document.getElementById('g_tel').value.trim(),
       titolo: document.getElementById('od_titolo').value.trim(),
       dataInizio: formatToItalianDate(document.getElementById('od_data_inizio').value),
       dataFine: formatToItalianDate(document.getElementById('od_data_fine').value),
-      orarioInizio: document.getElementById('od_orario_inizio').value.trim(),
-      orarioFine: document.getElementById('od_orario_fine').value.trim(),
+      orarioInizio: document.getElementById('od_orario_inizio').value,
+      orarioFine: document.getElementById('od_orario_fine').value,
       luogoNome: document.getElementById('od_luogo_nome').value.trim(),
       regione: document.getElementById('od_regione').value, 
       luogoLink: document.getElementById('od_luogo_link').value.trim(),
-      km: document.getElementById('od_km').value.trim(),
-      dislivello: document.getElementById('od_dislivello').value.trim(),
-      attrezzaturaJson: JSON.stringify(eqArray),
+      km: document.getElementById('od_km').value,
+      dislivello: document.getElementById('od_dislivello').value,
       descrizione: document.getElementById('od_descrizione').value.trim()
     };
 
-    if(!payload.guidaNome || !payload.titolo || !payload.dataInizio || !payload.regione) return alert("⚠️ Campi obbligatori mancanti!");
+    // VALIDAZIONE OBBLIGATORI RICHIESTI
+    if(!payload.guidaNome || !payload.titolo || !payload.dataInizio || !payload.orarioInizio || !payload.orarioFine || !payload.luogoNome || !payload.regione || !payload.km || !payload.dislivello) {
+      return alert("⚠️ Attenzione! Tutti i campi con asterisco (*) sono obbligatori, inclusi orari, km e dislivello.");
+    }
 
-    loader.style.display = 'flex';
+    let eqArray = [];
+    document.querySelectorAll('.od-eq').forEach(cb => {
+      let n = document.getElementById('note_' + cb.id).value.trim();
+      if(cb.checked || n !== "") eqArray.push({ item: cb.value, note: n });
+    });
+    payload.attrezzaturaJson = JSON.stringify(eqArray);
+
+    document.getElementById('loader').style.display = 'flex';
     fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', payload: payload }) })
-    .then(res => res.json()).then(res => {
-      loader.style.display = 'none'; 
-      if(res.success) { alert("🚀 Proposta inviata con successo!"); location.reload(); }
-      else { alert("❌ Errore: " + res.error); }
-    }).catch(() => { loader.style.display = 'none'; alert("❌ Errore di rete."); });
+    .then(r => r.json()).then(res => {
+      document.getElementById('loader').style.display = 'none'; 
+      if(res.success) {
+        localStorage.setItem('wildu_p_nome', payload.guidaNome);
+        localStorage.setItem('wildu_p_tel', payload.guidaTel);
+        alert("🚀 Proposta inviata con successo!"); location.reload();
+      } else alert("❌ Errore: " + res.error);
+    }).catch(() => { document.getElementById('loader').style.display = 'none'; alert("❌ Errore di rete."); });
   }
 
   function copyAppLink() { navigator.clipboard.writeText(window.location.href); alert("🔗 Link copiato!"); }
