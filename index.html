@@ -169,6 +169,35 @@
 
   <div id="equipment-steps-container"></div>
 
+
+
+  <div id="step-8" class="step-content">
+    <span class="step-header">Passo 8 di 8: Foto di Copertina</span>
+    <div class="card shadow-lg p-4 text-center">
+      <div class="section-title">📸 IMMAGINE DEL TREKKING</div>
+      <p class="text-muted small">Carica una foto che rappresenti l'emozione del viaggio.</p>
+      
+      <div class="upload-box border-dashed p-4 rounded-3 mb-3" style="border: 2px dashed #444; background: #161616;">
+        <input type="file" id="foto_input" accept="image/*" class="d-none" onchange="handleImageSelection(event)">
+        <div id="preview_container" style="display:none;">
+            <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;">
+            <br>
+            <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
+        </div>
+        <div id="upload_prompt">
+            <button class="btn btn-primary rounded-pill px-4 py-2" onclick="document.getElementById('foto_input').click()">📁 Seleziona Foto</button>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-light w-50" onclick="goToStep(7)">← Indietro</button>
+        <button class="btn btn-success p-3 w-50 fw-bold" id="final_submit_btn" onclick="sendToWildu()">🚀 INVIA PROPOSTA</button>
+      </div>
+    </div>
+  </div>
+
+
+  
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -210,40 +239,12 @@
         }
     }
 
-  // HO MESSO QUI!
-
-    <div id="step-8" class="step-content">
-    <span class="step-header">Passo 8 di 8: Foto di Copertina</span>
-    <div class="card shadow-lg p-4 text-center">
-      <div class="section-title">📸 IMMAGINE DEL TREKKING</div>
-      <p class="text-muted small">Carica una foto che rappresenti l'emozione del viaggio.</p>
-      
-      <div class="upload-box border-dashed p-4 rounded-3 mb-3" style="border: 2px dashed #444; background: #161616;">
-        <input type="file" id="foto_input" accept="image/*" class="d-none" onchange="handleImageSelection(event)">
-        <div id="preview_container" style="display:none;">
-            <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;">
-            <br>
-            <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
-        </div>
-        <div id="upload_prompt">
-            <button class="btn btn-primary rounded-pill px-4 py-2" onclick="document.getElementById('foto_input').click()">📁 Seleziona Foto</button>
-        </div>
-      </div>
-
-      <div class="d-flex gap-2 mt-4">
-        <button class="btn btn-outline-light w-50" onclick="goToStep(7)">← Indietro</button>
-        <button class="btn btn-success p-3 w-50 fw-bold" id="final_submit_btn" onclick="sendToWildu()">🚀 INVIA PROPOSTA</button>
-      </div>
-    </div>
-  </div>
-
-    // HO MESSO QUI!
     
     document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
     document.getElementById('step-' + step).classList.add('active');
     
     // AGGIUNGI QUESTA RIGA QUI SOTTO:
-    document.getElementById('progress-bar').style.width = (step / 7 * 100) + "%";
+    document.getElementById('progress-bar').style.width = (step / 8 * 100) + "%";
 
     window.scrollTo(0,0);
   }
@@ -267,13 +268,15 @@
     } catch(e){}
   };
 
-  function renderEquipmentSteps() {
+function renderEquipmentSteps() {
     let container = document.getElementById('equipment-steps-container');
     eqCategories.forEach((cat, idx) => {
       let isLast = (idx === eqCategories.length - 1);
+      
+      // Costruiamo tutta la stringa HTML in un unico blocco pulito
       let html = `
         <div id="step-${cat.step}" class="step-content">
-          <span class="step-header">Passo ${cat.step} di 7: ${cat.name}</span>
+          <span class="step-header">Passo ${cat.step} di 8: ${cat.name}</span>
           <div class="card shadow-lg p-4">
             <div class="eq-category-card">
               <div class="row m-0">
@@ -290,15 +293,17 @@
                 }).join('')}
               </div>
             </div>
+
             <div class="d-flex gap-2 mt-4">
               <button class="btn btn-outline-light w-50" onclick="goToStep(${cat.step - 1})">← Indietro</button>
               ${isLast ? 
-                `<button class="btn btn-success p-3 w-50 fw-bold" onclick="sendToWildu()">🚀 INVIA PROPOSTA</button>` : 
+                `<button class="btn btn-submit text-white w-50" onclick="goToStep(8)">Avanti: Foto →</button>` : 
                 `<button class="btn btn-submit text-white w-50" onclick="goToStep(${cat.step + 1})">Avanti →</button>`
               }
             </div>
           </div>
         </div>`;
+      
       container.innerHTML += html;
     });
   }
