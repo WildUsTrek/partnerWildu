@@ -623,13 +623,6 @@ function renderEquipmentSteps() {
         location.reload(); 
       } else {
 
-        
-        // NON SPEGNIAMO IL LOADER. Cambiamo solo il testo per tranquillizzare l'utente.
-        document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
-        
-        alert("🚀 Proposta inviata con successo!"); 
-        location.reload(); // La schermata nera rimarrà a proteggere il modulo finché la pagina non si ricarica!
-      } else {
         // ERRORE: Qui sì che spegniamo il loader per fargli correggere i dati
         loader.style.display = 'none'; 
         alert("❌ Errore: " + res.error);
