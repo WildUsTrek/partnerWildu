@@ -189,6 +189,15 @@
 
 <div id="form-view" class="container pb-5 pt-3" style="max-width: 850px; display:none;">
 
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="text-white fw-bold m-0">Nuova Proposta</h4>
+    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelProposal()">
+      <i class="bi bi-x-lg"></i> Esci e Annulla
+    </button>
+  </div>
+
+
   <div class="progress-container mb-4">
     <div id="progress-bar" class="progress-bar-fill"></div>
   </div>
@@ -299,7 +308,22 @@
 
   
 </div>
+  
+<div id="my-proposals-view" class="container pb-5 pt-3" style="max-width: 600px; display:none;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-white fw-bold m-0">Le mie Proposte</h2>
+    <button class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="showPage('home')">Indietro</button>
+  </div>
 
+  <div class="section-title text-warning" style="border-bottom-color: #ffc107;">⏳ In Valutazione</div>
+  <div id="list-pending" class="mb-4">
+    </div>
+
+  <div class="section-title text-success" style="border-bottom-color: #198754;">✅ Accettate</div>
+  <div id="list-accepted">
+    </div>
+</div>
+  
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   // DEFINIZIONE CATEGORIE
@@ -805,12 +829,77 @@ async function updateProfile() {
 }
 
 
-function openMyProposals() {
-  alert("Sto recuperando le tue proposte dal database Wildu... (Funzione in attivazione)");
-  // Qui tra poco collegheremo una chiamata fetch al Master Script
-  // che cercherà nella Colonna O (15) il tuo UID.
-}  
 
+// Funzione per Annullare il Modulo
+function cancelProposal() {
+  if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
+    document.querySelectorAll('.form-control').forEach(i => i.value = ""); // Pulisce
+    showPage('home');
+  }
+}
+
+// Funzione per caricare le proposte e gestire il limite di 3
+async function openMyProposals() {
+  const user = auth.currentUser;
+  if (!user) return alert("Devi essere loggato!");
+
+  document.getElementById('loader').style.display = 'flex';
+  
+  try {
+    const response = await fetch(MOTORE_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: "getUserData", uid: user.uid })
+    });
+    const data = await response.json();
+
+    // 1. Mostriamo la pagina
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('my-proposals-view').style.display = 'block';
+
+    // 2. Renderizziamo le Card
+    renderProposals(data);
+
+    // 3. Blocchiamo il tasto "Nuova Proposta" se >= 3
+    const totaleAttive = data.pending.length + data.accepted.length;
+    const btnNuova = document.querySelector('.menu-card[onclick="showPage(\'form\')"]');
+    
+    if (totaleAttive >= 3) {
+      btnNuova.style.opacity = "0.4";
+      btnNuova.style.pointerEvents = "none";
+      btnNuova.querySelector('.menu-desc').innerHTML = "<b class='text-danger'>Limite di 3 proposte raggiunto.</b>";
+    } else {
+      btnNuova.style.opacity = "1";
+      btnNuova.style.pointerEvents = "auto";
+      btnNuova.querySelector('.menu-desc').innerText = "Wizard guidato in pochi passi.";
+    }
+
+  } catch (e) {
+    alert("Errore nel recupero dati dal database.");
+  } finally {
+    document.getElementById('loader').style.display = 'none';
+  }
+}
+
+function renderProposals(data) {
+  const pList = document.getElementById('list-pending');
+  const aList = document.getElementById('list-accepted');
+  
+  pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna proposta in attesa.</p>";
+  aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessun evento ancora approvato.</p>";
+
+  data.pending.forEach(item => {
+    pList.innerHTML += `<div class='card bg-dark p-3 mb-2 border-warning' style='border-left:4px solid'>
+      <div class='fw-bold'>${item.titolo}</div><div class='small text-muted'>${item.data} - ${item.luogo}</div>
+    </div>`;
+  });
+
+  data.accepted.forEach(item => {
+    aList.innerHTML += `<div class='card bg-dark p-3 mb-2 border-success' style='border-left:4px solid'>
+      <div class='fw-bold'>${item.titolo}</div><div class='small text-muted'>${item.data} - ${item.luogo}</div>
+    </div>`;
+  });
+}
   
 </script>
 
