@@ -1,114 +1,255 @@
 <!DOCTYPE html>
-<html lang="it">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Wildu Partner Hub</title>
-
-  <link rel="apple-touch-icon" href="iconpart.png">
-  <link rel="icon" type="image/png" href="iconpart.png">
-  <link rel="manifest" href="manifest.json">
-
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#121212">
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+ 
   <style>
-    body, html { 
-      margin: 0; padding: 0; height: 100%; 
-      background-color: #121212; 
-      font-family: 'Inter', sans-serif;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-
-    .portal-card {
-      padding: 40px 20px;
-      max-width: 400px;
-      width: 90%;
-    }
-
-    .logo-container {
-      margin-bottom: 30px;
-    }
-
-    .logo-container img {
-      width: 100px;
-      height: 100px;
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    h1 {
-      font-weight: 900;
-      font-size: 1.8rem;
-      margin-bottom: 10px;
-      letter-spacing: -1px;
-    }
-
-    p {
-      color: #888;
-      font-size: 0.95rem;
-      margin-bottom: 40px;
-      line-height: 1.5;
-    }
-
-    .btn-enter {
-      display: inline-block;
-      background: #0d6efd;
-      color: white;
-      text-decoration: none;
-      font-weight: 800;
-      padding: 20px 40px;
-      border-radius: 50px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 15px 30px rgba(13,110,253,0.3);
-      transition: 0.3s;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    .btn-enter:hover {
-      transform: translateY(-3px);
-      background: #0b5ed7;
-      box-shadow: 0 20px 40px rgba(13,110,253,0.4);
-    }
-
-    .install-hint {
-      margin-top: 50px;
-      font-size: 0.75rem;
-      color: #444;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 1px;
-    }
+    body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
+    .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    #home-view { padding: 40px 20px; text-align: center; }
+    .menu-card { background: #1e1e1e; border: 1px solid #333; border-radius: 24px; padding: 30px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; text-decoration: none; display: block; }
+    .menu-card:hover { transform: translateY(-5px); border-color: #0d6efd; background: #252525; }
+    .menu-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+    .menu-title { color: white; font-weight: 800; font-size: 1.2rem; margin-bottom: 5px; }
+    .menu-desc { color: #888; font-size: 0.9rem; }
+    .card { background: #1e1e1e; border: 1px solid #333; border-radius: 24px; border-top: 6px solid #0d6efd; overflow: hidden; }
+    .form-control, .form-select { background: #252525; border: 1px solid #444; color: white; border-radius: 10px; padding: 12px; font-size: 0.95rem; }
+    .auto-calculating { border-color: #ffc107 !important; animation: pulse-border 1.5s infinite; }
+    @keyframes pulse-border { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    label { font-weight: 600; font-size: 0.75rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .section-title { color: #0d6efd; font-weight: 800; font-size: 0.9rem; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 30px; margin-bottom: 5px; text-transform: uppercase; }
+    .eq-grid { background: #161616; padding: 20px; border-radius: 16px; border: 1px solid #333; }
+    .btn-submit { background: #0d6efd; border: none; border-radius: 50px; padding: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+    .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <div class="portal-card">
-    <div class="logo-container">
-      <img src="iconpart.png" alt="Wildu Logo">
-    </div>
-    
-    <h1>WILDU <span style="color:#0d6efd">PARTNER</span></h1>
-    <p>Benvenuto nel Pannello Proposte.<br>Clicca qui sotto per gestire i tuoi eventi.</p>
+<script>
+  const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
+</script>
 
-    <a href="https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec" 
-       target="_blank" 
-       rel="noopener noreferrer" 
-       class="btn-enter">
-       🚀 Entra nel Pannello
-    </a>
+<div class="util-nav d-flex justify-content-between align-items-center">
+  <span class="text-white fw-bold" onclick="showPage('home')" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
+  <div>
+    <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" onclick="copyAppLink()">🔗 Copia Link</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="showInstallInfo()">📱 Salva in Home</button>
+  </div>
+</div>
 
-    <div class="install-hint">Partner Hub v2.0</div>
+<div id="loader" class="loader-overlay">
+  <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+  <h5 class="fw-bold text-white">Invio proposta in corso...</h5>
+</div>
+
+<div id="home-view" class="container" style="max-width: 500px;">
+  <div class="mb-5 mt-4">
+    <h1 class="fw-bold text-white">Ciao! 👋</h1>
+    <p class="text-muted">Benvenuto nell'Area Partner Wildu.</p>
   </div>
 
+  <div class="menu-card shadow-sm" onclick="showPage('form')">
+    <span class="menu-icon">🗓️</span>
+    <div class="menu-title">Proponi Open Day</div>
+    <div class="menu-desc">Inserisci i dettagli del tuo prossimo evento gratuito da inviare in revisione.</div>
+  </div>
+
+  <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm">
+    <span class="menu-icon">💬</span>
+    <div class="menu-title">Assistenza Wildu</div>
+    <div class="menu-desc">Hai dubbi o vuoi modificare un evento inviato? Scrivici.</div>
+  </a>
+</div>
+
+<div id="form-view" class="container pb-5 pt-3" style="max-width: 850px; display:none;">
+  <button class="btn btn-link text-primary p-0 mb-4 text-decoration-none fw-bold" onclick="showPage('home')">← Torna alla Dashboard</button>
+  
+  <div class="text-center mb-4">
+    <h2 class="fw-bold text-white mb-0">PROPOSTA <span class="text-primary">OPEN DAY</span></h2>
+    <p class="text-muted small">Compila i dettagli del trekking</p>
+  </div>
+
+  <div class="card shadow-lg p-4">
+    <div class="row g-3 mb-2">
+      <div class="col-md-6">
+        <label>Nome e Cognome Guida *</label>
+        <input type="text" id="g_nome" class="form-control" placeholder="Es. Marco Rossi">
+      </div>
+      <div class="col-md-6">
+        <label>Cellulare / WhatsApp *</label>
+        <input type="text" id="g_tel" class="form-control" placeholder="Es. 333 1234567">
+      </div>
+    </div>
+
+    <div class="section-title">📅 DATE E ORARI</div>
+    <div class="row g-3 mt-1">
+      <div class="col-12">
+        <label>Titolo Evento *</label>
+        <input type="text" id="od_titolo" class="form-control border-primary">
+      </div>
+      <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
+      <div class="col-6"><label>Data Fine</label><input type="date" id="od_data_fine" class="form-control"></div>
+    </div>
+
+    <div class="section-title">📍 LUOGO E GEOLOCALIZZAZIONE</div>
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <label>Punto di Ritrovo *</label>
+        <input type="text" id="od_luogo_nome" class="form-control" onblur="autoFetchRegion()">
+      </div>
+      <div class="col-md-6">
+        <label>Regione *</label>
+        <select id="od_regione" class="form-select">
+          <option value="">Rilevamento automatico...</option>
+          <option value="Abruzzo">Abruzzo</option><option value="Basilicata">Basilicata</option><option value="Calabria">Calabria</option><option value="Campania">Campania</option><option value="Emilia-Romagna">Emilia-Romagna</option><option value="Friuli-Venezia Giulia">Friuli-Venezia Giulia</option><option value="Lazio">Lazio</option><option value="Liguria">Liguria</option><option value="Lombardia">Lombardia</option><option value="Marche">Marche</option><option value="Molise">Molise</option><option value="Piemonte">Piemonte</option><option value="Puglia">Puglia</option><option value="Sardegna">Sardegna</option><option value="Sicilia">Sicilia</option><option value="Toscana">Toscana</option><option value="Trentino-Alto Adige">Trentino-Alto Adige</option><option value="Umbria">Umbria</option><option value="Valle d'Aosta">Valle d'Aosta</option><option value="Veneto">Veneto</option>
+        </select>
+      </div>
+      <div class="col-12 mt-3">
+        <label>Link Google Maps *</label>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary px-3 rounded-3 fw-bold" type="button" onclick="openMapsSearch()" style="border-width: 2px;">🧭 Cerca</button>
+          <input type="text" id="od_luogo_link" class="form-control" placeholder="Incolla l'URL qui">
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">🎒 ATTREZZATURA</div>
+    <div id="eq-container" class="eq-grid row m-0"></div>
+
+    <div class="section-title">📝 DESCRIZIONE EXTRA</div>
+    <textarea id="od_descrizione" class="form-control mt-2" rows="6"></textarea>
+
+    <div class="d-grid mt-5">
+      <button class="btn btn-submit text-white shadow-lg" onclick="sendToWildu()">🚀 Invia Proposta a Wildu</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function showPage(page) {
+    document.getElementById('home-view').style.display = (page === 'home') ? 'block' : 'none';
+    document.getElementById('form-view').style.display = (page === 'form') ? 'block' : 'none';
+    window.scrollTo(0,0);
+  }
+
+  // --- FUNZIONE CERCA MAPS: ORA FUNZIONA AL 100% SU PC PERCHE' SIAMO SU GITHUB ---
+  function openMapsSearch() {
+    const ritrovo = document.getElementById('od_luogo_nome').value.trim();
+    if(!ritrovo) return alert("⚠️ Scrivi il luogo!");
+    const mapsUrl = "https://www.google.it/maps/search/" + encodeURIComponent(ritrovo + " Italia");
+    window.open(mapsUrl, '_blank');
+  }
+
+  // --- FUNZIONE REGIONE (VIA FETCH) ---
+  function autoFetchRegion() {
+    const luogo = document.getElementById('od_luogo_nome').value.trim();
+    const select = document.getElementById('od_regione');
+    if(!luogo || select.value !== "") return; 
+
+    select.classList.add('auto-calculating');
+    select.options[0].text = "🔄 Sto cercando...";
+
+    fetch(MOTORE_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getRegion', luogo: luogo })
+    })
+    .then(res => res.json())
+    .then(data => {
+      select.classList.remove('auto-calculating');
+      if(data.regione) {
+        select.value = data.regione;
+        select.options[0].text = "🤖 Rilevato: " + data.regione + "!";
+      } else {
+        select.options[0].text = "⚠️ Seleziona a mano";
+      }
+    });
+  }
+
+  // --- LOGICA ATTREZZATURA ---
+  const eqItems = [
+    { id: 'eq1', val: 'Acqua', icon: '💧' }, { id: 'eq2', val: 'Pranzo al sacco', icon: '🥪' },
+    { id: 'eq3', val: 'Scarpe da trekking', icon: '🥾' }, { id: 'eq4', val: 'Vestiti a strati', icon: '👕' },
+    { id: 'eq15', val: 'Altro', icon: '➕' }
+  ];
+
+  window.onload = function() {
+    try {
+      document.getElementById('g_nome').value = localStorage.getItem('wildu_p_nome') || '';
+      document.getElementById('g_tel').value = localStorage.getItem('wildu_p_tel') || '';
+    } catch(e){}
+    
+    let html = '';
+    eqItems.forEach(it => {
+      html += `
+        <div class="col-12 col-md-6 d-flex align-items-center mb-3">
+          <input class="form-check-input od-eq" type="checkbox" value="${it.val}" id="${it.id}">
+          <label class="form-check-label ms-2 mb-0" for="${it.id}">${it.icon} ${it.val}</label>
+          <input type="text" class="form-control form-control-sm ms-2" id="note_${it.id}" style="width:80px" placeholder="Note">
+        </div>`;
+    });
+    document.getElementById('eq-container').innerHTML = html;
+  };
+
+  function formatToItalianDate(dateStr) {
+      if (!dateStr) return "";
+      const p = dateStr.split('-');
+      return `${p[2]}/${p[1]}/${p[0]}`; 
+  }
+
+  // --- INVIO PROPOSTA (VIA FETCH) ---
+  function sendToWildu() {
+    const loader = document.getElementById('loader');
+    let eqArray = [];
+    document.querySelectorAll('.od-eq').forEach(cb => {
+      let noteVal = document.getElementById('note_' + cb.id).value.trim();
+      if(cb.checked || noteVal !== "") eqArray.push({ item: cb.value, note: noteVal });
+    });
+
+    const payload = {
+      guidaNome: document.getElementById('g_nome').value.trim(),
+      guidaTel: document.getElementById('g_tel').value.trim(),
+      titolo: document.getElementById('od_titolo').value.trim(),
+      dataInizio: formatToItalianDate(document.getElementById('od_data_inizio').value),
+      dataFine: formatToItalianDate(document.getElementById('od_data_fine').value),
+      luogoNome: document.getElementById('od_luogo_nome').value.trim(),
+      regione: document.getElementById('od_regione').value, 
+      luogoLink: document.getElementById('od_luogo_link').value.trim(),
+      attrezzaturaJson: JSON.stringify(eqArray),
+      descrizione: document.getElementById('od_descrizione').value.trim()
+    };
+
+    if(!payload.guidaNome || !payload.titolo || !payload.dataInizio || !payload.regione) {
+      return alert("⚠️ Campi obbligatori mancanti!");
+    }
+
+    loader.style.display = 'flex';
+    fetch(MOTORE_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'submit', payload: payload })
+    })
+    .then(res => res.json())
+    .then(res => {
+      loader.style.display = 'none'; 
+      if(res.success) {
+        alert("🚀 Inviato!");
+        location.reload();
+      } else { alert("❌ Errore: " + res.error); }
+    })
+    .catch(() => { loader.style.display = 'none'; alert("❌ Errore di rete"); });
+  }
+
+  function copyAppLink() {
+    navigator.clipboard.writeText(window.location.href);
+    alert("🔗 Link copiato!");
+  }
+</script>
 </body>
 </html>
