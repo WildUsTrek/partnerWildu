@@ -181,23 +181,24 @@
     <p class="text-muted">Inizia la configurazione del tuo prossimo evento.</p>
   </div>
 
-  <div class="menu-card shadow-sm" onclick="showPage('form')">
+  <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form')">
     <span class="menu-icon">🗓️</span>
     <div class="menu-title">Nuova Proposta</div>
     <div class="menu-desc">Wizard guidato in pochi passi per configurare l'evento.</div>
   </div>
-<div class="row g-2 mb-4">
-  <div class="col-6">
-    <button class="btn btn-outline-primary w-100 py-3 rounded-4 shadow-sm" onclick="openProfile()">
-      <i class="bi bi-person-circle d-block mb-1 fs-4"></i> Profilo
-    </button>
+
+  <div class="row g-2 mb-4">
+    <div class="col-6">
+      <button class="btn btn-outline-primary w-100 py-3 rounded-4 shadow-sm" onclick="openProfile()">
+        <i class="bi bi-person-circle d-block mb-1 fs-4"></i> Profilo
+      </button>
+    </div>
+    <div class="col-6">
+      <button class="btn btn-outline-info w-100 py-3 rounded-4 shadow-sm" onclick="openMyProposals()">
+        <i class="bi bi-list-stars d-block mb-1 fs-4"></i> Mie Proposte
+      </button>
+    </div>
   </div>
-  <div class="col-6">
-    <button class="btn btn-outline-info w-100 py-3 rounded-4 shadow-sm" onclick="openMyProposals()">
-      <i class="bi bi-list-stars d-block mb-1 fs-4"></i> Mie Proposte
-    </button>
-  </div>
-</div>
   
   <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm">
     <span class="menu-icon">💬</span>
@@ -891,37 +892,46 @@ async function openMyProposals() {
   const user = auth.currentUser;
   if (!user) return alert("Devi essere loggato!");
 
+  // Usiamo il loader che abbiamo nell'HTML
   document.getElementById('loader').style.display = 'flex';
   
-try {
+  try {
     const response = await fetch(MOTORE_API_URL, {
       method: 'POST',
       body: JSON.stringify({ action: "getUserData", uid: user.uid })
     });
+    
+    if (!response.ok) throw new Error("Errore server");
     const data = await response.json();
 
-    // 1. Usiamo la nuova funzione centralizzata
+    // 1. Cambiamo pagina
     showPage('proposals'); 
 
     // 2. Renderizziamo le Card
     renderProposals(data);
     
-    // 3. Blocchiamo il tasto "Nuova Proposta" se >= 3
+    // 3. Gestione Limite di 3 Proposte
+    // Cerchiamo il tasto usando l'ID che abbiamo aggiunto nell'HTML
+    const btnNuova = document.getElementById('btn-nuova-proposta');
     const totaleAttive = data.pending.length + data.accepted.length;
-    const btnNuova = document.querySelector('.menu-card[onclick="showPage(\'form\')"]');
     
-    if (totaleAttive >= 3) {
-      btnNuova.style.opacity = "0.4";
-      btnNuova.style.pointerEvents = "none";
-      btnNuova.querySelector('.menu-desc').innerHTML = "<b class='text-danger'>Limite di 3 proposte raggiunto.</b>";
-    } else {
-      btnNuova.style.opacity = "1";
-      btnNuova.style.pointerEvents = "auto";
-      btnNuova.querySelector('.menu-desc').innerText = "Wizard guidato in pochi passi.";
+    if (btnNuova) { 
+      if (totaleAttive >= 3) {
+        btnNuova.style.opacity = "0.4";
+        btnNuova.style.pointerEvents = "none";
+        const desc = btnNuova.querySelector('.menu-desc');
+        if (desc) desc.innerHTML = "<b class='text-danger'>Limite di 3 proposte raggiunto.</b>";
+      } else {
+        btnNuova.style.opacity = "1";
+        btnNuova.style.pointerEvents = "auto";
+        const desc = btnNuova.querySelector('.menu-desc');
+        if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+      }
     }
 
   } catch (e) {
-    alert("Errore nel recupero dati dal database.");
+    console.error("Errore recupero proposte:", e);
+    alert("Errore nel recupero dati dal database. Riprova tra poco.");
   } finally {
     document.getElementById('loader').style.display = 'none';
   }
