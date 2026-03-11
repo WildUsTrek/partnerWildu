@@ -888,7 +888,12 @@ async function updateProfile() {
 // Funzione per Annullare il Modulo
 function cancelProposal() {
   if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
-    document.querySelectorAll('.form-control').forEach(i => i.value = ""); // Pulisce
+    // Pulisce tutti i campi TRANNE Nome e Telefono
+    document.querySelectorAll('.form-control').forEach(i => {
+      if (i.id !== 'g_nome' && i.id !== 'g_tel') {
+        i.value = ""; 
+      }
+    }); 
     showPage('home');
   }
 }
