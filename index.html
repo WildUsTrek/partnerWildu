@@ -8,7 +8,34 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
- 
+
+
+
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDIPgFA_caKIMHFgEa-enO4Jk0d7eTCFLI",
+    authDomain: "wild-u-server.firebaseapp.com",
+    projectId: "wild-u-server",
+    storageBucket: "wild-u-server.firebasestorage.app",
+    messagingSenderId: "959006418837",
+    appId: "1:959006418837:web:affce9510301b946e7389c",
+    measurementId: "G-KC1R6VSMF5"
+  };
+
+  // Inizializzazione
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
+</script>
+
+  
+  
   <style>
     body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
     .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
@@ -79,6 +106,37 @@
 </head>
 <body>
 
+
+  
+  <div id="auth-overlay" class="loader-overlay" style="display: flex;">
+  <div class="text-center p-4 card bg-dark border-primary shadow-lg" style="max-width: 400px;">
+    <h2 class="fw-bold text-white mb-3">Wildu Partner</h2>
+    <p class="text-muted mb-4">Accedi con il tuo account Google per iniziare a configurare i tuoi eventi.</p>
+    <button class="btn btn-light rounded-pill w-100 fw-bold p-3" onclick="loginGoogle()">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2">
+      Accedi con Google
+    </button>
+  </div>
+</div>
+
+<div id="profile-overlay" class="loader-overlay" style="display: none;">
+  <div class="text-center p-4 card bg-dark border-primary shadow-lg" style="max-width: 400px;">
+    <h3 class="fw-bold text-white mb-3">Completa Profilo</h3>
+    <p class="text-muted small mb-4">Ciao! È la tua prima volta. Abbiamo bisogno di questi dati per le tue proposte.</p>
+    <div class="text-start">
+      <label class="text-primary small fw-bold">NOME E COGNOME</label>
+      <input type="text" id="p_nome_completo" class="form-control mb-3" placeholder="Es. Mario Rossi">
+      <label class="text-primary small fw-bold">WHATSAPP</label>
+      <input type="tel" id="p_whatsapp" class="form-control mb-4" placeholder="Es. 3331234567">
+    </div>
+    <button class="btn btn-primary rounded-pill w-100 fw-bold p-3" onclick="saveFirstProfile()">
+      SALVA E INIZIA
+    </button>
+  </div>
+</div>
+
+
+  
 <script>
   const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
 </script>
@@ -107,7 +165,19 @@
     <div class="menu-title">Nuova Proposta</div>
     <div class="menu-desc">Wizard guidato in pochi passi per configurare l'evento.</div>
   </div>
-
+<div class="row g-2 mb-4">
+  <div class="col-6">
+    <button class="btn btn-outline-primary w-100 py-3 rounded-4 shadow-sm" onclick="openProfile()">
+      <i class="bi bi-person-circle d-block mb-1 fs-4"></i> Profilo
+    </button>
+  </div>
+  <div class="col-6">
+    <button class="btn btn-outline-info w-100 py-3 rounded-4 shadow-sm" onclick="openMyProposals()">
+      <i class="bi bi-list-stars d-block mb-1 fs-4"></i> Mie Proposte
+    </button>
+  </div>
+</div>
+  
   <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm">
     <span class="menu-icon">💬</span>
     <div class="menu-title">Assistenza Wildu</div>
@@ -395,9 +465,10 @@ function renderEquipmentSteps() {
     const loader = document.getElementById('loader');
     loader.style.display = 'flex';
     
-    // PREPARAZIONE CHIAVE UTENTE (Pronta per il futuro sistema di Login)
-    // Se localStorage è vuoto, il fallback è "Utente_Anonimo"
-    let currentUserKey = localStorage.getItem('wildu_user_id') || "Utente_Anonimo";
+  
+// RECUPERO CHIAVE UTENTE DA FIREBASE
+    // Se l'utente è loggato, prendiamo il suo UID (quello z5jE...), altrimenti "Utente_Anonimo"
+    const currentUserKey = firebase.auth().currentUser ? firebase.auth().currentUser.uid : "Utente_Anonimo";
 
 // 1. GESTIONE FOTO (Upload o Galleria)
     let fotoUrl = selectedGalleryUrl; // Parte dal presupposto che abbia scelto una foto vecchia
@@ -627,6 +698,119 @@ function clearGallerySelection() {
   selectedGalleryUrl = "";
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
 }
+
+
+// Funzione Login
+function loginGoogle() {
+  auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message));
+}
+
+// OSSERVATORE STATO AUTH
+auth.onAuthStateChanged(async (user) => {
+  const authOverlay = document.getElementById('auth-overlay');
+  const profileOverlay = document.getElementById('profile-overlay');
+  
+  if (user) {
+    authOverlay.style.display = 'none';
+    
+    // Controlliamo se il profilo esiste su Firestore
+    const docRef = db.collection("users_partners").doc(user.uid);
+    const doc = await docRef.get();
+
+    if (doc.exists) {
+      // PROFILO ESISTE: Carichiamo i dati e andiamo alla Home
+      const data = doc.data();
+      document.getElementById('g_nome').value = data.nome_cognome;
+      document.getElementById('g_tel').value = data.whatsapp;
+      profileOverlay.style.display = 'none';
+    } else {
+      // PROFILO MANCA: Mostriamo il modulo di registrazione
+      profileOverlay.style.display = 'flex';
+    }
+  } else {
+    // NON LOGGATO
+    authOverlay.style.display = 'flex';
+    profileOverlay.style.display = 'none';
+  }
+});
+
+// SALVATAGGIO PRIMO PROFILO
+async function saveFirstProfile() {
+  const user = auth.currentUser;
+  const nome = document.getElementById('p_nome_completo').value.trim();
+  const tel = document.getElementById('p_whatsapp').value.trim();
+
+  if (!nome || !tel) return alert("⚠️ Compila entrambi i campi!");
+
+  try {
+    await db.collection("users_partners").doc(user.uid).set({
+      nome_cognome: nome,
+      whatsapp: tel,
+      email: user.email,
+      creato_il: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // Popoliamo i campi del Passo 1 del modulo
+    document.getElementById('g_nome').value = nome;
+    document.getElementById('g_tel').value = tel;
+    
+    document.getElementById('profile-overlay').style.display = 'none';
+    alert("✅ Profilo creato! Benvenuto in Wildu.");
+  } catch (e) {
+    alert("Errore nel salvataggio: " + e.message);
+  }
+}
+
+// Apre l'interfaccia di modifica caricando i dati attuali
+async function openProfile() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const doc = await db.collection("users_partners").doc(user.uid).get();
+  if (doc.exists) {
+    const data = doc.data();
+    document.getElementById('edit_p_nome').value = data.nome_cognome || "";
+    document.getElementById('edit_p_tel').value = data.whatsapp || "";
+  }
+  document.getElementById('edit-profile-overlay').style.display = 'flex';
+}
+
+function closeProfile() {
+  document.getElementById('edit-profile-overlay').style.display = 'none';
+}
+
+// Salva le modifiche su Firebase e aggiorna i campi del modulo
+async function updateProfile() {
+  const user = auth.currentUser;
+  const nuovoNome = document.getElementById('edit_p_nome').value.trim();
+  const nuovoTel = document.getElementById('edit_p_tel').value.trim();
+
+  if (!nuovoNome || !nuovoTel) return alert("Inserisci tutti i campi!");
+
+  try {
+    await db.collection("users_partners").doc(user.uid).update({
+      nome_cognome: nuovoNome,
+      whatsapp: nuovoTel
+    });
+    
+    // Aggiorna anche i campi "nascosti" del passo 1 per i nuovi invii
+    document.getElementById('g_nome').value = nuovoNome;
+    document.getElementById('g_tel').value = nuovoTel;
+    
+    alert("Profilo aggiornato!");
+    closeProfile();
+  } catch (e) {
+    alert("Errore nell'aggiornamento: " + e.message);
+  }
+}
+
+
+function openMyProposals() {
+  alert("Sto recuperando le tue proposte dal database Wildu... (Funzione in attivazione)");
+  // Qui tra poco collegheremo una chiamata fetch al Master Script
+  // che cercherà nella Colonna O (15) il tuo UID.
+}  
+
   
 </script>
 
@@ -649,5 +833,29 @@ function clearGallerySelection() {
     </div>
   </div>
 </div>
+
+  
+<div id="edit-profile-overlay" class="loader-overlay" style="display: none;">
+  <div class="card bg-dark border-primary p-4 shadow-lg w-100 m-3" style="max-width: 450px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="text-white fw-bold m-0">Il tuo Profilo</h3>
+      <button class="btn-close btn-close-white" onclick="closeProfile()"></button>
+    </div>
+    
+    <label class="text-primary small fw-bold mb-1">NOME E COGNOME</label>
+    <input type="text" id="edit_p_nome" class="form-control mb-3">
+    
+    <label class="text-primary small fw-bold mb-1">TELEFONO (WHATSAPP)</label>
+    <input type="tel" id="edit_p_tel" class="form-control mb-4">
+    
+    <button class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">
+      AGGIORNA DATI
+    </button>
+    
+    <button class="btn btn-link text-muted mt-3 btn-sm" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+  
 </body>
 </html>
