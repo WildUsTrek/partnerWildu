@@ -38,6 +38,14 @@
   
   
   <style>
+    /* Un caricamento a tutto schermo che copre tutto all'inizio */
+#init-screen {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #121212;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 20000; /* Sopra a ogni cosa */
+}
     body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
     .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     #home-view { padding: 40px 20px; text-align: center; }
@@ -117,7 +125,12 @@
 </head>
 <body>
 
-
+<div id="init-screen">
+  <div class="text-center">
+    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="text-white fw-bold">WILDU <span class="text-primary">PARTNER</span></h5>
+  </div>
+</div>
   
   <div id="auth-overlay" class="loader-overlay" style="display: none;">
   <div class="text-center p-4 card bg-dark border-primary shadow-lg" style="max-width: 400px;">
@@ -752,32 +765,45 @@ function loginGoogle() {
   auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message));
 }
 
-// OSSERVATORE STATO AUTH
+// NUOVO OSSERVATORE STATO AUTH (Sostituisci il tuo vecchio blocco con questo)
 auth.onAuthStateChanged(async (user) => {
-  const authOverlay = document.getElementById('auth-overlay');
-  const profileOverlay = document.getElementById('profile-overlay');
+  const initScreen = document.getElementById('init-screen'); // Il velo nero di caricamento
+  const authOverlay = document.getElementById('auth-overlay'); // La schermata login
+  const profileOverlay = document.getElementById('profile-overlay'); // La schermata primo profilo
   
   if (user) {
-    authOverlay.style.display = 'none';
-    
-    // Controlliamo se il profilo esiste su Firestore
+    // 1. MANTENIAMO IL TUO CONTROLLO FIRESTORE (Non perdi nulla!)
     const docRef = db.collection("users_partners").doc(user.uid);
     const doc = await docRef.get();
 
     if (doc.exists) {
-      // PROFILO ESISTE: Carichiamo i dati e andiamo alla Home
+      // PROFILO ESISTE: Carichiamo i dati come facevi prima
       const data = doc.data();
       document.getElementById('g_nome').value = data.nome_cognome;
       document.getElementById('g_tel').value = data.whatsapp;
+      
+      authOverlay.style.display = 'none';
       profileOverlay.style.display = 'none';
+      showPage('home'); // Ti porta in Home in modo pulito
     } else {
       // PROFILO MANCA: Mostriamo il modulo di registrazione
+      authOverlay.style.display = 'none';
       profileOverlay.style.display = 'flex';
     }
   } else {
-    // NON LOGGATO
+    // NON LOGGATO: Mostriamo il login
     authOverlay.style.display = 'flex';
     profileOverlay.style.display = 'none';
+    // Se non è loggato, ci assicuriamo che le altre viste siano chiuse
+    document.getElementById('home-view').style.display = 'none';
+  }
+  
+  // IL TOCCO FINALE: Solo ora che Firebase ha deciso, togliamo il velo nero
+  if (initScreen) {
+    setTimeout(() => { 
+      initScreen.style.opacity = '0';
+      setTimeout(() => { initScreen.style.display = 'none'; }, 500);
+    }, 500);
   }
 });
 
@@ -906,45 +932,47 @@ function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
   
-  pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna proposta in attesa.</p>";
-  aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessun evento ancora approvato.</p>";
+  pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
+  aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
 
   const generateCard = (item, colorClass) => {
-    // PULIZIA DATA: Trasforma 2026-03-10T23:00... in 11/03/2026
-    let dataPulita = "Data non definita";
-    if (item.data) {
-      const d = new Date(item.data);
-      dataPulita = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
+    // Formattazione Date e Orari
+    const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
+    const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
+    const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
 
-    let eqList = "";
+    // Elaborazione Attrezzatura
+    let eqFormatted = "";
     try {
       const eqArray = JSON.parse(item.eq);
-      eqList = eqArray.map(e => `• ${e.item}`).join(', ');
-    } catch(e) { eqList = "Standard"; }
+      eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\\n');
+    } catch(e) { eqFormatted = "Dotazione standard"; }
+
+    // Stringa per il tasto INFO (KM, Dislivello + Kit)
+    const infoTecniche = `DATI TECNICI:\\n🏃 Km: ${item.km || 0}\\n⛰️ Dislivello: ${item.dislivello || 0}m D+\\n\\nKIT RICHIESTO:\\n${eqFormatted}`;
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
         <div class="card-body p-3">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <h6 class="text-white fw-bold m-0">${item.titolo || "Senza Titolo"}</h6>
-            <span class="badge bg-primary small">${item.regione || "Regione..."}</span>
+            <h6 class="text-white fw-bold m-0">${item.titolo}</h6>
+            <span class="badge bg-primary small">${item.regione || "N/D"}</span>
           </div>
           
           <div class="small text-info fw-bold mb-3">
-            <i class="bi bi-calendar-event"></i> ${dataPulita} 
-            <span class="text-muted mx-1">|</span> 
-            <i class="bi bi-geo-alt"></i> ${item.luogo || "N/D"}
+            <i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} 
+            <br>
+            <i class="bi bi-geo-alt"></i> ${item.luogo}
           </div>
 
-          <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc || "Nessuna descrizione."}</p>
+          <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc}</p>
 
           <div class="d-flex gap-2">
             <a href="${item.link}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1">
-              <i class="bi bi-map"></i> Punto Ritrovo
+              <i class="bi bi-map"></i> Mappa
             </a>
-            <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="alert('Dotazione: ${eqList.replace(/'/g, "\\'")}')">
-              <i class="bi bi-backpack"></i> Kit
+            <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="alert('${infoTecniche}')">
+              <i class="bi bi-info-circle"></i> Info & Kit
             </button>
           </div>
         </div>
