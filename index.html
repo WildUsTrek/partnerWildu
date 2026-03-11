@@ -212,7 +212,16 @@
     <div class="menu-desc">Hai dubbi o vuoi modificare un evento inviato? Scrivici su WhatsApp.</div>
   </a>
 
-  <p class="text-muted small mt-5">Sistema Partner Hub v2.5</p>
+  <p class="text-muted small mt-5" 
+   style="user-select: none; -webkit-user-select: none;"
+   onmousedown="startSyncTimer()" 
+   onmouseup="cancelSyncTimer()" 
+   onmouseleave="cancelSyncTimer()"
+   ontouchstart="startSyncTimer()" 
+   ontouchend="cancelSyncTimer()" 
+   ontouchcancel="cancelSyncTimer()">
+   Sistema Partner Hub v2.5
+</p>
 </div>
 
 <div id="form-view" class="container pb-5 pt-3" style="max-width: 850px; display:none;">
@@ -1068,14 +1077,25 @@ function logout() {
 }
 
 
-  // Aggiungi questa funzione ovunque nel tuo script
+let pressTimer; // La variabile che terrà in memoria il nostro cronometro
+
+function startSyncTimer() {
+  // Quando appoggi il dito, parte un timer di 3000 millisecondi (3 secondi)
+  pressTimer = setTimeout(() => {
+    forceSync();
+  }, 3000);
+}
+
+function cancelSyncTimer() {
+  // Se alzi il dito o ti sposti prima dei 3 secondi, cancelliamo il timer
+  clearTimeout(pressTimer);
+}
+
+// La funzione che avevamo già preparato
 function forceSync() {
-  if(confirm("Vuoi forzare il download dei dati dal server? \n\nUsa questa funzione solo se non vedi gli ultimi aggiornamenti.")) {
-    // Svuota la memoria temporanea
+  if(confirm("🛠️ MODALITÀ TECNICA 🛠️\n\nVuoi forzare il download dei dati scavalcando la memoria del telefono?")) {
     sessionStorage.removeItem('wildu_cache_proposte');
     sessionStorage.removeItem('wildu_cache_time');
-    
-    // Ricarica la pagina per applicare il tutto
     location.reload(); 
   }
 }
@@ -1120,17 +1140,12 @@ function forceSync() {
       AGGIORNA DATI
     </button>
     
-    <div class="mt-4 pt-3 border-top border-secondary text-center">
+<div class="mt-4 pt-3 border-top border-secondary text-center">
       <button class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="logout()">
         <i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT
       </button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
-      
-      <button class="btn btn-outline-warning w-100 rounded-pill fw-bold mt-4" onclick="forceSync()">
-        <i class="bi bi-arrow-clockwise"></i> SINCRONIZZA SERVER
-      </button>
-      <p class="text-muted small mt-1 mb-0">Forza il download dei dati (usa solo se necessario)</p>
-      </div>
+    </div>
   </div>
 </div>
 
