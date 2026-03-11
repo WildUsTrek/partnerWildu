@@ -51,6 +51,26 @@
       .eq-item { flex-direction: column !important; align-items: stretch !important; gap: 8px; padding-bottom: 15px; border-bottom: 1px solid #2a2a2a; }
       .eq-item:last-child { border-bottom: none; }
     }
+
+
+    /* Progress Bar Style */
+    .progress-container {
+      height: 6px;
+      width: 100%;
+      background: #333;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 14.28%; /* Inizialmente al passo 1 di 7 */
+      background: linear-gradient(90deg, #0d6efd, #0dcaf0);
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+
+    
   </style>
 </head>
 <body>
@@ -84,6 +104,10 @@
 </div>
 
 <div id="form-view" class="container pb-5 pt-3" style="max-width: 850px; display:none;">
+
+  <div class="progress-container mb-4">
+    <div id="progress-bar" class="progress-bar-fill"></div>
+  </div>
   
   <div id="step-1" class="step-content active">
     <span class="step-header">Passo 1 di 7: Dati Base</span>
@@ -178,6 +202,10 @@
 
     document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
     document.getElementById('step-' + step).classList.add('active');
+    
+    // AGGIUNGI QUESTA RIGA QUI SOTTO:
+    document.getElementById('progress-bar').style.width = (step / 7 * 100) + "%";
+
     window.scrollTo(0,0);
   }
 
