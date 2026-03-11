@@ -171,21 +171,47 @@
 
 
 
-  <div id="step-8" class="step-content">
+<div id="step-8" class="step-content">
     <span class="step-header">Passo 8 di 8: Foto di Copertina</span>
     <div class="card shadow-lg p-4 text-center">
       <div class="section-title">📸 IMMAGINE DEL TREKKING</div>
-      <p class="text-muted small">Carica una foto che rappresenti l'emozione del viaggio.</p>
+      <p class="text-muted small mb-3">Carica una nuova foto o scegline una dal tuo archivio.</p>
       
-      <div class="upload-box border-dashed p-4 rounded-3 mb-3" style="border: 2px dashed #444; background: #161616;">
-        <input type="file" id="foto_input" accept="image/*" class="d-none" onchange="handleImageSelection(event)">
-        <div id="preview_container" style="display:none;">
-            <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;">
-            <br>
-            <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
+      <ul class="nav nav-pills nav-fill gap-2 p-1 bg-dark rounded-pill mb-4" id="pills-tab" role="tablist" style="border: 1px solid #333;">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active rounded-pill text-white fw-bold" id="tab-upload" data-bs-toggle="pill" data-bs-target="#pane-upload" type="button" role="tab" onclick="clearGallerySelection()">📤 Nuova</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link rounded-pill text-white fw-bold" id="tab-mie" data-bs-toggle="pill" data-bs-target="#pane-mie" type="button" role="tab" onclick="loadGallery('mie')">👤 Le Mie</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link rounded-pill text-white fw-bold" id="tab-archivio" data-bs-toggle="pill" data-bs-target="#pane-archivio" type="button" role="tab" onclick="loadGallery('archivio')">🌍 Wildu</button>
+        </li>
+      </ul>
+
+      <div class="tab-content" id="pills-tabContent">
+        <div class="tab-pane fade show active" id="pane-upload" role="tabpanel">
+          <div class="upload-box border-dashed p-4 rounded-3 mb-3" style="border: 2px dashed #444; background: #161616;">
+            <input type="file" id="foto_input" accept="image/*" class="d-none" onchange="handleImageSelection(event)">
+            <div id="preview_container" style="display:none;">
+                <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;">
+                <br>
+                <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
+            </div>
+            <div id="upload_prompt">
+                <button class="btn btn-primary rounded-pill px-4 py-2" onclick="document.getElementById('foto_input').click()">📁 Seleziona Foto dal Telefono</button>
+            </div>
+          </div>
         </div>
-        <div id="upload_prompt">
-            <button class="btn btn-primary rounded-pill px-4 py-2" onclick="document.getElementById('foto_input').click()">📁 Seleziona Foto</button>
+
+        <div class="tab-pane fade" id="pane-mie" role="tabpanel">
+          <div id="gallery-mie" class="p-3 rounded-3" style="background: #161616; min-height: 150px;">
+             </div>
+        </div>
+
+        <div class="tab-pane fade" id="pane-archivio" role="tabpanel">
+          <div id="gallery-archivio" class="p-3 rounded-3" style="background: #161616; min-height: 150px;">
+             </div>
         </div>
       </div>
 
@@ -365,14 +391,15 @@ function renderEquipmentSteps() {
     const loader = document.getElementById('loader');
     loader.style.display = 'flex';
 
-    // 1. GESTIONE FOTO (Upload preventivo a Cloudinary)
-    let fotoUrl = "";
+// 1. GESTIONE FOTO (Upload o Galleria)
+    let fotoUrl = selectedGalleryUrl; // Parte dal presupposto che abbia scelto una foto vecchia
     try {
-      // Carica la foto solo se l'utente ne ha selezionata una
-      fotoUrl = await uploadToCloudinary();
+      // Se c'è un file caricato fisicamente, ignora la galleria e fai l'upload
+      if (document.getElementById('foto_input').files.length > 0) {
+        fotoUrl = await uploadToCloudinary();
+      }
     } catch (e) {
       console.error("Errore caricamento immagine:", e);
-      // Puoi decidere se bloccare tutto o proseguire senza foto
     }
 
     // 2. COSTRUZIONE PAYLOAD (Dati ordinati per le colonne dello Sheet)
@@ -479,6 +506,8 @@ async function uploadToCloudinary() {
   formData.append('file', compressedFile);
   formData.append('upload_preset', 'WILDU_s'); // <--- METTI QUI IL NOME DEL PRESET UNSIGNED
   formData.append('cloud_name', 'daiyrgmbb');
+  // Aggiunge i due "cartellini" alla foto in arrivo
+formData.append('tags', 'archivio_wildu,' + getGuideTag());
 
   const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', {
     method: 'POST',
@@ -518,6 +547,71 @@ function compressImage(file) {
 }
 
 // NUOVE IMAGE
+
+
+let selectedGalleryUrl = ""; // Memorizza la foto cliccata dalla galleria
+
+// 1. MOTORE CREAZIONE NOME GUIDA (Il Cartellino)
+function getGuideTag() {
+  let nomeRaw = document.getElementById('g_nome').value || localStorage.getItem('wildu_p_nome') || 'anonimo';
+  // Pulisce il nome: "Mario Rossi!" -> "guida_mario_rossi"
+  let nomePulito = nomeRaw.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+  return 'guida_' + nomePulito;
+}
+
+// 2. MOTORE GALLERIA
+async function loadGallery(tipo) {
+  resetImage(); // Se aveva caricato un file nuovo, lo togliamo per evitare conflitti
+  
+  let tag = (tipo === 'mie') ? getGuideTag() : 'archivio_wildu';
+  let container = document.getElementById('gallery-' + tipo);
+  
+  container.innerHTML = '<div class="spinner-border text-primary mt-4"></div><p class="small text-muted mt-2">Ricerca in corso...</p>';
+  
+  try {
+    // Il parametro 't' serve a ingannare la cache per vedere subito le nuove foto
+    let url = `https://res.cloudinary.com/daiyrgmbb/image/list/${tag}.json?t=${new Date().getTime()}`;
+    let res = await fetch(url);
+    
+    if (!res.ok) {
+      container.innerHTML = `<p class="text-muted small mt-4">Nessuna foto trovata in questa sezione.</p>`;
+      return;
+    }
+    
+    let data = await res.json();
+    if (!data.resources || data.resources.length === 0) {
+      container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`;
+      return;
+    }
+    
+    // Genera la griglia
+    let html = '<div class="d-flex flex-wrap gap-2 justify-content-center">';
+    data.resources.forEach(img => {
+      let imgUrl = `https://res.cloudinary.com/daiyrgmbb/image/upload/v${img.version}/${img.public_id}.${img.format}`;
+      html += `<img src="${imgUrl}" class="gallery-img rounded-3 shadow-sm" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent; transition: 0.2s;" onclick="selectGalleryImage(this, '${imgUrl}')">`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    
+  } catch (err) {
+    container.innerHTML = `<p class="text-danger small mt-4">Errore di connessione all'archivio.</p>`;
+  }
+}
+
+// 3. SELEZIONE IMMAGINE DALLA GALLERIA
+function selectGalleryImage(imgElement, url) {
+  // Rimuovi il bordo blu da tutte le altre foto
+  document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
+  // Metti il bordo blu a quella cliccata
+  imgElement.style.borderColor = '#0d6efd';
+  selectedGalleryUrl = url;
+}
+
+// 4. RESET SELEZIONE SE TORNA ALL'UPLOAD
+function clearGallerySelection() {
+  selectedGalleryUrl = "";
+  document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
+}
   
 </script>
 
