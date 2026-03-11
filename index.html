@@ -69,7 +69,7 @@
       transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-
+.text-muted { color: #aaaaaa !important; }
     
   </style>
 </head>
@@ -101,7 +101,7 @@
   <div class="menu-card shadow-sm" onclick="showPage('form')">
     <span class="menu-icon">🗓️</span>
     <div class="menu-title">Nuova Proposta</div>
-    <div class="menu-desc">Wizard guidato in 8 passi per configurare l'evento.</div>
+    <div class="menu-desc">Wizard guidato in pochi passi per configurare l'evento.</div>
   </div>
 
   <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm">
@@ -119,14 +119,14 @@
     <div id="progress-bar" class="progress-bar-fill"></div>
   </div>
   
-  <div id="step-1" class="step-content active">
+<div id="step-1" class="step-content active">
     <span class="step-header">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="row g-3">
-        <div class="col-md-6"><label>Nome e Cognome Guida *</label><input type="text" id="g_nome" class="form-control"></div>
-        <div class="col-md-6"><label>WhatsApp *</label><input type="text" id="g_tel" class="form-control"></div>
+        <div class="col-md-6"><label>Nome e Cognome Guida *</label><input type="text" id="g_nome" class="form-control" placeholder="Es. Mario Rossi"></div>
+        <div class="col-md-6"><label>WhatsApp *</label><input type="text" id="g_tel" class="form-control" placeholder="Es. 3331234567"></div>
         <div class="section-title">DETTAGLI TEMPORALI</div>
-        <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary"></div>
+        <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
         <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
         <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
         <div class="col-6"><label>Orario Inizio *</label><input type="time" id="od_orario_inizio" class="form-control"></div>
@@ -140,7 +140,7 @@
     <span class="step-header">Passo 2 di 8: Luogo e Tecnica</span>
     <div class="card shadow-lg p-4">
       <div class="row g-3">
-        <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" onblur="autoFetchRegion()"></div>
+        <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" onblur="autoFetchRegion()" placeholder="Es. Bar Centrale, Roma"></div>
         <div class="col-md-6"><label>Regione *</label>
           <select id="od_regione" class="form-select">
             <option value="">Rilevamento...</option>
@@ -158,7 +158,7 @@
         <div class="col-6"><label>Km Totali *</label><input type="number" id="od_km" class="form-control" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
         <div class="col-6"><label>Dislivello (m) *</label><input type="number" id="od_dislivello" class="form-control" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
         <div class="section-title">DESCRIZIONE EMOZIONALE *</div>
-        <div class="col-12"><textarea id="od_descrizione" class="form-control" rows="5"></textarea></div>
+        <div class="col-12"><textarea id="od_descrizione" class="form-control" rows="5" placeholder="Scrivi qui la descrizione emozionale del tuo evento..."></textarea></div>
       </div>
       <div class="d-flex gap-2 mt-4">
         <button class="btn btn-outline-light w-50" onclick="goToStep(1)">← Indietro</button>
