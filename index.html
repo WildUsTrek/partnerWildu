@@ -286,9 +286,27 @@
   }
 
   function openMapsSearch() {
-    const r = document.getElementById('od_luogo_nome').value.trim();
-    if(!r) return alert("Scrivi il luogo!");
-    window.open("https://www.google.it/maps/search/" + encodeURIComponent(r + " Italia"), '_blank');
+    const ritrovo = document.getElementById('od_luogo_nome').value.trim();
+    if(!ritrovo) return alert("⚠️ Scrivi prima il nome o l'indirizzo nel campo 'Punto di Ritrovo'!");
+    
+    // URL di ricerca per Google Maps
+    const mapsUrl = "https://www.google.it/maps/search/" + encodeURIComponent(ritrovo + " Italia");
+    
+    // RILEVATORE: È uno smartphone?
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      /* SU MOBILE: Usiamo window.location. 
+         Il telefono intercetta il link e lancia l'App di Maps. 
+         Non si crea nessuna pagina bianca perché non apriamo nuove schede (_blank).
+      */
+      window.location.href = mapsUrl;
+    } else {
+      /* SU DESKTOP: Apriamo in una nuova scheda. 
+         Il partner cerca il punto e poi torna nella scheda dell'App Wildu.
+      */
+      window.open(mapsUrl, '_blank');
+    }
   }
 
   function autoFetchRegion() {
