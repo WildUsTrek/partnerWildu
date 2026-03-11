@@ -906,12 +906,50 @@ function cancelProposal() {
   }
 }
 
-// Funzione per caricare le proposte e gestire il limite di 3
+// 1. HELPER: Gestione grafica del limite di 3 proposte
+function gestisciLimiteProposte(data) {
+  const btnNuova = document.getElementById('btn-nuova-proposta');
+  const totaleAttive = data.pending.length + data.accepted.length;
+  
+  if (btnNuova) { 
+    if (totaleAttive >= 3) {
+      btnNuova.style.opacity = "0.4";
+      btnNuova.style.pointerEvents = "none";
+      const desc = btnNuova.querySelector('.menu-desc');
+      if (desc) desc.innerHTML = "<b class='text-danger'>Limite di 3 proposte raggiunto.</b>";
+    } else {
+      btnNuova.style.opacity = "1";
+      btnNuova.style.pointerEvents = "auto";
+      const desc = btnNuova.querySelector('.menu-desc');
+      if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+    }
+  }
+}
+
+// 2. FUNZIONE PRINCIPALE: Caricamento Proposte (con Cache Intelligente di 30 min)
 async function openMyProposals() {
   const user = auth.currentUser;
   if (!user) return alert("Devi essere loggato!");
 
-  // Usiamo il loader che abbiamo nell'HTML
+  // --- CONTROLLO MEMORIA (CACHE) ---
+  const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  const timestamp = sessionStorage.getItem('wildu_cache_time');
+  const adesso = new Date().getTime();
+  
+  // Se la memoria esiste e non sono passati 30 minuti (1.800.000 millisecondi)
+  if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
+    console.log("Dati caricati istantaneamente dalla memoria del telefono!");
+    const data = JSON.parse(memoria);
+    
+    // Aggiorniamo la grafica in una frazione di secondo
+    showPage('proposals');
+    renderProposals(data);
+    gestisciLimiteProposte(data);
+    
+    return; // STOP! Esce dalla funzione e RISPARMIA la chiamata a Google
+  }
+
+  // --- SE LA MEMORIA È VUOTA O SCADUTA, CHIAMA GOOGLE ---
   document.getElementById('loader').style.display = 'flex';
   
   try {
@@ -923,30 +961,14 @@ async function openMyProposals() {
     if (!response.ok) throw new Error("Errore server");
     const data = await response.json();
 
-    // 1. Cambiamo pagina
-    showPage('proposals'); 
+    // SALVA NELLA MEMORIA DEL TELEFONO PER I PROSSIMI 30 MINUTI
+    sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+    sessionStorage.setItem('wildu_cache_time', adesso.toString());
 
-    // 2. Renderizziamo le Card
+    // Aggiorniamo la grafica
+    showPage('proposals'); 
     renderProposals(data);
-    
-    // 3. Gestione Limite di 3 Proposte
-    // Cerchiamo il tasto usando l'ID che abbiamo aggiunto nell'HTML
-    const btnNuova = document.getElementById('btn-nuova-proposta');
-    const totaleAttive = data.pending.length + data.accepted.length;
-    
-    if (btnNuova) { 
-      if (totaleAttive >= 3) {
-        btnNuova.style.opacity = "0.4";
-        btnNuova.style.pointerEvents = "none";
-        const desc = btnNuova.querySelector('.menu-desc');
-        if (desc) desc.innerHTML = "<b class='text-danger'>Limite di 3 proposte raggiunto.</b>";
-      } else {
-        btnNuova.style.opacity = "1";
-        btnNuova.style.pointerEvents = "auto";
-        const desc = btnNuova.querySelector('.menu-desc');
-        if (desc) desc.innerText = "Wizard guidato in pochi passi.";
-      }
-    }
+    gestisciLimiteProposte(data);
 
   } catch (e) {
     console.error("Errore recupero proposte:", e);
@@ -1023,6 +1045,18 @@ function logout() {
   }
 }
 
+
+  // Aggiungi questa funzione ovunque nel tuo script
+function forceSync() {
+  if(confirm("Vuoi forzare il download dei dati dal server? \n\nUsa questa funzione solo se non vedi gli ultimi aggiornamenti.")) {
+    // Svuota la memoria temporanea
+    sessionStorage.removeItem('wildu_cache_proposte');
+    sessionStorage.removeItem('wildu_cache_time');
+    
+    // Ricarica la pagina per applicare il tutto
+    location.reload(); 
+  }
+}
   
 </script>
 
@@ -1069,7 +1103,12 @@ function logout() {
         <i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT
       </button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
-    </div>
+      
+      <button class="btn btn-outline-warning w-100 rounded-pill fw-bold mt-4" onclick="forceSync()">
+        <i class="bi bi-arrow-clockwise"></i> SINCRONIZZA SERVER
+      </button>
+      <p class="text-muted small mt-1 mb-0">Forza il download dei dati (usa solo se necessario)</p>
+      </div>
   </div>
 </div>
 
