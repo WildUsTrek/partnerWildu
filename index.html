@@ -234,8 +234,20 @@
     <span class="step-header">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="row g-3">
-        <div class="col-md-6"><label>Nome e Cognome Guida *</label><input type="text" id="g_nome" class="form-control" placeholder="Es. Mario Rossi"></div>
-        <div class="col-md-6"><label>WhatsApp *</label><input type="text" id="g_tel" class="form-control" placeholder="Es. 3331234567"></div>
+        
+        <div class="col-md-6">
+          <label>Nome e Cognome Guida</label>
+          <input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly>
+        </div>
+        <div class="col-md-6">
+          <label>WhatsApp</label>
+          <input type="text" id="g_tel" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly>
+        </div>
+        <div class="col-12 mt-1 mb-3">
+          <p class="text-warning m-0" style="font-size: 0.7rem; line-height: 1.2;">
+            <i class="bi bi-lock-fill"></i> Dati collegati al tuo account. Per modificarli, esci dal modulo e vai in <b>Profilo</b>.
+          </p>
+        </div>
         <div class="section-title">DETTAGLI TEMPORALI</div>
         <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
         <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
@@ -425,12 +437,9 @@
   }
 
   window.onload = function() {
-    renderEquipmentSteps();
-    try {
-      document.getElementById('g_nome').value = localStorage.getItem('wildu_p_nome') || '';
-      document.getElementById('g_tel').value = localStorage.getItem('wildu_p_tel') || '';
-    } catch(e){}
-  };
+  renderEquipmentSteps();
+  // Ho rimosso il blocco "try/catch" del localStorage perché creava conflitto con Firebase
+};
 
 function renderEquipmentSteps() {
     let container = document.getElementById('equipment-steps-container');
@@ -841,16 +850,15 @@ async function saveFirstProfile() {
 }
 
 // Apre l'interfaccia di modifica caricando i dati attuali
-async function openProfile() {
+function openProfile() {
   const user = auth.currentUser;
   if (!user) return;
 
-  const doc = await db.collection("users_partners").doc(user.uid).get();
-  if (doc.exists) {
-    const data = doc.data();
-    document.getElementById('edit_p_nome').value = data.nome_cognome || "";
-    document.getElementById('edit_p_tel').value = data.whatsapp || "";
-  }
+  // Invece di chiamare Firebase, peschiamo i dati che abbiamo 
+  // già scritto nei campi "g_nome" e "g_tel" all'avvio dell'app!
+  document.getElementById('edit_p_nome').value = document.getElementById('g_nome').value;
+  document.getElementById('edit_p_tel').value = document.getElementById('g_tel').value;
+  
   document.getElementById('edit-profile-overlay').style.display = 'flex';
 }
 
