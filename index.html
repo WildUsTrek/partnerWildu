@@ -44,7 +44,8 @@
   top: 0; left: 0; width: 100%; height: 100%;
   background: #121212;
   display: flex; align-items: center; justify-content: center;
-  z-index: 20000; /* Sopra a ogni cosa */
+  z-index: 20000;
+  transition: opacity 0.5s ease; /* AGGIUNGI QUESTA RIGA PER LA FLUIDITÀ */
 }
     body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
     .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
@@ -173,10 +174,6 @@
   </div>
 </div>
 
-<div id="init-loader" class="loader-overlay" style="display: flex;">
-  <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
-  <h5 class="fw-bold text-white">Caricamento Wildu...</h5>
-</div>
 
 <div id="home-view" class="container" style="max-width: 500px;">
   <div class="mb-5 mt-4">
@@ -799,11 +796,13 @@ auth.onAuthStateChanged(async (user) => {
   }
   
   // IL TOCCO FINALE: Solo ora che Firebase ha deciso, togliamo il velo nero
-  if (initScreen) {
-    setTimeout(() => { 
+     if (initScreen) {
+      setTimeout(() => { 
       initScreen.style.opacity = '0';
-      setTimeout(() => { initScreen.style.display = 'none'; }, 500);
-    }, 500);
+      setTimeout(() => { 
+        initScreen.style.display = 'none'; 
+      }, 500);
+    }, 1000); // 1 secondo di attesa per essere sicuri che Firebase sia pronto
   }
 });
 
