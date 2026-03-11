@@ -394,6 +394,10 @@ function renderEquipmentSteps() {
   async function sendToWildu() {
     const loader = document.getElementById('loader');
     loader.style.display = 'flex';
+    
+    // PREPARAZIONE CHIAVE UTENTE (Pronta per il futuro sistema di Login)
+    // Se localStorage è vuoto, il fallback è "Utente_Anonimo"
+    let currentUserKey = localStorage.getItem('wildu_user_id') || "Utente_Anonimo";
 
 // 1. GESTIONE FOTO (Upload o Galleria)
     let fotoUrl = selectedGalleryUrl; // Parte dal presupposto che abbia scelto una foto vecchia
@@ -427,7 +431,9 @@ function renderEquipmentSteps() {
       regione: document.getElementById('od_regione').value, 
       
       // COLONNA M: Foto URL (Il link ricevuto da Cloudinary)
-      fotoUrl: fotoUrl 
+      fotoUrl: fotoUrl, 
+
+      utente: currentUserKey // <--- LA CHIAVE VIENE SPEDITA QUI
     };
 
     // 3. GESTIONE ATTREZZATURA (JSON)
