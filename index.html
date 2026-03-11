@@ -599,6 +599,28 @@ function renderEquipmentSteps() {
         // SUCCESSO: Salviamo i dati
         localStorage.setItem('wildu_p_nome', payload.guidaNome);
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
+
+
+        .then(res => {
+      if(res.success) {
+        // SUCCESSO: Salviamo i dati
+        localStorage.setItem('wildu_p_nome', payload.guidaNome);
+        localStorage.setItem('wildu_p_tel', payload.guidaTel);
+        
+        // ========================================================
+        // IL TOCCO MAGICO: DISTRUGGIAMO LA CACHE DELLE PROPOSTE!
+        // Così la prossima volta che apre "Mie Proposte", vedrà quella nuova.
+        sessionStorage.removeItem('wildu_cache_proposte');
+        sessionStorage.removeItem('wildu_cache_time');
+        // ========================================================
+        
+        // NON SPEGNIAMO IL LOADER. Cambiamo solo il testo.
+        document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
+        
+        alert("🚀 Proposta inviata con successo!"); 
+        location.reload(); 
+      } else {
+
         
         // NON SPEGNIAMO IL LOADER. Cambiamo solo il testo per tranquillizzare l'utente.
         document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
