@@ -82,7 +82,8 @@
 <div class="util-nav d-flex justify-content-between align-items-center">
   <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
   <div>
-    <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" onclick="copyAppLink()">🔗 Link</button>
+    <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" onclick="copyAppLink()">🔗 Condividi App</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="showInstallInfo()">📱 Salva App</button>
   </div>
 </div>
 
@@ -344,7 +345,16 @@
     }).catch(() => { document.getElementById('loader').style.display = 'none'; alert("❌ Errore rete."); });
   }
 
-  function copyAppLink() { navigator.clipboard.writeText(window.location.href); alert("🔗 Link copiato!"); }
+  // Funzione per copiare il link (Condividi App)
+function copyAppLink() { 
+  navigator.clipboard.writeText(window.location.href); 
+  alert("🔗 Link dell'App copiato! Ora puoi inviarlo ai tuoi partner."); 
+}
+
+// Funzione per mostrare il Modal (Salva App)
+function showInstallInfo() { 
+  new bootstrap.Modal(document.getElementById('installModal')).show(); 
+}
 </script>
 </body>
 </html>
