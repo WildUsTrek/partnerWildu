@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
 
@@ -336,10 +337,22 @@
   ];
 
   function showPage(page) {
-    document.getElementById('home-view').style.display = (page === 'home') ? 'block' : 'none';
-    document.getElementById('form-view').style.display = (page === 'form') ? 'block' : 'none';
-    window.scrollTo(0,0);
+  // Nascondiamo SEMPRE tutto prima di decidere cosa mostrare
+  document.getElementById('home-view').style.display = 'none';
+  document.getElementById('form-view').style.display = 'none';
+  document.getElementById('my-proposals-view').style.display = 'none';
+
+  // Accendiamo solo la pagina richiesta
+  if (page === 'home') {
+    document.getElementById('home-view').style.display = 'block';
+  } else if (page === 'form') {
+    document.getElementById('form-view').style.display = 'block';
+  } else if (page === 'proposals') {
+    document.getElementById('my-proposals-view').style.display = 'block';
   }
+
+  window.scrollTo(0,0);
+}
 
   // LOGICA DI NAVIGAZIONE E VALIDAZIONE
  function goToStep(step) {
@@ -845,21 +858,19 @@ async function openMyProposals() {
 
   document.getElementById('loader').style.display = 'flex';
   
-  try {
+try {
     const response = await fetch(MOTORE_API_URL, {
       method: 'POST',
       body: JSON.stringify({ action: "getUserData", uid: user.uid })
     });
     const data = await response.json();
 
-    // 1. Mostriamo la pagina
-    document.getElementById('home-view').style.display = 'none';
-    document.getElementById('form-view').style.display = 'none';
-    document.getElementById('my-proposals-view').style.display = 'block';
+    // 1. Usiamo la nuova funzione centralizzata
+    showPage('proposals'); 
 
     // 2. Renderizziamo le Card
     renderProposals(data);
-
+    
     // 3. Blocchiamo il tasto "Nuova Proposta" se >= 3
     const totaleAttive = data.pending.length + data.accepted.length;
     const btnNuova = document.querySelector('.menu-card[onclick="showPage(\'form\')"]');
@@ -900,6 +911,18 @@ function renderProposals(data) {
     </div>`;
   });
 }
+
+function logout() {
+  if(confirm("Vuoi uscire dall'app? Dovrai rifare il login per inviare nuove proposte.")) {
+    auth.signOut().then(() => {
+      // Puliamo anche eventuali dati locali per sicurezza
+      localStorage.removeItem('wildu_p_nome');
+      localStorage.removeItem('wildu_p_tel');
+      location.reload(); // Ricarica la pagina per mostrare l'overlay di login
+    }).catch(e => alert("Errore durante il logout: " + e.message));
+  }
+}
+
   
 </script>
 
@@ -941,7 +964,12 @@ function renderProposals(data) {
       AGGIORNA DATI
     </button>
     
-    <button class="btn btn-link text-muted mt-3 btn-sm" onclick="logout()">Logout</button>
+    <div class="mt-4 pt-3 border-top border-secondary text-center">
+      <button class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="logout()">
+        <i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT
+      </button>
+      <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
+    </div>
   </div>
 </div>
 
