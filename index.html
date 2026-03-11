@@ -210,6 +210,35 @@
         }
     }
 
+  // HO MESSO QUI!
+
+    <div id="step-8" class="step-content">
+    <span class="step-header">Passo 8 di 8: Foto di Copertina</span>
+    <div class="card shadow-lg p-4 text-center">
+      <div class="section-title">📸 IMMAGINE DEL TREKKING</div>
+      <p class="text-muted small">Carica una foto che rappresenti l'emozione del viaggio.</p>
+      
+      <div class="upload-box border-dashed p-4 rounded-3 mb-3" style="border: 2px dashed #444; background: #161616;">
+        <input type="file" id="foto_input" accept="image/*" class="d-none" onchange="handleImageSelection(event)">
+        <div id="preview_container" style="display:none;">
+            <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;">
+            <br>
+            <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
+        </div>
+        <div id="upload_prompt">
+            <button class="btn btn-primary rounded-pill px-4 py-2" onclick="document.getElementById('foto_input').click()">📁 Seleziona Foto</button>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-light w-50" onclick="goToStep(7)">← Indietro</button>
+        <button class="btn btn-success p-3 w-50 fw-bold" id="final_submit_btn" onclick="sendToWildu()">🚀 INVIA PROPOSTA</button>
+      </div>
+    </div>
+  </div>
+
+    // HO MESSO QUI!
+    
     document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
     document.getElementById('step-' + step).classList.add('active');
     
@@ -327,7 +356,21 @@
       return `${p[2]}/${p[1]}/${p[0]}`; 
   }
 
-  function sendToWildu() {
+  async function sendToWildu() {
+    const loader = document.getElementById('loader');
+    loader.style.display = 'flex';
+
+    // 1. GESTIONE FOTO (Upload preventivo a Cloudinary)
+    let fotoUrl = "";
+    try {
+      // Carica la foto solo se l'utente ne ha selezionata una
+      fotoUrl = await uploadToCloudinary();
+    } catch (e) {
+      console.error("Errore caricamento immagine:", e);
+      // Puoi decidere se bloccare tutto o proseguire senza foto
+    }
+
+    // 2. COSTRUZIONE PAYLOAD (Dati ordinati per le colonne dello Sheet)
     const payload = {
       guidaNome: document.getElementById('g_nome').value.trim(),
       guidaTel: document.getElementById('g_tel').value.trim(),
@@ -337,13 +380,21 @@
       orarioInizio: document.getElementById('od_orario_inizio').value,
       orarioFine: document.getElementById('od_orario_fine').value,
       luogoNome: document.getElementById('od_luogo_nome').value.trim(),
-      regione: document.getElementById('od_regione').value, 
       luogoLink: document.getElementById('od_luogo_link').value.trim(),
       km: document.getElementById('od_km').value,
       dislivello: document.getElementById('od_dislivello').value,
-      descrizione: document.getElementById('od_descrizione').value.trim()
+      
+      // COLONNA K: Descrizione
+      descrizione: document.getElementById('od_descrizione').value.trim(),
+      
+      // COLONNA L: Regione (Recuperata dal menu a tendina)
+      regione: document.getElementById('od_regione').value, 
+      
+      // COLONNA M: Foto URL (Il link ricevuto da Cloudinary)
+      fotoUrl: fotoUrl 
     };
 
+    // 3. GESTIONE ATTREZZATURA (JSON)
     let eqArray = [];
     document.querySelectorAll('.od-eq').forEach(cb => {
       let n = document.getElementById('note_' + cb.id).value.trim();
@@ -351,18 +402,28 @@
     });
     payload.attrezzaturaJson = JSON.stringify(eqArray);
 
-    document.getElementById('loader').style.display = 'flex';
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', payload: payload }) })
-    .then(r => r.json()).then(res => {
-      document.getElementById('loader').style.display = 'none'; 
+    // 4. INVIO AL MOTORE GOOGLE
+    fetch(MOTORE_API_URL, { 
+      method: 'POST', 
+      body: JSON.stringify({ action: 'submit', payload: payload }) 
+    })
+    .then(r => r.json())
+    .then(res => {
+      loader.style.display = 'none'; 
       if(res.success) {
         localStorage.setItem('wildu_p_nome', payload.guidaNome);
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
-        alert("🚀 Proposta inviata con successo!"); location.reload();
-      } else alert("❌ Errore: " + res.error);
-    }).catch(() => { document.getElementById('loader').style.display = 'none'; alert("❌ Errore rete."); });
+        alert("🚀 Proposta inviata con successo!"); 
+        location.reload();
+      } else {
+        alert("❌ Errore: " + res.error);
+      }
+    })
+    .catch(() => { 
+      loader.style.display = 'none'; 
+      alert("❌ Errore rete o server non raggiungibile."); 
+    });
   }
-
   // Funzione per copiare il link (Condividi App)
 function copyAppLink() { 
   navigator.clipboard.writeText(window.location.href); 
@@ -373,6 +434,86 @@ function copyAppLink() {
 function showInstallInfo() { 
   new bootstrap.Modal(document.getElementById('installModal')).show(); 
 }
+
+
+// NUOVE IMAGE
+  
+let finalFotoUrl = ""; // Qui salveremo il link di Cloudinary
+
+function handleImageSelection(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('image_preview').src = e.target.result;
+    document.getElementById('preview_container').style.display = 'block';
+    document.getElementById('upload_prompt').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetImage() {
+  document.getElementById('foto_input').value = "";
+  document.getElementById('preview_container').style.display = 'none';
+  document.getElementById('upload_prompt').style.display = 'block';
+  finalFotoUrl = "";
+}
+
+// IL MOTORE DI COMPRESSIONE E CARICAMENTO
+async function uploadToCloudinary() {
+  const fileInput = document.getElementById('foto_input');
+  if (fileInput.files.length === 0) return ""; // Nessuna foto selezionata
+
+  const file = fileInput.files[0];
+  
+  // TRITACARNE: Compressione sul telefono del partner
+  const compressedFile = await compressImage(file);
+
+  const formData = new FormData();
+  formData.append('file', compressedFile);
+  formData.append('upload_preset', 'IL_TUO_PRESET_NAME'); // <--- METTI QUI IL NOME DEL PRESET UNSIGNED
+  formData.append('cloud_name', 'daiyrgmbb');
+
+  const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', {
+    method: 'POST',
+    body: formData
+  });
+  const data = await resp.json();
+  return data.secure_url; // Restituisce il link diretto .jpg
+}
+
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200; // Qualità ottima ma leggera
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.8); // Qualità 80% (invisibile all'occhio, pesa pochissimo)
+      };
+    };
+  });
+}
+
+// NUOVE IMAGE
+  
 </script>
 
   <div class="modal fade" id="installModal" tabindex="-1">
