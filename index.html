@@ -1371,10 +1371,9 @@ function generaLocandinaFinale() {
       let luogoRaw = item.luogo ? item.luogo.toUpperCase() : "";
       
       let badgeTxt = "";
-      const maxTextW = 850; // Larghezza massima del testo dentro il bollo
+      const maxTextW = 850; 
       
       if (regStr && luogoRaw) {
-          // Tronca il luogo se l'unione è troppo lunga
           let testTxt = regStr + "  |  📍 " + luogoRaw;
           if (ctx.measureText(testTxt).width > maxTextW) {
               let tronco = luogoRaw;
@@ -1388,7 +1387,6 @@ function generaLocandinaFinale() {
       } else if (regStr) {
           badgeTxt = regStr;
       } else if (luogoRaw) {
-          // Tronca solo il luogo se non c'è la regione
           let tronco = luogoRaw;
           if (ctx.measureText("📍 " + tronco).width > maxTextW) {
               while (ctx.measureText("📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
@@ -1402,9 +1400,8 @@ function generaLocandinaFinale() {
           badgeTxt = "⭐ OPEN DAY";
       }
 
-      // Calcola larghezza finale del bollo (minimo 450px, massimo adattivo)
       let textW = ctx.measureText(badgeTxt).width;
-      let badgeW = Math.max(450, textW + 80); // 80px di padding laterale
+      let badgeW = Math.max(450, textW + 80); 
       
       ctx.fillStyle = "#0d6efd"; 
       ctx.beginPath(); ctx.roundRect((W - badgeW) / 2, cursorY, badgeW, 60, 30); ctx.fill();
@@ -1413,44 +1410,55 @@ function generaLocandinaFinale() {
       
       cursorY += 100;
 
-      // --- DATA E ORARI ---
+      // --- DATA E ORARI (CON RECUPERO DATA FINE E AUTO-RESIZE) ---
       const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
+      const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
       const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
-      let dateTxt = "📅 " + dIn + orari;
       
-      ctx.font = "bold 35px 'Inter', sans-serif"; 
+      let dateTxt = "📅 " + dIn + dFine + orari;
+      
+      let dateFontSize = 35;
+      ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
+      
+      // Auto-restringimento: se la riga intera sfora, rimpicciolisce il font
+      while(ctx.measureText(dateTxt).width > (W - 80) && dateFontSize > 18) {
+          dateFontSize -= 2;
+          ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
+      }
+
       ctx.fillStyle = "white";
       ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 15; 
       ctx.fillText(dateTxt, W/2, cursorY);
       ctx.shadowColor = "transparent";
       
-      cursorY += 70; // Spaziatura ridotta grazie allo spostamento del luogo
+      cursorY += 70; 
 
-      // --- TITOLO SMART A DUE STADI ---
+      // --- TITOLO SMART A TRE STADI (Con Force-Fit) ---
       ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; 
       const titleText = (item.titolo || "Evento").toUpperCase();
       
-      // Imposta font gigante di default
       ctx.font = "900 85px 'Playfair Display', serif";
       let interlinea = 90;
 
-      // Se supera una riga, rimpicciolisce il font
+      // 1. Se supera una riga standard, rimpicciolisce
       if (ctx.measureText(titleText).width > (W - 100)) {
           ctx.font = "900 65px 'Playfair Display', serif";
-          interlinea = 70; // Riduciamo l'interlinea perché il font è più piccolo
+          interlinea = 70; 
       }
       
-      // Vai a capo se, nonostante la riduzione, è ancora troppo lungo
+      // 2. Wrap intelligente con spazi
       const words = titleText.split(' '); let line = '';
       for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         if (ctx.measureText(testLine).width > (W - 100) && n > 0) {
-            ctx.fillText(line.trim(), W/2, cursorY);
+            // 3. FORCE-FIT: Il 4° parametro (W - 80) comprime fisicamente parole impossibili
+            ctx.fillText(line.trim(), W/2, cursorY, W - 80);
             line = words[n] + ' '; 
             cursorY += interlinea;
         } else { line = testLine; }
       }
-      ctx.fillText(line.trim(), W/2, cursorY);
+      // Stampa l'ultima riga rimasta con la stessa protezione
+      ctx.fillText(line.trim(), W/2, cursorY, W - 80);
       ctx.shadowColor = "transparent";
 
       // D. LOGICA ANCORAGGIO DAL BASSO
