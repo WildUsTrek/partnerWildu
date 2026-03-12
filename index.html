@@ -895,6 +895,11 @@ function openProfile() {
   document.getElementById('edit_p_nome').value = document.getElementById('g_nome').value;
   document.getElementById('edit_p_tel').value = document.getElementById('g_tel').value;
   
+  // ---> L'UNICA RIGA AGGIUNTA: Aggiorna la grafica del logo leggendo la memoria del telefono <---
+  if (typeof refreshProfileLogoUI === "function") {
+      refreshProfileLogoUI(); 
+  }
+
   document.getElementById('edit-profile-overlay').style.display = 'flex';
 }
 
@@ -927,7 +932,70 @@ async function updateProfile() {
   }
 }
 
+// --- MOTORE GESTIONE LOGO DAL PROFILO ---
+function refreshProfileLogoUI() {
+  const logo = localStorage.getItem('wildu_partner_logo');
+  const img = document.getElementById('profile-logo-img');
+  const icon = document.getElementById('profile-logo-icon');
+  const status = document.getElementById('profile-logo-status');
+  const removeBtn = document.getElementById('profile-logo-remove-btn');
 
+  if (logo) {
+    img.src = logo;
+    img.style.display = 'block';
+    icon.style.display = 'none';
+    status.innerText = "✅ Logo attivo";
+    status.className = "small text-success mb-1 fw-bold";
+    removeBtn.style.display = 'inline-block';
+  } else {
+    img.src = "";
+    img.style.display = 'none';
+    icon.style.display = 'block';
+    status.innerText = "⚠️ Nessun logo salvato";
+    status.className = "small text-warning mb-1 fw-bold";
+    removeBtn.style.display = 'none';
+  }
+}
+
+function saveProfileLogo(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+          // Rimpicciolisce il logo (Max 300px) per risparmiare memoria
+          const canvas = document.createElement('canvas');
+          const MAX = 300;
+          let w = img.width, h = img.height;
+          if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
+          else if (h > w && h > MAX) { w *= MAX / h; h = MAX; }
+          else if (w === h && w > MAX) { w = MAX; h = MAX; }
+
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          
+          // Salva in PNG per mantenere le trasparenze
+          const base64Logo = canvas.toDataURL('image/png');
+          localStorage.setItem('wildu_partner_logo', base64Logo);
+          
+          refreshProfileLogoUI(); // Mostra subito l'anteprima!
+      };
+      img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = ""; // Resetta l'input
+}
+
+function removeProfileLogo() {
+  if(confirm("Vuoi davvero rimuovere il tuo logo dalle prossime locandine?")) {
+    localStorage.removeItem('wildu_partner_logo');
+    refreshProfileLogoUI();
+  }
+}
+// ----------------------------------------
 
 // Funzione per Annullare il Modulo
 function cancelProposal() {
@@ -1726,6 +1794,25 @@ function forceSync() {
     
     <label class="text-primary small fw-bold mb-1">TELEFONO (WHATSAPP)</label>
     <input type="tel" id="edit_p_tel" class="form-control mb-4">
+
+
+    <label class="text-primary small fw-bold mb-1 mt-2">LOGO PARTNER (Locandine)</label>
+    <div class="d-flex align-items-center mb-4 p-2 rounded-3" style="background: #252525; border: 1px solid #444;">
+      <div id="profile-logo-preview-container" class="me-3" style="width: 60px; height: 60px; background: #161616; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+        <img id="profile-logo-img" style="max-width: 100%; max-height: 100%; display: none;">
+        <i id="profile-logo-icon" class="bi bi-image text-muted fs-3"></i>
+      </div>
+      <div class="flex-grow-1">
+        <p id="profile-logo-status" class="small text-warning mb-1 fw-bold">Nessun logo salvato</p>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-light rounded-pill px-3" onclick="document.getElementById('profile-logo-upload').click()">Carica</button>
+          <button id="profile-logo-remove-btn" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="display: none;" onclick="removeProfileLogo()">Rimuovi</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="profile-logo-upload" accept="image/png, image/jpeg" style="display:none;" onchange="saveProfileLogo(event)">
+    
+
     
     <button class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">
       AGGIORNA DATI
