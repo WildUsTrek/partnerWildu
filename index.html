@@ -164,7 +164,20 @@
   
 <script>
   const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
+  // COSTANTE GLOBALE LIMITE PROPOSTE (Così un domani la cambi solo qui!)
+let MAX_PROPOSTE_ATTIVE = 3; // Valore di base
+
+function aggiornaLimiteDalServer(data) {
+   // FALLBACK D'ACCIAIO: Se il dato esiste, è valido e non è una parola strana, lo usa.
+   // Altrimenti scatta il paracadute e forza il limite a 3!
+   if (data && data.config && data.config.limiteProposte && !isNaN(data.config.limiteProposte)) {
+       MAX_PROPOSTE_ATTIVE = parseInt(data.config.limiteProposte, 10);
+   } else {
+       MAX_PROPOSTE_ATTIVE = 3; // Il nostro salvagente di emergenza
+   }
+}
 </script>
+
 
 <div class="util-nav d-flex justify-content-between align-items-center">
   <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
@@ -185,6 +198,9 @@
   <div class="mb-5 mt-4">
     <h1 class="fw-bold text-white">Area Partner 👋</h1>
     <p class="text-muted">Inizia la configurazione del tuo prossimo evento.</p>
+    <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">
+       ⏳ Caricamento slot...
+    </span>
   </div>
 
   <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form')">
@@ -555,13 +571,17 @@ function renderEquipmentSteps() {
     // =========================================================
   // HARD GUARD: BLOCCO FISICO SE HA GIA' 3 PROPOSTE
   // =========================================================
-  const memoria = sessionStorage.getItem('wildu_cache_proposte');
+ const memoria = sessionStorage.getItem('wildu_cache_proposte');
   if (memoria) {
     const datiCache = JSON.parse(memoria);
+    
+    // 🔴 AGGIUNGI QUESTA RIGA:
+    aggiornaLimiteDalServer(datiCache);
+    
     const totaleAttive = datiCache.pending.length + datiCache.accepted.length;
-    if (totaleAttive >= 3) {
-       alert("⚠️ ERRORE: Hai già raggiunto il limite massimo di 3 proposte attive. Non puoi inviarne altre finché non vengono valutate.");
-       return; // BLOCCA TOTALMENTE L'ESECUZIONE!
+    if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
+       alert(`⚠️ ERRORE: Hai già raggiunto il limite massimo di ${MAX_PROPOSTE_ATTIVE} proposte attive. Non puoi inviarne altre finché non vengono valutate.`);
+       return; 
     }
   }
   // =========================================================
@@ -1033,11 +1053,11 @@ function gestisciLimiteProposte(data) {
   const totaleAttive = data.pending.length + data.accepted.length;
   
   if (btnNuova) { 
-    if (totaleAttive >= 3) {
+    if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
       btnNuova.style.opacity = "0.4";
       btnNuova.style.pointerEvents = "none";
       const desc = btnNuova.querySelector('.menu-desc');
-      if (desc) desc.innerHTML = "<b class='text-danger'>Limite di 3 proposte raggiunto.</b>";
+      if (desc) desc.innerHTML = `<b class='text-danger'>Limite di ${MAX_PROPOSTE_ATTIVE} proposte raggiunto.</b>`;
     } else {
       btnNuova.style.opacity = "1";
       btnNuova.style.pointerEvents = "auto";
@@ -1047,7 +1067,7 @@ function gestisciLimiteProposte(data) {
   }
 }
 
-// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP (BLINDATO)
+// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP (BLINDATO E AGGIORNATO)
 async function checkProposalLimitAtStartup(uid) {
   const btnNuova = document.getElementById('btn-nuova-proposta');
   const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
@@ -1062,8 +1082,13 @@ async function checkProposalLimitAtStartup(uid) {
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
+  // ==========================================
+  // CASO 1: LEGGE DALLA MEMORIA DEL TELEFONO
+  // ==========================================
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
-    gestisciLimiteProposte(JSON.parse(memoria));
+    const datiCache = JSON.parse(memoria); // Estraiamo i dati
+    aggiornaLimiteDalServer(datiCache);    // 1. Aggiorna la variabile globale
+    gestisciLimiteProposte(datiCache);     // 2. Aggiorna la grafica
     return;
   }
 
@@ -1075,11 +1100,16 @@ async function checkProposalLimitAtStartup(uid) {
       body: JSON.stringify({ action: "getUserData", uid: uid })
     });
     
+    // ==========================================
+    // CASO 2: LEGGE FRESCO DAL SERVER
+    // ==========================================
     if (response.ok) {
       const data = await response.json();
       sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
       sessionStorage.setItem('wildu_cache_time', adesso.toString());
-      gestisciLimiteProposte(data); // Questa funzione riattiva il bottone automaticamente se serve!
+      
+      aggiornaLimiteDalServer(data); // 1. Aggiorna la variabile globale
+      gestisciLimiteProposte(data);  // 2. Questa funzione riattiva il bottone automaticamente se serve!
     } else {
         // Se c'è un errore server, ripristiniamo
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
@@ -1103,14 +1133,19 @@ async function openMyProposals() {
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // Se la memoria esiste e non sono passati 30 minuti (1.800.000 millisecondi)
+  // ==========================================
+  // CASO 1: LEGGE DALLA MEMORIA DEL TELEFONO
+  // ==========================================
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
     console.log("Dati caricati istantaneamente dalla memoria del telefono!");
     const data = JSON.parse(memoria);
     
+    // 🔴 AGGIUNGIAMO IL LAVACERVELLI QUI
+    aggiornaLimiteDalServer(data);
+    
     // Aggiorniamo la grafica in una frazione di secondo
     showPage('proposals');
-    renderProposals(data);
+    renderProposals(data); // L'ho ripristinato, era sparito dal tuo snippet!
     gestisciLimiteProposte(data);
     
     return; // STOP! Esce dalla funzione e RISPARMIA la chiamata a Google
@@ -1132,6 +1167,12 @@ async function openMyProposals() {
     sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
     sessionStorage.setItem('wildu_cache_time', adesso.toString());
 
+    // ==========================================
+    // CASO 2: LEGGE FRESCO DAL SERVER
+    // ==========================================
+    // 🔴 AGGIUNGIAMO IL LAVACERVELLI QUI
+    aggiornaLimiteDalServer(data);
+
     // Aggiorniamo la grafica
     showPage('proposals'); 
     renderProposals(data);
@@ -1144,7 +1185,6 @@ async function openMyProposals() {
     document.getElementById('loader').style.display = 'none';
   }
 }
-
 function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
@@ -1152,19 +1192,27 @@ function renderProposals(data) {
   pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
   aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
 
+  // 🔴 CALCOLIAMO IL LIMITE UNA VOLTA SOLA
+  const totaleAttive = data.pending.length + data.accepted.length;
+  const limiteRaggiunto = totaleAttive >= MAX_PROPOSTE_ATTIVE;
+
   const generateCard = (item, colorClass, isPending) => {
     
     const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
     const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
 
-    // LO SCUDO ANTI-APOSTROFO (.replace)
     const itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27");
 
-    // BOTTONE INFO RIPARATO (Ora chiama una funzione sicura esterna)
     const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
 
-    const btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
+    // 🔴 IL BOTTONE DIVENTA INTELLIGENTE: Se limite raggiunto, appare grigio e non cliccabile
+    let btnRiproponi = "";
+    if (limiteRaggiunto) {
+       btnRiproponi = `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite Proposte Raggiunto</button>`;
+    } else {
+       btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
+    }
     
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
 
