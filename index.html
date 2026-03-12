@@ -1227,20 +1227,38 @@ function generaLocandina(itemEncoded) {
   document.getElementById('locandina-upload').click();
 }
 
-// 2. SELEZIONE FOTO E AVVIO MODALE CON MATEMATICA PROPORZIONALE
+// 2. SELEZIONE FOTO E AVVIO MODALE CON MATEMATICA PROPORZIONALE E LOADER
 function handleLocandinaSelect(event) {
   const file = event.target.files[0];
   if (!file) return;
 
+  // 🔴 NOVITÀ 1: ACCENDIAMO LO SCUDO NERO ANTI-CLICK!
+  const loader = document.getElementById('loader');
+  if (loader) {
+      loader.style.display = 'flex';
+      const loaderText = loader.querySelector('h5');
+      if(loaderText) loaderText.innerText = "Caricamento foto...";
+  }
+
   const pBox = document.getElementById('loc-preview-price');
   const prezzo = window.currentLocandinaItem.prezzo;
   if (!prezzo || prezzo == "0" || prezzo == 0) {
-    if(pBox) { pBox.innerText = "PARTECIPAZIONE GRATUITA"; pBox.style.borderColor = "#fff"; pBox.style.background = "rgba(255,255,255,0.2)"; }
+    if(pBox) { 
+        pBox.innerText = "PARTECIPAZIONE GRATUITA"; 
+        pBox.style.borderColor = "#fff"; 
+        pBox.style.background = "rgba(255,255,255,0.2)"; 
+        pBox.style.color = "#fff"; // Fix Colore testo Bianco
+    }
   } else {
-    if(pBox) { pBox.innerText = "€ " + prezzo; pBox.style.borderColor = "#FFD700"; pBox.style.background = "rgba(255,215,0,0.2)"; }
+    if(pBox) { 
+        pBox.innerText = "€ " + prezzo; 
+        pBox.style.borderColor = "#FFD700"; 
+        pBox.style.background = "rgba(255,215,0,0.2)"; 
+        pBox.style.color = "#FFD700"; // Fix Colore testo Giallo
+    }
   }
 
-  // Aggiorna dinamicamente il titolo nell'anteprima
+  // Aggiorna dinamicamente il titolo nell'anteprima (Intatto dal tuo originale)
   const pTitle = document.getElementById('loc-preview-title');
   if (pTitle) {
     pTitle.innerText = window.currentLocandinaItem.titolo.toUpperCase();
@@ -1277,6 +1295,13 @@ function handleLocandinaSelect(event) {
       
       img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(1)`;
       
+      // 🟢 NOVITÀ 2: SPEGNIAMO LO SCUDO NERO E APRIAMO L'ANTEPRIMA
+      if (loader) {
+          loader.style.display = 'none';
+          const loaderText = loader.querySelector('h5');
+          if(loaderText) loaderText.innerText = "Elaborazione in corso..."; // Ripristina il testo per i prossimi usi
+      }
+
       new bootstrap.Modal(document.getElementById('modalCropLocandina')).show();
       document.getElementById('locandina-upload').value = ""; 
     };
