@@ -1365,15 +1365,55 @@ function generaLocandinaFinale() {
       ctx.textAlign = "center";
       let cursorY = 140; 
       
-      // Icona Mondo per la Regione (come richiesto)
-      const badgeTxt = item.regione ? "🌍 " + item.regione.toUpperCase() : "⭐ OPEN DAY";
+      // --- BOLLO DINAMICO (REGIONE + LUOGO) ---
+      ctx.font = "bold 26px 'Inter', sans-serif";
+      let regStr = item.regione ? "🌍 " + item.regione.toUpperCase() : "";
+      let luogoRaw = item.luogo ? item.luogo.toUpperCase() : "";
+      
+      let badgeTxt = "";
+      const maxTextW = 850; // Larghezza massima del testo dentro il bollo
+      
+      if (regStr && luogoRaw) {
+          // Tronca il luogo se l'unione è troppo lunga
+          let testTxt = regStr + "  |  📍 " + luogoRaw;
+          if (ctx.measureText(testTxt).width > maxTextW) {
+              let tronco = luogoRaw;
+              while (ctx.measureText(regStr + "  |  📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
+                  tronco = tronco.slice(0, -1);
+              }
+              badgeTxt = regStr + "  |  📍 " + tronco.trim() + "...";
+          } else {
+              badgeTxt = testTxt;
+          }
+      } else if (regStr) {
+          badgeTxt = regStr;
+      } else if (luogoRaw) {
+          // Tronca solo il luogo se non c'è la regione
+          let tronco = luogoRaw;
+          if (ctx.measureText("📍 " + tronco).width > maxTextW) {
+              while (ctx.measureText("📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
+                  tronco = tronco.slice(0, -1);
+              }
+              badgeTxt = "📍 " + tronco.trim() + "...";
+          } else {
+              badgeTxt = "📍 " + tronco;
+          }
+      } else {
+          badgeTxt = "⭐ OPEN DAY";
+      }
+
+      // Calcola larghezza finale del bollo (minimo 450px, massimo adattivo)
+      let textW = ctx.measureText(badgeTxt).width;
+      let badgeW = Math.max(450, textW + 80); // 80px di padding laterale
+      
       ctx.fillStyle = "#0d6efd"; 
-      ctx.beginPath(); ctx.roundRect((W - 450) / 2, cursorY, 450, 60, 30); ctx.fill();
-      ctx.fillStyle = "white"; ctx.font = "bold 26px 'Inter', sans-serif";
+      ctx.beginPath(); ctx.roundRect((W - badgeW) / 2, cursorY, badgeW, 60, 30); ctx.fill();
+      ctx.fillStyle = "white"; 
       ctx.fillText(badgeTxt, W/2, cursorY + 40);
       
-      cursorY += 110;
+      cursorY += 100;
 
+      // --- DATA E ORARI ---
       const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
       const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
       let dateTxt = "📅 " + dIn + orari;
@@ -1381,31 +1421,36 @@ function generaLocandinaFinale() {
       ctx.font = "bold 35px 'Inter', sans-serif"; 
       ctx.fillStyle = "white";
       ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 15; 
-      
       ctx.fillText(dateTxt, W/2, cursorY);
-      if(item.luogo) {
-          cursorY += 45;
-          ctx.font = "bold 28px 'Inter', sans-serif";
-          // Icona Pin per il Luogo (come richiesto)
-          ctx.fillText("📍 " + item.luogo.toUpperCase(), W/2, cursorY);
-      }
       ctx.shadowColor = "transparent";
       
-      cursorY += 80;
+      cursorY += 70; // Spaziatura ridotta grazie allo spostamento del luogo
 
+      // --- TITOLO SMART A DUE STADI ---
       ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; 
       const titleText = (item.titolo || "Evento").toUpperCase();
-      ctx.font = titleText.length > 25 ? "900 65px 'Playfair Display', serif" : "900 85px 'Playfair Display', serif";
       
+      // Imposta font gigante di default
+      ctx.font = "900 85px 'Playfair Display', serif";
+      let interlinea = 90;
+
+      // Se supera una riga, rimpicciolisce il font
+      if (ctx.measureText(titleText).width > (W - 100)) {
+          ctx.font = "900 65px 'Playfair Display', serif";
+          interlinea = 70; // Riduciamo l'interlinea perché il font è più piccolo
+      }
+      
+      // Vai a capo se, nonostante la riduzione, è ancora troppo lungo
       const words = titleText.split(' '); let line = '';
       for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         if (ctx.measureText(testLine).width > (W - 100) && n > 0) {
-            ctx.fillText(line, W/2, cursorY);
-            line = words[n] + ' '; cursorY += 80;
+            ctx.fillText(line.trim(), W/2, cursorY);
+            line = words[n] + ' '; 
+            cursorY += interlinea;
         } else { line = testLine; }
       }
-      ctx.fillText(line, W/2, cursorY);
+      ctx.fillText(line.trim(), W/2, cursorY);
       ctx.shadowColor = "transparent";
 
       // D. LOGICA ANCORAGGIO DAL BASSO
