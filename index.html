@@ -1034,23 +1034,26 @@ function gestisciLimiteProposte(data) {
   }
 }
 
-// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP CON FEEDBACK VISIVO
+// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP (BLINDATO)
 async function checkProposalLimitAtStartup(uid) {
-  // Prende il testo sotto il bottone per poterci scrivere "Verifica in corso..."
   const btnNuova = document.getElementById('btn-nuova-proposta');
   const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
+
+  // 🔴 BLOCCO FISICO IMMEDIATO: Spengiamo il bottone finché non sappiamo la verità
+  if (btnNuova) {
+      btnNuova.style.pointerEvents = "none";
+      btnNuova.style.opacity = "0.7";
+  }
 
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // 1. La tua logica originale: se ha la memoria, applica il blocco all'istante
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
     gestisciLimiteProposte(JSON.parse(memoria));
     return;
   }
 
-  // 2. LA NOVITÀ: Mettiamo la rotellina di caricamento mentre interroga Google
   if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Verifica permessi in corso...</span>";
 
   try {
@@ -1061,20 +1064,19 @@ async function checkProposalLimitAtStartup(uid) {
     
     if (response.ok) {
       const data = await response.json();
-      
-      // 3. La tua logica originale: Salva e applica
       sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
       sessionStorage.setItem('wildu_cache_time', adesso.toString());
-      gestisciLimiteProposte(data);
-      
+      gestisciLimiteProposte(data); // Questa funzione riattiva il bottone automaticamente se serve!
     } else {
-        // Se Google dà errore, ripristina il testo normale del bottone
+        // Se c'è un errore server, ripristiniamo
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+        if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
     }
   } catch (e) {
     console.log("Errore nel controllo limiti in background", e);
-    // Se non c'è internet, ripristina il testo normale
+    // Se non c'è internet, ripristiniamo
     if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+    if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
   }
 }
   
@@ -1257,6 +1259,13 @@ async function annullaProposta(itemEncoded) {
   const user = auth.currentUser;
   if (!user) return;
 
+  // 🔴 NUOVO BLOCCO A: CONTROLLO MEMORIA VECCHIA
+  // Messo qui blocca tutto PRIMA ancora di chiedere conferma!
+  if (!item.tempId) {
+      alert("⚠️ ERRORE DI SINCRONIZZAZIONE\nStai leggendo dati vecchi dalla memoria.\nTieni premuta per 3 secondi la scritta in basso 'Sistema Partner Hub v2.5' per forzare lo scaricamento dei nuovi dati!");
+      return;
+  }
+
   // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio (INTATTO)
   if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}" del ${item.dataInizio}?\n\nL'operazione eliminerà il viaggio in modo irreversibile.`)) {
     return;
@@ -1267,7 +1276,7 @@ async function annullaProposta(itemEncoded) {
 
   try {
     // ==========================================
-    // L'UNICA COSA CAMBIATA: IL PAYLOAD CECCHINO
+    // IL PAYLOAD CECCHINO
     // ==========================================
     const payload = {
       tempId: item.tempId
@@ -1282,7 +1291,7 @@ async function annullaProposta(itemEncoded) {
     const res = await response.json();
     
     if(res.success) {
-      // Il Postino ha fatto il suo dovere. Distruggiamo la cache e ricarichiamo. (INTATTO)
+      // Il Postino ha fatto il suo dovere. Distruggiamo la cache e ricarichiamo.
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
       
@@ -1290,12 +1299,10 @@ async function annullaProposta(itemEncoded) {
       alert("Proposta eliminata con successo.");
       location.reload();
     } else {
-      // (INTATTO)
       document.getElementById('loader').style.display = 'none';
       alert("Impossibile annullare: " + res.error);
     }
   } catch(e) {
-    // (INTATTO)
     document.getElementById('loader').style.display = 'none';
     alert("Errore di connessione. Riprova tra poco.");
   }
