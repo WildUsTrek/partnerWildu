@@ -1047,11 +1047,35 @@ function cancelProposal() {
   }
 }
 
-// 1. HELPER: Gestione grafica del limite di 3 proposte
+
+// 1. HELPER: Gestione grafica del limite proposte e del Badge (Raggi X)
 function gestisciLimiteProposte(data) {
+  console.log("DATI RICEVUTI DA GOOGLE/CACHE:", data); // <--- I RAGGI X
+  console.log("LIMITE ATTUALE IMPOSTATO A:", MAX_PROPOSTE_ATTIVE);
+
   const btnNuova = document.getElementById('btn-nuova-proposta');
-  const totaleAttive = data.pending.length + data.accepted.length;
+  const badgeContatore = document.getElementById('contatore-proposte'); 
   
+  const pLen = (data && data.pending) ? data.pending.length : 0;
+  const aLen = (data && data.accepted) ? data.accepted.length : 0;
+  const totaleAttive = pLen + aLen;
+  
+  // --- AGGIORNA IL BADGE IN TEMPO REALE ---
+  if (badgeContatore) {
+      badgeContatore.style.display = 'inline-block'; 
+      
+      if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
+          badgeContatore.innerHTML = `🛑 Slot Pieni (${totaleAttive}/${MAX_PROPOSTE_ATTIVE})`;
+          badgeContatore.className = "badge bg-danger text-white px-3 py-2 rounded-pill shadow-sm mt-2";
+      } else {
+          badgeContatore.innerHTML = `🎫 Slot Proposte: ${totaleAttive} / ${MAX_PROPOSTE_ATTIVE}`;
+          badgeContatore.className = "badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm mt-2";
+      }
+  } else {
+      console.log("ERRORE: Non trovo il badge nell'HTML!");
+  }
+  // ------------------------------------------------
+
   if (btnNuova) { 
     if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
       btnNuova.style.opacity = "0.4";
@@ -1062,7 +1086,7 @@ function gestisciLimiteProposte(data) {
       btnNuova.style.opacity = "1";
       btnNuova.style.pointerEvents = "auto";
       const desc = btnNuova.querySelector('.menu-desc');
-      if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+      if (desc) desc.innerText = "Wizard guidato in pochi passi per configurare l'evento.";
     }
   }
 }
