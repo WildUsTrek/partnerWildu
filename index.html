@@ -601,7 +601,11 @@ function renderEquipmentSteps() {
       // COLONNA M: Foto URL (Il link ricevuto da Cloudinary)
       fotoUrl: fotoUrl, 
 
-      utente: currentUserKey // <--- LA CHIAVE VIENE SPEDITA QUI
+      utente: currentUserKey, // <--- LA CHIAVE VIENE SPEDITA QUI
+
+      // LA RIGA CHE CI SALVA LA VITA: L'ID UNIVOCO GENERATO AL VOLO
+      tempId: "PEND_" + new Date().getTime()
+ 
     };
 
     // 3. GESTIONE ATTREZZATURA (JSON)
@@ -1253,21 +1257,22 @@ async function annullaProposta(itemEncoded) {
   const user = auth.currentUser;
   if (!user) return;
 
-  // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio
+  // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio (INTATTO)
   if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}" del ${item.dataInizio}?\n\nL'operazione eliminerà il viaggio in modo irreversibile.`)) {
     return;
   }
 
-  // Attiva subito lo scudo nero anti-doppioclick
+  // Attiva subito lo scudo nero anti-doppioclick (INTATTO)
   document.getElementById('loader').style.display = 'flex';
 
   try {
+    // ==========================================
+    // L'UNICA COSA CAMBIATA: IL PAYLOAD CECCHINO
+    // ==========================================
     const payload = {
-      titolo: item.titolo,
-      dataInizio: item.dataInizio,
-      oraIn: item.oraIn,
-      utente: user.uid
+      tempId: item.tempId
     };
+    // ==========================================
 
     const response = await fetch(MOTORE_API_URL, {
       method: 'POST',
@@ -1277,7 +1282,7 @@ async function annullaProposta(itemEncoded) {
     const res = await response.json();
     
     if(res.success) {
-      // Il Postino ha fatto il suo dovere. Distruggiamo la cache e ricarichiamo.
+      // Il Postino ha fatto il suo dovere. Distruggiamo la cache e ricarichiamo. (INTATTO)
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
       
@@ -1285,15 +1290,16 @@ async function annullaProposta(itemEncoded) {
       alert("Proposta eliminata con successo.");
       location.reload();
     } else {
+      // (INTATTO)
       document.getElementById('loader').style.display = 'none';
       alert("Impossibile annullare: " + res.error);
     }
   } catch(e) {
+    // (INTATTO)
     document.getElementById('loader').style.display = 'none';
     alert("Errore di connessione. Riprova tra poco.");
   }
-}  
-
+}
 
 // =========================================================================
 // MOTORE LOCANDINA PRO - BLOCCO COMPLETO E UNICO (NON SEPARARE)
