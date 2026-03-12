@@ -1221,10 +1221,63 @@ async function annullaProposta(itemEncoded) {
 window.currentLocandinaItem = null;
 window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
 
-// 1. CLICK SUL BOTTONE DELLA CARD
+// 1. CLICK SUL BOTTONE DELLA CARD (CON CONTROLLO LOGO)
 function generaLocandina(itemEncoded) {
   window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
+  
+  const logoSalvato = localStorage.getItem('wildu_partner_logo');
+  const logoSaltato = sessionStorage.getItem('wildu_skip_logo'); // Cache temporanea se rifiuta
+
+  // Se non ha il logo e non ha ancora rifiutato in questa sessione
+  if (!logoSalvato && !logoSaltato) {
+      if (confirm("💡 Vuoi inserire il tuo Logo Partner nella locandina?\n\nIl logo verrà salvato nella memoria del telefono per i prossimi utilizzi.\n- Fai 'OK' per caricarlo ora.\n- Fai 'Annulla' per procedere senza logo.")) {
+          // Apre il caricatore del logo e FERMA la funzione
+          document.getElementById('logo-upload-input').click();
+          return; 
+      } else {
+          // Ha rifiutato. Non glielo chiediamo più finché non riavvia l'app.
+          sessionStorage.setItem('wildu_skip_logo', 'true'); 
+      }
+  }
+
+  // Se ha già il logo, o ha appena rifiutato, prosegue aprendo la foto di sfondo
   document.getElementById('locandina-upload').click();
+}
+
+// NUOVO MOTORE: SALVA IL LOGO NEL TELEFONO E RIPRENDE IL LAVORO
+function handleLogoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+          // Rimpiccioliamo il logo per non intasare la memoria del telefono (Max 300px)
+          const canvas = document.createElement('canvas');
+          const MAX = 300;
+          let w = img.width, h = img.height;
+          if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
+          else if (h > w && h > MAX) { w *= MAX / h; h = MAX; }
+          else if (w === h && w > MAX) { w = MAX; h = MAX; }
+
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          
+          // Salva come PNG per non perdere lo sfondo trasparente
+          const base64Logo = canvas.toDataURL('image/png');
+          localStorage.setItem('wildu_partner_logo', base64Logo);
+          
+          alert("✅ Logo salvato con successo! Ora scegli la foto di sfondo della locandina.");
+          
+          // RIPRENDE DA SOLO IL FLUSSO DELLA LOCANDINA
+          document.getElementById('locandina-upload').click();
+      };
+      img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = ""; // Resetta l'input per poter ricaricare lo stesso file se serve
 }
 
 // 2. SELEZIONE FOTO E AVVIO MODALE CON MATEMATICA PROPORZIONALE E LOADER
@@ -1354,8 +1407,8 @@ function endDragLoc() {
   document.removeEventListener('touchend', endDragLoc);
 }
 
-// 5. STAMPA E DOWNLOAD FINALE (IL MOTORE CANVAS PRO)
-function generaLocandinaFinale() {
+// 5. STAMPA E DOWNLOAD FINALE (ORA E' ASYNC PER CARICARE IL LOGO)
+async function generaLocandinaFinale() {
   try {
       const item = window.currentLocandinaItem;
       if(!item) return alert("Errore: Dati dell'evento non trovati in memoria.");
@@ -1370,20 +1423,16 @@ function generaLocandinaFinale() {
       const imgHTML = document.getElementById('loc-crop-img');
       const scale = window.locCropState.scale;
       
-      // LA FORMULA MATEMATICA SALVAVITA: 
-      // Calcola l'offset causato dallo zoom dal centro per allinearlo al Canvas (che stampa dal top-left)
       const trueX = window.locCropState.currentX + (window.locCropState.baseW / 2) * (1 - scale);
       const trueY = window.locCropState.currentY + (window.locCropState.baseH / 2) * (1 - scale);
 
-      // A. DISEGNA SFONDO RITAGLIATO
       ctx.save(); 
-      const M = 4; // Moltiplicatore 4x
+      const M = 4;
       ctx.translate(trueX * M, trueY * M);
       ctx.scale(scale, scale);
       ctx.drawImage(imgHTML, 0, 0, window.locCropState.baseW * M, window.locCropState.baseH * M);
       ctx.restore(); 
 
-      // B. SFUMATURE
       const gradTop = ctx.createLinearGradient(0, 0, 0, 600);
       gradTop.addColorStop(0, "rgba(0,0,0,0.85)"); gradTop.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = gradTop; ctx.fillRect(0, 0, W, 600);
@@ -1392,9 +1441,40 @@ function generaLocandinaFinale() {
       gradBot.addColorStop(0, "rgba(0,0,0,0)"); gradBot.addColorStop(0.4, "rgba(0,0,0,0.8)"); gradBot.addColorStop(1, "rgba(0,0,0,0.95)");
       ctx.fillStyle = gradBot; ctx.fillRect(0, H - 1000, W, 1000);
 
-      // C. TESTI TOP
       ctx.textAlign = "center";
-      let cursorY = 180; 
+      let cursorY = 180; // PARTENZA SAFE ZONE SOCIAL BASE
+      
+      // ==========================================
+      // CONTROLLO E STAMPA LOGO PARTNER (WATERMARK)
+      // ==========================================
+      const logoBase64 = localStorage.getItem('wildu_partner_logo');
+      if (logoBase64) {
+          const logoImg = await new Promise((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = () => resolve(null);
+              img.src = logoBase64;
+          });
+
+          if (logoImg) {
+              const maxLogoSize = 100; // Molto più piccolo (Watermark)
+              let lw = logoImg.width;
+              let lh = logoImg.height;
+              
+              if (lh > maxLogoSize) { lw *= maxLogoSize / lh; lh = maxLogoSize; }
+              if (lw > maxLogoSize) { lh *= maxLogoSize / lw; lw = maxLogoSize; }
+              
+              ctx.save();
+              ctx.globalAlpha = 0.5; // SEMI-TRASPARENZA AL 50%
+              // Posizionato in alto a destra, parzialmente fuori dalle safe zones
+              ctx.drawImage(logoImg, W - lw - 40, 40, lw, lh);
+              ctx.restore();
+              
+              // NON spinge giù il testo. Il cursore rimane fermo.
+          }
+      }
+    
+      // ==========================================
       
       // --- BOLLO DINAMICO (REGIONE + LUOGO) ---
       ctx.font = "bold 26px 'Inter', sans-serif";
@@ -1441,60 +1521,54 @@ function generaLocandinaFinale() {
       
       cursorY += 100;
 
-      // --- DATA E ORARI (CON RECUPERO DATA FINE E AUTO-RESIZE) ---
+      // --- DATA E ORARI (CON AUTO-RESIZE E COLORE AZZURRO) ---
       const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
       const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
       const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
       
       let dateTxt = "📅 " + dIn + dFine + orari;
-      
       let dateFontSize = 35;
       ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
       
-// Auto-restringimento: se la riga intera sfora, rimpicciolisce il font
       while(ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 18) {
           dateFontSize -= 2;
           ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
       }
 
-      ctx.fillStyle = "#00d4ff"; // <--- AZZURRO ELETTRICO SUPER BRILLANTE
-      ctx.shadowColor = "rgba(0,0,0,1)"; // <--- OMBRA NERO ASSOLUTO
-      ctx.shadowBlur = 25; // <--- ALONE RADDOPPIATO PER MASSIMO CONTRASTO
+      ctx.fillStyle = "#00d4ff"; // Ciano Elettrico Potenziato
+      ctx.shadowColor = "rgba(0,0,0,1)"; // Ombra Nera Assoluta
+      ctx.shadowBlur = 25; // Alone espanso
       ctx.fillText(dateTxt, W/2, cursorY);
       ctx.shadowColor = "transparent";
       
       cursorY += 70; 
 
-// --- TITOLO SMART A TRE STADI (Con Force-Fit) ---
-ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; 
-ctx.fillStyle = "white"; // <--- IL PENNELLO TORNA BIANCO!
-const titleText = (item.titolo || "Evento").toUpperCase();
+      // --- TITOLO SMART A TRE STADI (Con Force-Fit) ---
+      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; 
+      ctx.fillStyle = "white"; 
+      const titleText = (item.titolo || "Evento").toUpperCase();
       
       ctx.font = "900 85px 'Playfair Display', serif";
       let interlinea = 90;
 
-      // 1. Se supera una riga standard, rimpicciolisce
       if (ctx.measureText(titleText).width > (W - 160)) {
           ctx.font = "900 65px 'Playfair Display', serif";
           interlinea = 70; 
       }
       
-      // 2. Wrap intelligente con spazi
       const words = titleText.split(' '); let line = '';
       for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         if (ctx.measureText(testLine).width > (W - 160) && n > 0) {
-            // 3. FORCE-FIT: Il 4° parametro (W - 80) comprime fisicamente parole impossibili
             ctx.fillText(line.trim(), W/2, cursorY, W - 160);
             line = words[n] + ' '; 
             cursorY += interlinea;
         } else { line = testLine; }
       }
-      // Stampa l'ultima riga rimasta con la stessa protezione
       ctx.fillText(line.trim(), W/2, cursorY, W - 160);
       ctx.shadowColor = "transparent";
 
-      // D. LOGICA ANCORAGGIO DAL BASSO
+      // --- LOGICA ANCORAGGIO DAL BASSO ---
       const boxW = 850; const boxH = 140; 
       const boxY = H - boxH - 280; 
 
@@ -1564,13 +1638,11 @@ const titleText = (item.titolo || "Evento").toUpperCase();
         ctx.shadowColor = "transparent";
       }
 
-      // DOWNLOAD MATERIALE FINALE
       const link = document.createElement('a');
       link.download = 'Locandina_' + (item.titolo || "Evento").replace(/[^a-zA-Z0-9]/g,'_') + '.jpg';
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
 
-      // CHIUSURA MODALE
       const cropModalEl = document.getElementById('modalCropLocandina');
       if(cropModalEl) {
          const modalInstance = bootstrap.Modal.getInstance(cropModalEl);
@@ -1669,6 +1741,7 @@ function forceSync() {
 </div>
 
 <input type="file" id="locandina-upload" accept="image/*" style="display: none;" onchange="handleLocandinaSelect(event)">
+  <input type="file" id="logo-upload-input" accept="image/png, image/jpeg" style="display:none;" onchange="handleLogoUpload(event)">
 
 <div class="modal fade" id="modalCropLocandina" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
