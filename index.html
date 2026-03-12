@@ -1259,7 +1259,7 @@ function endDragLoc() {
   document.removeEventListener('touchend', endDragLoc);
 }
 
-// 4. DISEGNO E DOWNLOAD FINALE (IL MOTORE CANVAS)
+// 4. DISEGNO E DOWNLOAD FINALE (IL MOTORE CANVAS PRO)
 function generaLocandinaFinale() {
   const item = window.currentLocandinaItem;
   if(!item) return;
@@ -1271,14 +1271,25 @@ function generaLocandinaFinale() {
 
   const imgHTML = document.getElementById('loc-crop-img');
   
-  // A. Disegna Sfondo Ritagliato (Moltiplica le coordinate HTML x 4, visto che 270x4 = 1080)
+  // A. DISEGNA SFONDO RITAGLIATO E SCALATO (Dal motore originale)
   ctx.save(); 
-  const M = 4; // Moltiplicatore da 270x480 a 1080x1920
-  ctx.translate(window.locCropState.currentX * M, window.locCropState.currentY * M);
-  ctx.drawImage(imgHTML, 0, 0, imgHTML.width * M || imgHTML.naturalWidth * (480/imgHTML.naturalHeight) * M, imgHTML.height * M || 480 * M);
+  if (window.locCropState) {
+      const stageW = 270; const stageH = 480;
+      const ratioStage = stageW / stageH;
+      const ratioImg = imgHTML.naturalWidth / imgHTML.naturalHeight;
+      let baseW, baseH;
+      if(ratioImg > ratioStage) { baseH = stageH; baseW = stageH * ratioImg; } 
+      else { baseW = stageW; baseH = stageW / ratioImg; }
+      const M = 4; const finalW = baseW * M; const finalH = baseH * M; 
+      ctx.translate(window.locCropState.currentX * M, window.locCropState.currentY * M);
+      // Se c'è lo scale integrato usalo, altrimenti default 1
+      const s = window.locCropState.scale || 1; 
+      ctx.scale(s, s);
+      ctx.drawImage(imgHTML, 0, 0, finalW, finalH);
+  }
   ctx.restore(); 
 
-  // B. Sfumature Cinematografiche
+  // B. SFUMATURE CINEMATOGRAFICHE
   const gradTop = ctx.createLinearGradient(0, 0, 0, 600);
   gradTop.addColorStop(0, "rgba(0,0,0,0.85)"); gradTop.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = gradTop; ctx.fillRect(0, 0, W, 600);
@@ -1287,29 +1298,44 @@ function generaLocandinaFinale() {
   gradBot.addColorStop(0, "rgba(0,0,0,0)"); gradBot.addColorStop(0.4, "rgba(0,0,0,0.8)"); gradBot.addColorStop(1, "rgba(0,0,0,0.95)");
   ctx.fillStyle = gradBot; ctx.fillRect(0, H - 1000, W, 1000);
 
-  // C. Testi Top (Badge + Data + Titolo)
+  // C. TESTI TOP (Badge + Data + Titolo)
   ctx.textAlign = "center";
   let cursorY = 140; 
   
-  // Bollo "PROPOSTA VIAGGIO" o similare
+  // Bollo Dinamico
   const badgeTxt = item.regione ? "📍 " + item.regione.toUpperCase() : "⭐ OPEN DAY";
   ctx.fillStyle = "#0d6efd"; 
-  ctx.beginPath(); ctx.roundRect((W - 400) / 2, cursorY, 400, 60, 30); ctx.fill();
-  ctx.fillStyle = "white"; ctx.font = "bold 24px sans-serif";
+  ctx.beginPath(); ctx.roundRect((W - 450) / 2, cursorY, 450, 60, 30); ctx.fill(); // Leggermente più largo
+  ctx.fillStyle = "white"; ctx.font = "bold 26px 'Inter', sans-serif";
   ctx.fillText(badgeTxt, W/2, cursorY + 40);
   
-  cursorY += 100;
+  cursorY += 110;
 
-  // Data
+  // Data e Orari (Migliorata con Ombra)
   const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
-  ctx.font = "bold 35px sans-serif"; ctx.fillStyle = "white";
-  ctx.fillText("📅 " + dIn, W/2, cursorY);
+  const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
+  let dateTxt = "📅 " + dIn + orari;
+  
+  // Se c'è il luogo, stampiamolo sotto la data
+  ctx.font = "bold 35px 'Inter', sans-serif"; 
+  ctx.fillStyle = "white";
+  ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 15; // OMBRA NERA
+  
+  ctx.fillText(dateTxt, W/2, cursorY);
+  if(item.luogo) {
+      cursorY += 45;
+      ctx.font = "bold 28px 'Inter', sans-serif";
+      ctx.fillText("📍 " + item.luogo.toUpperCase(), W/2, cursorY);
+  }
+  ctx.shadowColor = "transparent";
   
   cursorY += 80;
 
-  // Titolo (Adattivo)
+  // Titolo (Adattivo con Ombra Pompata)
+  ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; // OMBRA NERA FORTE
   const titleText = item.titolo.toUpperCase();
-  ctx.font = titleText.length > 25 ? "900 65px serif" : "900 85px serif";
+  ctx.font = titleText.length > 25 ? "900 65px 'Playfair Display', serif" : "900 85px 'Playfair Display', serif";
+  
   // Funzione wrap semplice per il titolo
   const words = titleText.split(' '); let line = '';
   for(let n = 0; n < words.length; n++) {
@@ -1320,9 +1346,11 @@ function generaLocandinaFinale() {
     } else { line = testLine; }
   }
   ctx.fillText(line, W/2, cursorY);
+  ctx.shadowColor = "transparent";
 
-  // D. Bottom (Prezzo e Dati)
-  const boxW = 800; const boxH = 140; 
+
+  // --- D. LOGICA ANCORAGGIO DAL BASSO (SAFE ZONE VERA) ---
+  const boxW = 850; const boxH = 140; // Box più largo (850 invece di 800)
   const boxY = H - boxH - 280; 
 
   // Box SMART PRICING
@@ -1337,33 +1365,80 @@ function generaLocandinaFinale() {
   ctx.beginPath(); ctx.roundRect((W - boxW)/2, boxY, boxW, boxH, 40); ctx.fill();
   ctx.strokeStyle = isFree ? "#000" : "rgba(255,215,0,0.8)"; ctx.lineWidth = 4; ctx.stroke();
   
-  // Testo Prezzo
+  // Testo Prezzo (FONT PIU' PICCOLO SE E' GRATIS PER NON USCIRE DAI BORDI)
   ctx.fillStyle = isFree ? "#000" : "#FFD700";
-  ctx.font = "900 60px sans-serif";
-  ctx.fillText(isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo, W/2, boxY + 95);
+  ctx.font = isFree ? "900 48px 'Inter', sans-serif" : "900 65px 'Inter', sans-serif";
+  ctx.fillText(isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo, W/2, boxY + 92);
 
-  // Numero di Telefono (preso dal campo profilo nascosto!)
+  
+  // RISALIAMO DAL BOX PREZZI PER GLI ELEMENTI INFERIORI
+  let currentDrawY = boxY - 40;
+
+  // Numero di Telefono (Preso in locale o dal profilo nascosto)
   const telNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "Vedi Link";
-  ctx.fillStyle = "#25D366"; ctx.font = "bold 32px sans-serif";
-  ctx.fillText("📲 INFO E PRENOTAZIONI: " + telNum, W/2, boxY - 50);
+  ctx.font = "bold 32px 'Inter', sans-serif";
+  ctx.fillStyle = "#25D366"; 
+  ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 10; // OMBRA NERA SUL VERDE
+  ctx.fillText("📲 INFO E PRENOTAZIONI: " + telNum, W/2, currentDrawY);
+  ctx.shadowColor = "transparent";
 
-  // Dati Tecnici
+  currentDrawY -= 60; // Spazio tra numero e descrizione
+
+  // DESCRIZIONE EMOZIONALE (WRAP E OFFSET DINAMICO DAL BASSO)
+  const desc = item.desc || "";
+  if (desc) {
+      ctx.font = "500 26px 'Inter', sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      const cleanDesc = desc.replace(/\n/g, ' ').trim();
+      const shortDesc = cleanDesc.length > 200 ? cleanDesc.substring(0, 197) + "..." : cleanDesc;
+      
+      const descWords = shortDesc.split(' ');
+      let descLine = ''; let linesArr = [];
+      for(let n = 0; n < descWords.length; n++) {
+          const testDescLine = descLine + descWords[n] + ' ';
+          if (ctx.measureText(testDescLine).width > (W - 200) && n > 0) {
+              linesArr.push(descLine); descLine = descWords[n] + ' ';
+          } else { descLine = testDescLine; }
+      }
+      linesArr.push(descLine);
+      
+      const lineHeight = 38;
+      // Spostiamo il cursore in alto calcolando quante righe abbiamo generato
+      currentDrawY -= (linesArr.length - 1) * lineHeight; 
+      let tempY = currentDrawY;
+      
+      ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 10; // Ombra sulla descrizione
+      for(let l=0; l<linesArr.length; l++) {
+          ctx.fillText(linesArr[l], W/2, tempY); 
+          tempY += lineHeight;
+      }
+      ctx.shadowColor = "transparent";
+      currentDrawY -= 60; // Saliamo ancora per lasciare spazio ai Km/Dislivello
+  }
+
+  // DATI TECNICI (KM / DISLIVELLO)
   let techStr = [];
   if(item.km) techStr.push("🥾 " + item.km + " KM");
   if(item.dislivello) techStr.push("⛰️ " + item.dislivello + " M D+");
   if(techStr.length > 0) {
-    ctx.fillStyle = "#FFD700"; ctx.font = "bold 40px sans-serif";
-    ctx.fillText(techStr.join("    |    "), W/2, boxY - 140);
+    ctx.fillStyle = "#FFD700"; ctx.font = "bold 42px 'Inter', sans-serif";
+    ctx.shadowColor = "black"; ctx.shadowBlur = 15; // Ombra pesante sul giallo
+    ctx.fillText(techStr.join("    |    "), W/2, currentDrawY);
+    ctx.shadowColor = "transparent";
   }
 
-  // DOWNLOAD FISICO IMMAGINE
+  // E. DOWNLOAD FISICO IMMAGINE
   const link = document.createElement('a');
   link.download = 'Locandina_' + item.titolo.replace(/[^a-zA-Z0-9]/g,'') + '.jpg';
   link.href = canvas.toDataURL('image/jpeg', 0.95);
   link.click();
 
   // Chiudiamo la modale
-  bootstrap.Modal.getInstance(document.getElementById('modalCropLocandina')).hide();
+  const cropModalEl = document.getElementById('modalCropLocandina');
+  if(cropModalEl) {
+     const modalInstance = bootstrap.Modal.getInstance(cropModalEl);
+     if(modalInstance) modalInstance.hide();
+  }
 }
   
   
