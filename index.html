@@ -1420,14 +1420,14 @@ function generaLocandinaFinale() {
       let dateFontSize = 35;
       ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
       
-      // Auto-restringimento: se la riga intera sfora, rimpicciolisce il font
+// Auto-restringimento: se la riga intera sfora, rimpicciolisce il font
       while(ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 18) {
           dateFontSize -= 2;
           ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
       }
 
-      ctx.fillStyle = "white";
-      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 15; 
+      ctx.fillStyle = "#0d6efd"; // <--- DIVENTATO AZZURRO COME IL BOLLO
+      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 15; // <--- OMBRA NERA MANTENUTA
       ctx.fillText(dateTxt, W/2, cursorY);
       ctx.shadowColor = "transparent";
       
@@ -1652,10 +1652,17 @@ function forceSync() {
           <img id="loc-crop-img" style="position: absolute; top: 0; left: 0; transform-origin: center center;" onmousedown="startDragLoc(event)" ontouchstart="startDragLoc(event)">
           
           <div style="position: absolute; top: 0; left: 0; width: 100%; height: 150px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); pointer-events: none;"></div>
-          <div style="position: absolute; top: 75px; left: 10%; width: 80%; height: 40px; border: 1px dashed rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; pointer-events: none;">TITOLO EVENTO</div>
-          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 350px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); pointer-events: none;"></div>
-          <div style="position: absolute; bottom: 80px; left: 5%; width: 90%; height: 35px; border: 1px dashed #FFD700; background: rgba(255,215,0,0.2); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; pointer-events: none;" id="loc-preview-price">BOX PREZZO</div>
-          <div style="position: absolute; bottom: 45px; left: 5%; width: 90%; height: 25px; border: 1px dashed rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; font-size: 8px; font-weight:bold; pointer-events: none;">DESCRIZIONE EMOZIONALE (2/3 RIGHE)</div>
+          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 250px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); pointer-events: none;"></div>
+
+          <div style="position: absolute; top: 45px; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none;">
+            <div style="width: 112px; height: 15px; background: #0d6efd; border-radius: 8px;"></div> <div style="width: 150px; height: 8px; background: #0d6efd;"></div> <div style="width: 212px; height: 25px; border: 1px dashed rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; color: rgba(255,255,255,0.7);">TITOLO EVENTO</div>
+          </div>
+
+          <div style="position: absolute; bottom: 70px; left: 0; width: 100%; display: flex; flex-direction: column-reverse; align-items: center; gap: 8px; pointer-events: none;">
+            <div style="width: 212px; height: 35px; border: 1px dashed #FFD700; background: rgba(255,215,0,0.2); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; color: #FFD700;" id="loc-preview-price">BOX PREZZO</div>
+            <div style="width: 180px; height: 6px; background: #25D366;"></div> <div style="width: 212px; height: 40px; border: 1px dashed rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; font-size: 8px; font-weight:bold; color: rgba(255,255,255,0.7); text-align:center;">DESCRIZIONE EMOZIONALE<br>(Ingombro Variabile)</div>
+            <div style="width: 140px; height: 8px; background: #FFD700;"></div> </div>
+          
         </div>
 
         <div class="w-100 mt-4 px-3">
