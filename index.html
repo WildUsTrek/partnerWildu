@@ -1004,31 +1004,20 @@ function renderProposals(data) {
 
   const generateCard = (item, colorClass, isPending) => {
     
-    // TUA FORMATTAZIONE DATE (Intatta)
     const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
     const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
 
-    // TUA ELABORAZIONE ATTREZZATURA (Intatta)
-    let eqFormatted = "";
-    try {
-      const eqArray = JSON.parse(item.eq);
-      eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\n');
-    } catch(e) { eqFormatted = "Dotazione standard"; }
+    // LO SCUDO ANTI-APOSTROFO (.replace)
+    const itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27");
 
-    // TUA STRINGA PER L'ALERT (Intatta)
-    const infoTecniche = `DATI TECNICI:\n🏃 Km: ${item.km || 0}\n⛰️ Dislivello: ${item.dislivello || 0}m D+\n\nKIT RICHIESTO:\n${eqFormatted}`;
+    // BOTTONE INFO RIPARATO (Ora chiama una funzione sicura esterna)
+    const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
 
-    // Impacchettiamo l'oggetto per i bottoni
-    const itemStr = encodeURIComponent(JSON.stringify(item));
-
-    // BOTTONE RIPROPONI (Sempre visibile su tutte le card)
     const btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
     
-    // BOTTONE ANNULLA (Visibile SOLO per i viaggi In Attesa)
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
 
-    // BOTTONE LOCANDINA (Visibile SOLO per i viaggi Approvati)
     const btnLocandina = !isPending ? `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>` : '';
 
     return `
@@ -1051,9 +1040,7 @@ function renderProposals(data) {
             <a href="${item.link}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1">
               <i class="bi bi-map"></i> Mappa
             </a>
-            <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="alert('${infoTecniche}')">
-              <i class="bi bi-info-circle"></i> Info & Kit
-            </button>
+            ${btnInfo}
           </div>
           
           ${btnRiproponi}
@@ -1064,11 +1051,26 @@ function renderProposals(data) {
     `;
   };
 
-  // TRUE per le Pending (mostra Annulla), FALSE per le Accepted (mostra Locandina)
   data.pending.forEach(item => pList.innerHTML += generateCard(item, 'warning', true));
   data.accepted.forEach(item => aList.innerHTML += generateCard(item, 'success', false));
 }
 
+// Funzione sicura per mostrare Info & Kit
+function mostraInfoKit(itemEncoded) {
+  const item = JSON.parse(decodeURIComponent(itemEncoded));
+  
+  let eqFormatted = "";
+  try {
+    const eqArray = JSON.parse(item.eq);
+    eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\n');
+  } catch(e) { 
+    eqFormatted = "Dotazione standard"; 
+  }
+
+  const infoTecniche = `DATI TECNICI:\n🏃 Km: ${item.km || 0}\n⛰️ Dislivello: ${item.dislivello || 0}m D+\n\nKIT RICHIESTO:\n${eqFormatted}`;
+  
+  alert(infoTecniche);
+}  
 
 // --- MAGIA A COSTO ZERO: RIPROPONI EVENTO LOCALE ---
 function riproponiEvento(itemEncoded) {
