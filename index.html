@@ -1363,7 +1363,7 @@ function generaLocandinaFinale() {
 
       // C. TESTI TOP
       ctx.textAlign = "center";
-      let cursorY = 140; 
+      let cursorY = 180; 
       
       // --- BOLLO DINAMICO (REGIONE + LUOGO) ---
       ctx.font = "bold 26px 'Inter', sans-serif";
@@ -1421,7 +1421,7 @@ function generaLocandinaFinale() {
       ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
       
       // Auto-restringimento: se la riga intera sfora, rimpicciolisce il font
-      while(ctx.measureText(dateTxt).width > (W - 80) && dateFontSize > 18) {
+      while(ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 18) {
           dateFontSize -= 2;
           ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
       }
@@ -1441,7 +1441,7 @@ function generaLocandinaFinale() {
       let interlinea = 90;
 
       // 1. Se supera una riga standard, rimpicciolisce
-      if (ctx.measureText(titleText).width > (W - 100)) {
+      if (ctx.measureText(titleText).width > (W - 160)) {
           ctx.font = "900 65px 'Playfair Display', serif";
           interlinea = 70; 
       }
@@ -1450,15 +1450,15 @@ function generaLocandinaFinale() {
       const words = titleText.split(' '); let line = '';
       for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
-        if (ctx.measureText(testLine).width > (W - 100) && n > 0) {
+        if (ctx.measureText(testLine).width > (W - 160) && n > 0) {
             // 3. FORCE-FIT: Il 4° parametro (W - 80) comprime fisicamente parole impossibili
-            ctx.fillText(line.trim(), W/2, cursorY, W - 80);
+            ctx.fillText(line.trim(), W/2, cursorY, W - 160);
             line = words[n] + ' '; 
             cursorY += interlinea;
         } else { line = testLine; }
       }
       // Stampa l'ultima riga rimasta con la stessa protezione
-      ctx.fillText(line.trim(), W/2, cursorY, W - 80);
+      ctx.fillText(line.trim(), W/2, cursorY, W - 160);
       ctx.shadowColor = "transparent";
 
       // D. LOGICA ANCORAGGIO DAL BASSO
