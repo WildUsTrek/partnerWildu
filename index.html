@@ -1002,21 +1002,34 @@ function renderProposals(data) {
   pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
   aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
 
-  const generateCard = (item, colorClass) => {
-    // Formattazione Date e Orari
+  const generateCard = (item, colorClass, isPending) => {
+    
+    // TUA FORMATTAZIONE DATE (Intatta)
     const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
     const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
 
-    // Elaborazione Attrezzatura
+    // TUA ELABORAZIONE ATTREZZATURA (Intatta)
     let eqFormatted = "";
     try {
       const eqArray = JSON.parse(item.eq);
-      eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\\n');
+      eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\n');
     } catch(e) { eqFormatted = "Dotazione standard"; }
 
-    // Stringa per il tasto INFO (KM, Dislivello + Kit)
-    const infoTecniche = `DATI TECNICI:\\n🏃 Km: ${item.km || 0}\\n⛰️ Dislivello: ${item.dislivello || 0}m D+\\n\\nKIT RICHIESTO:\\n${eqFormatted}`;
+    // TUA STRINGA PER L'ALERT (Intatta)
+    const infoTecniche = `DATI TECNICI:\n🏃 Km: ${item.km || 0}\n⛰️ Dislivello: ${item.dislivello || 0}m D+\n\nKIT RICHIESTO:\n${eqFormatted}`;
+
+    // Impacchettiamo l'oggetto per i bottoni
+    const itemStr = encodeURIComponent(JSON.stringify(item));
+
+    // BOTTONE RIPROPONI (Sempre visibile su tutte le card)
+    const btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
+    
+    // BOTTONE ANNULLA (Visibile SOLO per i viaggi In Attesa)
+    const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
+
+    // BOTTONE LOCANDINA (Visibile SOLO per i viaggi Approvati)
+    const btnLocandina = !isPending ? `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>` : '';
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
@@ -1042,15 +1055,316 @@ function renderProposals(data) {
               <i class="bi bi-info-circle"></i> Info & Kit
             </button>
           </div>
+          
+          ${btnRiproponi}
+          ${btnAnnulla}
+          ${btnLocandina}
         </div>
       </div>
     `;
   };
 
-  data.pending.forEach(item => pList.innerHTML += generateCard(item, 'warning'));
-  data.accepted.forEach(item => aList.innerHTML += generateCard(item, 'success'));
+  // TRUE per le Pending (mostra Annulla), FALSE per le Accepted (mostra Locandina)
+  data.pending.forEach(item => pList.innerHTML += generateCard(item, 'warning', true));
+  data.accepted.forEach(item => aList.innerHTML += generateCard(item, 'success', false));
 }
 
+
+// --- MAGIA A COSTO ZERO: RIPROPONI EVENTO LOCALE ---
+function riproponiEvento(itemEncoded) {
+  const item = JSON.parse(decodeURIComponent(itemEncoded));
+  
+  // 1. Compila i campi di testo
+  document.getElementById('od_titolo').value = item.titolo || "";
+  document.getElementById('od_luogo_nome').value = item.luogo || "";
+  document.getElementById('od_luogo_link').value = item.link || "";
+  document.getElementById('od_km').value = item.km || "";
+  document.getElementById('od_dislivello').value = item.dislivello || "";
+  document.getElementById('od_descrizione').value = item.desc || "";
+  document.getElementById('od_regione').value = item.regione || "";
+  document.getElementById('od_orario_inizio').value = item.oraIn || "";
+  document.getElementById('od_orario_fine').value = item.oraOut || "";
+
+  // 2. Formatta le date per gli input HTML (Da GG/MM/AAAA a AAAA-MM-GG)
+  if (item.dataInizio) {
+    document.getElementById('od_data_inizio').value = item.dataInizio.split('/').reverse().join('-');
+  }
+  if (item.dataFine) {
+    document.getElementById('od_data_fine').value = item.dataFine.split('/').reverse().join('-');
+  }
+
+  // 3. Resetta e compila l'attrezzatura dal JSON
+  document.querySelectorAll('.od-eq').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.note-input').forEach(n => n.value = "");
+  
+  try {
+    const eqArray = JSON.parse(item.eq);
+    eqArray.forEach(eqItem => {
+      // Cerca la checkbox che ha come valore il nome dell'oggetto (es. "Acqua")
+      const checkbox = Array.from(document.querySelectorAll('.od-eq')).find(cb => cb.value === eqItem.item);
+      if(checkbox) {
+        checkbox.checked = true;
+        document.getElementById('note_' + checkbox.id).value = eqItem.note || "";
+      }
+    });
+  } catch(e) {}
+
+  // 4. Cambia pagina e porta l'utente allo step 1 del modulo!
+  showPage('form');
+  goToStep(1);
+}
+
+// --- FUNZIONE KILLER: ANNULLA PROPOSTA ---
+async function annullaProposta(itemEncoded) {
+  const item = JSON.parse(decodeURIComponent(itemEncoded));
+  const user = auth.currentUser;
+  if (!user) return;
+
+  // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio
+  if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}" del ${item.dataInizio}?\n\nL'operazione eliminerà il viaggio in modo irreversibile.`)) {
+    return;
+  }
+
+  // Attiva subito lo scudo nero anti-doppioclick
+  document.getElementById('loader').style.display = 'flex';
+
+  try {
+    const payload = {
+      titolo: item.titolo,
+      dataInizio: item.dataInizio,
+      oraIn: item.oraIn,
+      utente: user.uid
+    };
+
+    const response = await fetch(MOTORE_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: "DELETE_PENDING", payload: payload })
+    });
+    
+    const res = await response.json();
+    
+    if(res.success) {
+      // Il Postino ha fatto il suo dovere. Distruggiamo la cache e ricarichiamo.
+      sessionStorage.removeItem('wildu_cache_proposte');
+      sessionStorage.removeItem('wildu_cache_time');
+      
+      document.querySelector('#loader h5').innerText = "Proposta ritirata!";
+      alert("Proposta eliminata con successo.");
+      location.reload();
+    } else {
+      document.getElementById('loader').style.display = 'none';
+      alert("Impossibile annullare: " + res.error);
+    }
+  } catch(e) {
+    document.getElementById('loader').style.display = 'none';
+    alert("Errore di connessione. Riprova tra poco.");
+  }
+}  
+
+
+// VARIABILI GLOBALI PER LA LOCANDINA
+window.currentLocandinaItem = null;
+window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1 };
+
+// 1. CLICK SUL BOTTONE DELLA CARD
+function generaLocandina(itemEncoded) {
+  window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
+  // Simula il click sul caricatore file nascosto
+  document.getElementById('locandina-upload').click();
+}
+
+// 2. L'UTENTE HA SCELTO LA FOTO
+function handleLocandinaSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Aggiorniamo la scritta del "Ghost Overlay" in base al prezzo
+  const pBox = document.getElementById('loc-preview-price');
+  const prezzo = window.currentLocandinaItem.prezzo;
+  if (!prezzo || prezzo == "0" || prezzo == 0) {
+    pBox.innerText = "PARTECIPAZIONE GRATUITA";
+    pBox.style.borderColor = "#fff"; pBox.style.background = "rgba(255,255,255,0.2)";
+  } else {
+    pBox.innerText = "€ " + prezzo;
+    pBox.style.borderColor = "#FFD700"; pBox.style.background = "rgba(255,215,0,0.2)";
+  }
+
+  // Leggiamo l'immagine e calcoliamo il ritaglio
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = document.getElementById('loc-crop-img');
+    img.onload = function() {
+      // Setup Modale
+      window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1 };
+      
+      const stageW = 270; const stageH = 480; // Dimensioni contenitore HTML
+      const ratioStage = stageW / stageH;
+      const ratioImg = img.naturalWidth / img.naturalHeight;
+      let renderedW, renderedH;
+      
+      // Calcolo "Cover"
+      if(ratioImg > ratioStage) {
+          renderedH = stageH; renderedW = stageH * ratioImg;
+          img.style.height = stageH + "px"; img.style.width = "auto";
+          window.locCropState.currentX = (stageW - renderedW) / 2; window.locCropState.currentY = 0;
+      } else {
+          renderedW = stageW; renderedH = stageW / ratioImg;
+          img.style.width = stageW + "px"; img.style.height = "auto";
+          window.locCropState.currentX = 0; window.locCropState.currentY = (stageH - renderedH) / 2;
+      }
+      img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px)`;
+      
+      // Mostra modale
+      new bootstrap.Modal(document.getElementById('modalCropLocandina')).show();
+      // Resetta l'input file per permettere di ricaricare la stessa foto se si sbaglia
+      document.getElementById('locandina-upload').value = ""; 
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// 3. LOGICA DI TRASCINAMENTO (DRAG & DROP)
+function startDragLoc(e) {
+  e.preventDefault();
+  window.locCropState.isDragging = true;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  window.locCropState.startX = clientX - window.locCropState.currentX;
+  window.locCropState.startY = clientY - window.locCropState.currentY;
+  
+  document.addEventListener('mousemove', onDragLoc);
+  document.addEventListener('touchmove', onDragLoc, {passive: false});
+  document.addEventListener('mouseup', endDragLoc);
+  document.addEventListener('touchend', endDragLoc);
+}
+
+function onDragLoc(e) {
+  if (!window.locCropState.isDragging) return;
+  e.preventDefault();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  window.locCropState.currentX = clientX - window.locCropState.startX;
+  window.locCropState.currentY = clientY - window.locCropState.startY;
+  document.getElementById('loc-crop-img').style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px)`;
+}
+
+function endDragLoc() {
+  window.locCropState.isDragging = false;
+  document.removeEventListener('mousemove', onDragLoc);
+  document.removeEventListener('touchmove', onDragLoc);
+  document.removeEventListener('mouseup', endDragLoc);
+  document.removeEventListener('touchend', endDragLoc);
+}
+
+// 4. DISEGNO E DOWNLOAD FINALE (IL MOTORE CANVAS)
+function generaLocandinaFinale() {
+  const item = window.currentLocandinaItem;
+  if(!item) return;
+
+  const canvas = document.getElementById('poster-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 1080; const H = 1920;
+  canvas.width = W; canvas.height = H;
+
+  const imgHTML = document.getElementById('loc-crop-img');
+  
+  // A. Disegna Sfondo Ritagliato (Moltiplica le coordinate HTML x 4, visto che 270x4 = 1080)
+  ctx.save(); 
+  const M = 4; // Moltiplicatore da 270x480 a 1080x1920
+  ctx.translate(window.locCropState.currentX * M, window.locCropState.currentY * M);
+  ctx.drawImage(imgHTML, 0, 0, imgHTML.width * M || imgHTML.naturalWidth * (480/imgHTML.naturalHeight) * M, imgHTML.height * M || 480 * M);
+  ctx.restore(); 
+
+  // B. Sfumature Cinematografiche
+  const gradTop = ctx.createLinearGradient(0, 0, 0, 600);
+  gradTop.addColorStop(0, "rgba(0,0,0,0.85)"); gradTop.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradTop; ctx.fillRect(0, 0, W, 600);
+
+  const gradBot = ctx.createLinearGradient(0, H - 1000, 0, H);
+  gradBot.addColorStop(0, "rgba(0,0,0,0)"); gradBot.addColorStop(0.4, "rgba(0,0,0,0.8)"); gradBot.addColorStop(1, "rgba(0,0,0,0.95)");
+  ctx.fillStyle = gradBot; ctx.fillRect(0, H - 1000, W, 1000);
+
+  // C. Testi Top (Badge + Data + Titolo)
+  ctx.textAlign = "center";
+  let cursorY = 140; 
+  
+  // Bollo "PROPOSTA VIAGGIO" o similare
+  const badgeTxt = item.regione ? "📍 " + item.regione.toUpperCase() : "⭐ OPEN DAY";
+  ctx.fillStyle = "#0d6efd"; 
+  ctx.beginPath(); ctx.roundRect((W - 400) / 2, cursorY, 400, 60, 30); ctx.fill();
+  ctx.fillStyle = "white"; ctx.font = "bold 24px sans-serif";
+  ctx.fillText(badgeTxt, W/2, cursorY + 40);
+  
+  cursorY += 100;
+
+  // Data
+  const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
+  ctx.font = "bold 35px sans-serif"; ctx.fillStyle = "white";
+  ctx.fillText("📅 " + dIn, W/2, cursorY);
+  
+  cursorY += 80;
+
+  // Titolo (Adattivo)
+  const titleText = item.titolo.toUpperCase();
+  ctx.font = titleText.length > 25 ? "900 65px serif" : "900 85px serif";
+  // Funzione wrap semplice per il titolo
+  const words = titleText.split(' '); let line = '';
+  for(let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    if (ctx.measureText(testLine).width > (W - 100) && n > 0) {
+        ctx.fillText(line, W/2, cursorY);
+        line = words[n] + ' '; cursorY += 80;
+    } else { line = testLine; }
+  }
+  ctx.fillText(line, W/2, cursorY);
+
+  // D. Bottom (Prezzo e Dati)
+  const boxW = 800; const boxH = 140; 
+  const boxY = H - boxH - 280; 
+
+  // Box SMART PRICING
+  const prezzo = item.prezzo;
+  const isFree = (!prezzo || prezzo == "0" || prezzo == 0);
+  
+  const gradBox = ctx.createLinearGradient(0, boxY, 0, boxY + boxH);
+  gradBox.addColorStop(0, isFree ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.9)"); 
+  gradBox.addColorStop(1, isFree ? "rgba(230,230,230,0.9)" : "rgba(0,0,0,0.7)");
+  
+  ctx.fillStyle = gradBox;
+  ctx.beginPath(); ctx.roundRect((W - boxW)/2, boxY, boxW, boxH, 40); ctx.fill();
+  ctx.strokeStyle = isFree ? "#000" : "rgba(255,215,0,0.8)"; ctx.lineWidth = 4; ctx.stroke();
+  
+  // Testo Prezzo
+  ctx.fillStyle = isFree ? "#000" : "#FFD700";
+  ctx.font = "900 60px sans-serif";
+  ctx.fillText(isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo, W/2, boxY + 95);
+
+  // Numero di Telefono (preso dal campo profilo nascosto!)
+  const telNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "Vedi Link";
+  ctx.fillStyle = "#25D366"; ctx.font = "bold 32px sans-serif";
+  ctx.fillText("📲 INFO E PRENOTAZIONI: " + telNum, W/2, boxY - 50);
+
+  // Dati Tecnici
+  let techStr = [];
+  if(item.km) techStr.push("🥾 " + item.km + " KM");
+  if(item.dislivello) techStr.push("⛰️ " + item.dislivello + " M D+");
+  if(techStr.length > 0) {
+    ctx.fillStyle = "#FFD700"; ctx.font = "bold 40px sans-serif";
+    ctx.fillText(techStr.join("    |    "), W/2, boxY - 140);
+  }
+
+  // DOWNLOAD FISICO IMMAGINE
+  const link = document.createElement('a');
+  link.download = 'Locandina_' + item.titolo.replace(/[^a-zA-Z0-9]/g,'') + '.jpg';
+  link.href = canvas.toDataURL('image/jpeg', 0.95);
+  link.click();
+
+  // Chiudiamo la modale
+  bootstrap.Modal.getInstance(document.getElementById('modalCropLocandina')).hide();
+}
+  
+  
 function logout() {
   if(confirm("Vuoi uscire dall'app? Dovrai rifare il login per inviare nuove proposte.")) {
     auth.signOut().then(() => {
@@ -1134,6 +1448,40 @@ function forceSync() {
     </div>
   </div>
 </div>
+
+<input type="file" id="locandina-upload" accept="image/*" style="display: none;" onchange="handleLocandinaSelect(event)">
+
+<div class="modal fade" id="modalCropLocandina" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title fw-bold"><i class="bi bi-crop"></i> Centra la tua foto</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center d-flex flex-column align-items-center">
+        <p class="small text-muted mb-3">Trascina la foto per centrarla. I box grigi mostrano dove appariranno i testi, così non coprirai i dettagli importanti!</p>
+        
+        <div id="loc-crop-container" style="width: 270px; height: 480px; overflow: hidden; position: relative; border: 2px solid #fff; border-radius: 8px; background: #000; cursor: grab;">
+          
+          <img id="loc-crop-img" style="position: absolute; transform-origin: top left;" onmousedown="startDragLoc(event)" ontouchstart="startDragLoc(event)">
+          
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 150px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); pointer-events: none;"></div>
+          <div style="position: absolute; top: 75px; left: 10%; width: 80%; height: 40px; border: 1px dashed rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; pointer-events: none;">TITOLO EVENTO</div>
+          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 250px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); pointer-events: none;"></div>
+          <div style="position: absolute; bottom: 70px; left: 10%; width: 80%; height: 35px; border: 1px dashed #FFD700; background: rgba(255,215,0,0.2); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; pointer-events: none;" id="loc-preview-price">BOX PREZZO</div>
+          <div style="position: absolute; bottom: 15px; left: 10%; width: 80%; height: 20px; border: 1px dashed #25D366; background: rgba(37,211,102,0.2); display:flex; align-items:center; justify-content:center; font-size: 8px; font-weight:bold; pointer-events: none;">DATI TECNICI E CONTATTI</div>
+          
+        </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-success rounded-pill fw-bold" onclick="generaLocandinaFinale()"><i class="bi bi-download"></i> Salva Locandina</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="poster-canvas" style="display:none;"></canvas>
 
   
 </body>
