@@ -544,6 +544,21 @@ function renderEquipmentSteps() {
   }
 
   async function sendToWildu() {
+
+    // =========================================================
+  // HARD GUARD: BLOCCO FISICO SE HA GIA' 3 PROPOSTE
+  // =========================================================
+  const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  if (memoria) {
+    const datiCache = JSON.parse(memoria);
+    const totaleAttive = datiCache.pending.length + datiCache.accepted.length;
+    if (totaleAttive >= 3) {
+       alert("⚠️ ERRORE: Hai già raggiunto il limite massimo di 3 proposte attive. Non puoi inviarne altre finché non vengono valutate.");
+       return; // BLOCCA TOTALMENTE L'ESECUZIONE!
+    }
+  }
+  // =========================================================
+    
     const loader = document.getElementById('loader');
     loader.style.display = 'flex';
     
@@ -802,6 +817,11 @@ auth.onAuthStateChanged(async (user) => {
   const profileOverlay = document.getElementById('profile-overlay'); // La schermata primo profilo
   
   if (user) {
+    // ===============================================
+    // AVVIO CONTROLLO LIMITE PROPOSTE IN BACKGROUND!
+    checkProposalLimitAtStartup(user.uid);
+    // ===============================================
+
     // 1. MANTENIAMO IL TUO CONTROLLO FIRESTORE (Non perdi nulla!)
     const docRef = db.collection("users_partners").doc(user.uid);
     const doc = await docRef.get();
@@ -829,8 +849,8 @@ auth.onAuthStateChanged(async (user) => {
   }
   
   // IL TOCCO FINALE: Solo ora che Firebase ha deciso, togliamo il velo nero
-     if (initScreen) {
-      setTimeout(() => { 
+  if (initScreen) {
+    setTimeout(() => { 
       initScreen.style.opacity = '0';
       setTimeout(() => { 
         initScreen.style.display = 'none'; 
@@ -838,7 +858,6 @@ auth.onAuthStateChanged(async (user) => {
     }, 1000); // 1 secondo di attesa per essere sicuri che Firebase sia pronto
   }
 });
-
 // SALVATAGGIO PRIMO PROFILO
 async function saveFirstProfile() {
   const user = auth.currentUser;
@@ -943,6 +962,37 @@ function gestisciLimiteProposte(data) {
   }
 }
 
+// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP
+async function checkProposalLimitAtStartup(uid) {
+  const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  const timestamp = sessionStorage.getItem('wildu_cache_time');
+  const adesso = new Date().getTime();
+  
+  // Se abbiamo già i dati freschi in memoria, usiamo quelli all'istante
+  if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
+    gestisciLimiteProposte(JSON.parse(memoria));
+    return;
+  }
+
+  // Altrimenti, chiediamo a Google in "sottofondo" (senza far apparire il loader a tutto schermo)
+  try {
+    const response = await fetch(MOTORE_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: "getUserData", uid: uid })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      // Salviamo in cache così quando cliccherà "Mie Proposte" si apriranno all'istante!
+      sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+      sessionStorage.setItem('wildu_cache_time', adesso.toString());
+      gestisciLimiteProposte(data);
+    }
+  } catch (e) {
+    console.log("Errore nel controllo limiti in background", e);
+  }
+}
+
+  
 // 2. FUNZIONE PRINCIPALE: Caricamento Proposte (con Cache Intelligente di 30 min)
 async function openMyProposals() {
   const user = auth.currentUser;
