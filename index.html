@@ -1259,29 +1259,26 @@ async function annullaProposta(itemEncoded) {
   const user = auth.currentUser;
   if (!user) return;
 
-  // 🔴 NUOVO BLOCCO A: CONTROLLO MEMORIA VECCHIA
-  // Messo qui blocca tutto PRIMA ancora di chiedere conferma!
+  // 🔴 SCUDO 1: CONTROLLO MEMORIA VECCHIA
+  // Blocca tutto PRIMA ancora di chiedere conferma!
   if (!item.tempId) {
-      alert("⚠️ ERRORE DI SINCRONIZZAZIONE\nStai leggendo dati vecchi dalla memoria.\nTieni premuta per 3 secondi la scritta in basso 'Sistema Partner Hub v2.5' per forzare lo scaricamento dei nuovi dati!");
+      alert("⚠️ ERRORE DI SINCRONIZZAZIONE\nStai leggendo dati vecchi dalla memoria.\nTieni premuta per 3 secondi la scritta in basso 'Sistema Partner Hub v2.5' per scaricare i dati aggiornati!");
       return;
   }
 
-  // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio (INTATTO)
+  // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio
   if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}" del ${item.dataInizio}?\n\nL'operazione eliminerà il viaggio in modo irreversibile.`)) {
     return;
   }
 
-  // Attiva subito lo scudo nero anti-doppioclick (INTATTO)
+  // Attiva subito lo scudo nero anti-doppioclick
   document.getElementById('loader').style.display = 'flex';
 
   try {
-    // ==========================================
     // IL PAYLOAD CECCHINO
-    // ==========================================
     const payload = {
       tempId: item.tempId
     };
-    // ==========================================
 
     const response = await fetch(MOTORE_API_URL, {
       method: 'POST',
