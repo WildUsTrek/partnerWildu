@@ -1323,7 +1323,7 @@ function endDragLoc() {
   document.removeEventListener('touchend', endDragLoc);
 }
 
-// 5. STAMPA E DOWNLOAD FINALE (IL MOTORE CANVAS)
+// 5. STAMPA E DOWNLOAD FINALE (IL MOTORE CANVAS PRO)
 function generaLocandinaFinale() {
   try {
       const item = window.currentLocandinaItem;
@@ -1337,12 +1337,18 @@ function generaLocandinaFinale() {
       canvas.width = W; canvas.height = H;
 
       const imgHTML = document.getElementById('loc-crop-img');
+      const scale = window.locCropState.scale;
       
+      // LA FORMULA MATEMATICA SALVAVITA: 
+      // Calcola l'offset causato dallo zoom dal centro per allinearlo al Canvas (che stampa dal top-left)
+      const trueX = window.locCropState.currentX + (window.locCropState.baseW / 2) * (1 - scale);
+      const trueY = window.locCropState.currentY + (window.locCropState.baseH / 2) * (1 - scale);
+
       // A. DISEGNA SFONDO RITAGLIATO
       ctx.save(); 
       const M = 4; // Moltiplicatore 4x
-      ctx.translate(window.locCropState.currentX * M, window.locCropState.currentY * M);
-      ctx.scale(window.locCropState.scale, window.locCropState.scale);
+      ctx.translate(trueX * M, trueY * M);
+      ctx.scale(scale, scale);
       ctx.drawImage(imgHTML, 0, 0, window.locCropState.baseW * M, window.locCropState.baseH * M);
       ctx.restore(); 
 
@@ -1359,7 +1365,8 @@ function generaLocandinaFinale() {
       ctx.textAlign = "center";
       let cursorY = 140; 
       
-      const badgeTxt = item.regione ? "📍 " + item.regione.toUpperCase() : "⭐ OPEN DAY";
+      // Icona Mondo per la Regione (come richiesto)
+      const badgeTxt = item.regione ? "🌍 " + item.regione.toUpperCase() : "⭐ OPEN DAY";
       ctx.fillStyle = "#0d6efd"; 
       ctx.beginPath(); ctx.roundRect((W - 450) / 2, cursorY, 450, 60, 30); ctx.fill();
       ctx.fillStyle = "white"; ctx.font = "bold 26px 'Inter', sans-serif";
@@ -1379,6 +1386,7 @@ function generaLocandinaFinale() {
       if(item.luogo) {
           cursorY += 45;
           ctx.font = "bold 28px 'Inter', sans-serif";
+          // Icona Pin per il Luogo (come richiesto)
           ctx.fillText("📍 " + item.luogo.toUpperCase(), W/2, cursorY);
       }
       ctx.shadowColor = "transparent";
@@ -1586,8 +1594,9 @@ function forceSync() {
       <div class="modal-body text-center d-flex flex-column align-items-center">
         <p class="small text-muted mb-3">Usa la barra per lo zoom e trascina la foto per centrarla.</p>
         
-        <div id="loc-crop-container" style="width: 270px; height: 480px; overflow: hidden; position: relative; border: 2px solid #fff; border-radius: 8px; background: #000; cursor: grab;">
-          <img id="loc-crop-img" style="position: absolute; transform-origin: top left;" onmousedown="startDragLoc(event)" ontouchstart="startDragLoc(event)">
+        <div id="loc-crop-container" style="width: 270px; height: 480px; overflow: hidden; position: relative; border: 2px solid #fff; border-radius: 8px; background: #000; cursor: grab; text-align: left; box-sizing: content-box;">
+          
+          <img id="loc-crop-img" style="position: absolute; top: 0; left: 0; transform-origin: center center;" onmousedown="startDragLoc(event)" ontouchstart="startDragLoc(event)">
           
           <div style="position: absolute; top: 0; left: 0; width: 100%; height: 150px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); pointer-events: none;"></div>
           <div style="position: absolute; top: 75px; left: 10%; width: 80%; height: 40px; border: 1px dashed rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; pointer-events: none;">TITOLO EVENTO</div>
