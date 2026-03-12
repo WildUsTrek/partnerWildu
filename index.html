@@ -330,8 +330,15 @@
                 <br>
                 <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
             </div>
-            <div id="upload_prompt">
+<div id="upload_prompt">
                 <button class="btn btn-primary rounded-pill px-4 py-2" onclick="document.getElementById('foto_input').click()">📁 Seleziona Foto dal Telefono</button>
+                
+                <div class="form-check form-switch mt-4 text-start p-3 rounded-3" style="background: rgba(0,0,0,0.3); border: 1px solid #333;">
+                    <input class="form-check-input ms-1 mt-1" type="checkbox" id="condividi_foto_community" checked style="transform: scale(1.3);">
+                    <label class="form-check-label ms-3 small text-light opacity-75" for="condividi_foto_community">
+                        🌍 Condividi la foto con la community (la renderà disponibile ad altri partner nell'archivio globale Wildu)
+                    </label>
+                </div>
             </div>
           </div>
         </div>
@@ -699,17 +706,23 @@ async function uploadToCloudinary() {
 
   const formData = new FormData();
   formData.append('file', compressedFile);
-  formData.append('upload_preset', 'WILDU_s'); // <--- METTI QUI IL NOME DEL PRESET UNSIGNED
+  formData.append('upload_preset', 'WILDU_s'); 
   formData.append('cloud_name', 'daiyrgmbb');
-  // Aggiunge i due "cartellini" alla foto in arrivo
-formData.append('tags', 'archivio_wildu,' + getGuideTag());
+  
+  // 🔴 LOGICA PRIVACY: Legge l'interruttore
+  const shareCheckbox = document.getElementById('condividi_foto_community');
+  let tags = getGuideTag(); // Tag personale (sempre presente)
+  if (shareCheckbox && shareCheckbox.checked) {
+      tags = 'archivio_wildu,' + tags; // Aggiunge il tag globale solo se spuntato
+  }
+  formData.append('tags', tags);
 
   const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', {
     method: 'POST',
     body: formData
   });
   const data = await resp.json();
-  return data.secure_url; // Restituisce il link diretto .jpg
+  return data.secure_url; 
 }
 
 function compressImage(file) {
@@ -1213,16 +1226,22 @@ function mostraInfoKit(itemEncoded) {
 function riproponiEvento(itemEncoded) {
   const item = JSON.parse(decodeURIComponent(itemEncoded));
   
-  // 1. Compila i campi di testo
+  // 1. Compila i campi di testo base
   document.getElementById('od_titolo').value = item.titolo || "";
   document.getElementById('od_luogo_nome').value = item.luogo || "";
   document.getElementById('od_luogo_link').value = item.link || "";
   document.getElementById('od_km').value = item.km || "";
   document.getElementById('od_dislivello').value = item.dislivello || "";
-  document.getElementById('od_descrizione').value = item.desc || "";
   document.getElementById('od_regione').value = item.regione || "";
   document.getElementById('od_orario_inizio').value = item.oraIn || "";
   document.getElementById('od_orario_fine').value = item.oraOut || "";
+
+  // 🔴 LA SPUGNA MAGIC (LAVACERVELLI DELLA FIRMA)
+  let testoSporco = item.desc || "";
+  // La Regex cerca "Guida: QualsiasiCosa |" all'inizio del testo e lo vaporizza
+  let testoPulito = testoSporco.replace(/^Guida:.*?\|\s*/i, "");
+  document.getElementById('od_descrizione').value = testoPulito.trim();
+
 
   // 2. Formatta le date per gli input HTML (Da GG/MM/AAAA a AAAA-MM-GG)
   if (item.dataInizio) {
