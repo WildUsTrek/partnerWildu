@@ -571,16 +571,16 @@ function renderEquipmentSteps() {
     // =========================================================
   // HARD GUARD: BLOCCO FISICO SE HA GIA' 3 PROPOSTE
   // =========================================================
- const memoria = sessionStorage.getItem('wildu_cache_proposte');
+const memoria = sessionStorage.getItem('wildu_cache_proposte');
   if (memoria) {
     const datiCache = JSON.parse(memoria);
-    
-    // 🔴 AGGIUNGI QUESTA RIGA:
     aggiornaLimiteDalServer(datiCache);
     
-    const totaleAttive = datiCache.pending.length + datiCache.accepted.length;
+    // 🔴 CONTA SOLO LE PENDING
+    const totaleAttive = datiCache.pending ? datiCache.pending.length : 0;
+    
     if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
-       alert(`⚠️ ERRORE: Hai già raggiunto il limite massimo di ${MAX_PROPOSTE_ATTIVE} proposte attive. Non puoi inviarne altre finché non vengono valutate.`);
+       alert(`⚠️ ERRORE: Hai già ${MAX_PROPOSTE_ATTIVE} proposte in attesa di valutazione. Non puoi inviarne altre finché non vengono valutate dall'Admin.`);
        return; 
     }
   }
@@ -1048,40 +1048,32 @@ function cancelProposal() {
 }
 
 
-// 1. HELPER: Gestione grafica del limite proposte e del Badge (Raggi X)
+// 1. HELPER: Gestione grafica del limite proposte (Solo Pending)
 function gestisciLimiteProposte(data) {
-  console.log("DATI RICEVUTI DA GOOGLE/CACHE:", data); // <--- I RAGGI X
-  console.log("LIMITE ATTUALE IMPOSTATO A:", MAX_PROPOSTE_ATTIVE);
-
   const btnNuova = document.getElementById('btn-nuova-proposta');
   const badgeContatore = document.getElementById('contatore-proposte'); 
   
-  const pLen = (data && data.pending) ? data.pending.length : 0;
-  const aLen = (data && data.accepted) ? data.accepted.length : 0;
-  const totaleAttive = pLen + aLen;
+  // 🔴 CONTA SOLO QUELLE IN ATTESA (PENDING)
+  const totaleAttive = (data && data.pending) ? data.pending.length : 0;
   
-  // --- AGGIORNA IL BADGE IN TEMPO REALE ---
   if (badgeContatore) {
       badgeContatore.style.display = 'inline-block'; 
       
       if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
-          badgeContatore.innerHTML = `🛑 Slot Pieni (${totaleAttive}/${MAX_PROPOSTE_ATTIVE})`;
+          badgeContatore.innerHTML = `🛑 Slot in Attesa Pieni (${totaleAttive}/${MAX_PROPOSTE_ATTIVE})`;
           badgeContatore.className = "badge bg-danger text-white px-3 py-2 rounded-pill shadow-sm mt-2";
       } else {
-          badgeContatore.innerHTML = `🎫 Slot Proposte: ${totaleAttive} / ${MAX_PROPOSTE_ATTIVE}`;
+          badgeContatore.innerHTML = `🎫 Slot in Attesa: ${totaleAttive} / ${MAX_PROPOSTE_ATTIVE}`;
           badgeContatore.className = "badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm mt-2";
       }
-  } else {
-      console.log("ERRORE: Non trovo il badge nell'HTML!");
   }
-  // ------------------------------------------------
 
   if (btnNuova) { 
     if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
       btnNuova.style.opacity = "0.4";
       btnNuova.style.pointerEvents = "none";
       const desc = btnNuova.querySelector('.menu-desc');
-      if (desc) desc.innerHTML = `<b class='text-danger'>Limite di ${MAX_PROPOSTE_ATTIVE} proposte raggiunto.</b>`;
+      if (desc) desc.innerHTML = `<b class='text-danger'>Hai raggiunto il limite di ${MAX_PROPOSTE_ATTIVE} proposte in valutazione.</b>`;
     } else {
       btnNuova.style.opacity = "1";
       btnNuova.style.pointerEvents = "auto";
@@ -1090,7 +1082,6 @@ function gestisciLimiteProposte(data) {
     }
   }
 }
-
 // CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP (BLINDATO E AGGIORNATO)
 async function checkProposalLimitAtStartup(uid) {
   const btnNuova = document.getElementById('btn-nuova-proposta');
@@ -1209,6 +1200,8 @@ async function openMyProposals() {
     document.getElementById('loader').style.display = 'none';
   }
 }
+
+  
 function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
@@ -1216,8 +1209,8 @@ function renderProposals(data) {
   pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
   aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
 
-  // 🔴 CALCOLIAMO IL LIMITE UNA VOLTA SOLA
-  const totaleAttive = data.pending.length + data.accepted.length;
+  // 🔴 CONTA SOLO LE PENDING PER BLOCCARE IL TASTO RIPROPONI
+  const totaleAttive = data.pending ? data.pending.length : 0;
   const limiteRaggiunto = totaleAttive >= MAX_PROPOSTE_ATTIVE;
 
   const generateCard = (item, colorClass, isPending) => {
@@ -1230,17 +1223,17 @@ function renderProposals(data) {
 
     const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
 
-    // 🔴 IL BOTTONE DIVENTA INTELLIGENTE: Se limite raggiunto, appare grigio e non cliccabile
     let btnRiproponi = "";
     if (limiteRaggiunto) {
-       btnRiproponi = `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite Proposte Raggiunto</button>`;
+       btnRiproponi = `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite In Attesa Raggiunto</button>`;
     } else {
        btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
     }
     
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
 
-    const btnLocandina = !isPending ? `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>` : '';
+    // 🔴 LOCANDINA SBLOCCATA PER TUTTE LE PROPOSTE (Pending e Accepted)
+    const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
