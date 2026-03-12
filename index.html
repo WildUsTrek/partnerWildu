@@ -184,11 +184,23 @@ function aggiornaLimiteDalServer(data) {
        MAX_PROPOSTE_ATTIVE = 3; 
    }
 
-   // 🔴 NOVITA': Accende il logo se esiste!
+   // 🔴 NOVITA': Accende il logo e "traduce" i link di Google Drive!
    if (data && data.config && data.config.logoUrl) {
        const logoImg = document.getElementById('app-logo');
        if (logoImg) {
-           logoImg.src = data.config.logoUrl;
+           let finalUrl = data.config.logoUrl;
+           
+           // TRADUTTORE GOOGLE DRIVE
+           // Cerca l'ID segreto nel link (la stringa lunga di lettere e numeri)
+           const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+           const match = finalUrl.match(driveRegex);
+           
+           if (match && match[1]) {
+               // Se è un link di Drive, lo trasforma nel link diretto all'immagine pura
+               finalUrl = "https://drive.google.com/uc?export=view&id=" + match[1];
+           }
+           
+           logoImg.src = finalUrl;
            logoImg.style.display = 'block'; // Lo rende visibile
        }
    }
