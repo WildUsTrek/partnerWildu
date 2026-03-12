@@ -1030,36 +1030,49 @@ function gestisciLimiteProposte(data) {
   }
 }
 
-// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP
+// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP CON FEEDBACK VISIVO
 async function checkProposalLimitAtStartup(uid) {
+  // Prende il testo sotto il bottone per poterci scrivere "Verifica in corso..."
+  const btnNuova = document.getElementById('btn-nuova-proposta');
+  const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
+
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // Se abbiamo già i dati freschi in memoria, usiamo quelli all'istante
+  // 1. La tua logica originale: se ha la memoria, applica il blocco all'istante
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
     gestisciLimiteProposte(JSON.parse(memoria));
     return;
   }
 
-  // Altrimenti, chiediamo a Google in "sottofondo" (senza far apparire il loader a tutto schermo)
+  // 2. LA NOVITÀ: Mettiamo la rotellina di caricamento mentre interroga Google
+  if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Verifica permessi in corso...</span>";
+
   try {
     const response = await fetch(MOTORE_API_URL, {
       method: 'POST',
       body: JSON.stringify({ action: "getUserData", uid: uid })
     });
+    
     if (response.ok) {
       const data = await response.json();
-      // Salviamo in cache così quando cliccherà "Mie Proposte" si apriranno all'istante!
+      
+      // 3. La tua logica originale: Salva e applica
       sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
       sessionStorage.setItem('wildu_cache_time', adesso.toString());
       gestisciLimiteProposte(data);
+      
+    } else {
+        // Se Google dà errore, ripristina il testo normale del bottone
+        if (desc) desc.innerText = "Wizard guidato in pochi passi.";
     }
   } catch (e) {
     console.log("Errore nel controllo limiti in background", e);
+    // Se non c'è internet, ripristina il testo normale
+    if (desc) desc.innerText = "Wizard guidato in pochi passi.";
   }
 }
-
   
 // 2. FUNZIONE PRINCIPALE: Caricamento Proposte (con Cache Intelligente di 30 min)
 async function openMyProposals() {
