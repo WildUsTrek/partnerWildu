@@ -959,22 +959,40 @@ async function saveFirstProfile() {
   }
 }
 
-// Apre l'interfaccia di modifica caricando i dati attuali
+// Apre l'interfaccia di modifica (CON ANTI-INGORGO GRAFICO)
 function openProfile() {
-  const user = auth.currentUser;
-  if (!user) {
-      alert("L'utente non è ancora caricato. Riprova tra un istante.");
-      return;
-  }
+  try {
+      const user = auth.currentUser;
+      if (!user) {
+          alert("⏳ Attendi un secondo, sto collegando l'account...");
+          return;
+      }
 
-  document.getElementById('edit_p_nome').value = document.getElementById('g_nome').value;
-  document.getElementById('edit_p_tel').value = document.getElementById('g_tel').value;
-  
-  if (typeof refreshProfileLogoUI === "function") {
-      refreshProfileLogoUI(); 
-  }
+      // 1. Prepara i dati in background
+      const gNome = document.getElementById('g_nome');
+      const gTel = document.getElementById('g_tel');
+      
+      if (gNome) document.getElementById('edit_p_nome').value = gNome.value;
+      if (gTel) document.getElementById('edit_p_tel').value = gTel.value;
+      
+      if (typeof refreshProfileLogoUI === "function") {
+          refreshProfileLogoUI(); 
+      }
 
-  document.getElementById('edit-profile-overlay').style.display = 'flex';
+      // 2. IL "CALCIO" AL BROWSER: aspetta 10 millisecondi e forza il ricalcolo grafico!
+      setTimeout(() => {
+          const modal = document.getElementById('edit-profile-overlay');
+          if (modal) {
+              modal.style.display = 'flex';
+          } else {
+              alert("Errore grafico: Impossibile trovare la finestra profilo.");
+          }
+      }, 10);
+
+  } catch(e) {
+      console.error("ERRORE PROFILO:", e);
+      alert("Errore nell'apertura del profilo.");
+  }
 }
 
 function closeProfile() {
