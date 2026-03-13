@@ -962,14 +962,14 @@ async function saveFirstProfile() {
 // Apre l'interfaccia di modifica caricando i dati attuali
 function openProfile() {
   const user = auth.currentUser;
-  if (!user) return;
+  if (!user) {
+      alert("L'utente non è ancora caricato. Riprova tra un istante.");
+      return;
+  }
 
-  // Invece di chiamare Firebase, peschiamo i dati che abbiamo 
-  // già scritto nei campi "g_nome" e "g_tel" all'avvio dell'app!
   document.getElementById('edit_p_nome').value = document.getElementById('g_nome').value;
   document.getElementById('edit_p_tel').value = document.getElementById('g_tel').value;
   
-  // ---> L'UNICA RIGA AGGIUNTA: Aggiorna la grafica del logo leggendo la memoria del telefono <---
   if (typeof refreshProfileLogoUI === "function") {
       refreshProfileLogoUI(); 
   }
@@ -1175,7 +1175,7 @@ async function checkProposalLimitAtStartup(uid) {
   }
 }
   
-// 2. FUNZIONE PRINCIPALE: Caricamento Proposte (con Cache Intelligente di 30 min)
+// 2. FUNZIONE PRINCIPALE: Caricamento Proposte (con Cache Intelligente)
 async function openMyProposals() {
   const user = auth.currentUser;
   if (!user) return alert("Devi essere loggato!");
@@ -1184,19 +1184,18 @@ async function openMyProposals() {
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // CASO 1: LEGGE DALLA MEMORIA DEL TELEFONO
+  // CASO 1: LEGGE DALLA MEMORIA
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
-    console.log("Dati caricati istantaneamente dalla memoria del telefono!");
-    const data = JSON.parse(memoria);
-    
-    // 🔴 BLOCCO ERRORI CACHE: Se avevamo salvato un errore per sbaglio, lo saltiamo e forziamo Google
-    if (!data.error && data.success !== false) {
-        aggiornaLimiteDalServer(data);
-        showPage('proposals');
-        renderProposals(data); 
-        gestisciLimiteProposte(data);
-        return; 
-    }
+    try {
+        const data = JSON.parse(memoria);
+        if (!data.error && data.success !== false) {
+            aggiornaLimiteDalServer(data);
+            showPage('proposals');
+            renderProposals(data); 
+            gestisciLimiteProposte(data);
+            return; 
+        }
+    } catch(e) {} // Se la memoria è rotta, la ignora e scarica da Google
   }
 
   // CASO 2: CHIAMA GOOGLE
@@ -1208,12 +1207,11 @@ async function openMyProposals() {
       body: JSON.stringify({ action: "getUserData", uid: user.uid })
     });
     
-    if (!response.ok) throw new Error("Errore server HTTP");
+    if (!response.ok) throw new Error("Errore di rete");
     const data = await response.json();
 
-    // 🔴 BLOCCO SALVATAGGIO ERRORI
     if (data.error || data.success === false) {
-        throw new Error(data.error || "Errore sconosciuto dal Master Script");
+        throw new Error(data.error || "Dati non validi");
     }
 
     sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
@@ -1225,8 +1223,9 @@ async function openMyProposals() {
     gestisciLimiteProposte(data);
 
   } catch (e) {
-    console.error("Errore recupero proposte:", e);
-    alert("Errore nel database: " + e.message + "\nRiprova tra poco.");
+    console.error("Errore:", e);
+    alert("Errore nel recupero dati. Tieni premuta la scritta in basso per 3 secondi per pulire la memoria.");
+    showPage('home'); // PARACADUTE: Se fallisce, ti riporta in Home e NON ti lascia sulla pagina vuota!
   } finally {
     document.getElementById('loader').style.display = 'none';
   }
@@ -1237,7 +1236,8 @@ function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
   
-  // 🔴 SCUDO ANTI-CRASH: Se i dati mancano o c'è un errore, crea liste vuote
+  if (!pList || !aList) return; // Paracadute di sicurezza
+
   const pendingArr = (data && data.pending) ? data.pending : [];
   const acceptedArr = (data && data.accepted) ? data.accepted : [];
 
@@ -1252,7 +1252,8 @@ function renderProposals(data) {
     const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
 
-    const itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27");
+    let itemStr = "";
+    try { itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27"); } catch(e) {}
 
     const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
 
