@@ -10,12 +10,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-
-
-  
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -28,25 +25,14 @@
     measurementId: "G-KC1R6VSMF5"
   };
 
-  // Inizializzazione
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
 </script>
 
-  
-  
   <style>
-    /* Un caricamento a tutto schermo che copre tutto all'inizio */
-#init-screen {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: #121212;
-  display: flex; align-items: center; justify-content: center;
-  z-index: 20000;
-  transition: opacity 0.5s ease; /* AGGIUNGI QUESTA RIGA PER LA FLUIDITÀ */
-}
+    #init-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; display: flex; align-items: center; justify-content: center; z-index: 20000; transition: opacity 0.5s ease; }
     body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
     .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     #home-view { padding: 40px 20px; text-align: center; }
@@ -89,48 +75,19 @@
       .eq-item:last-child { border-bottom: none; }
     }
 
+    .progress-container { height: 6px; width: 100%; background: #333; border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; width: 12.5%; background: linear-gradient(90deg, #0d6efd, #0dcaf0); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 
-    /* Progress Bar Style */
-    .progress-container {
-      height: 6px;
-      width: 100%;
-      background: #333;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      width: 12.5%; /* Inizialmente al passo 1 di 7 */
-      background: linear-gradient(90deg, #0d6efd, #0dcaf0);
-      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    .text-muted { color: #aaaaaa !important; }
+    ::placeholder { color: #777777 !important; opacity: 1; }
+    :-ms-input-placeholder { color: #777777 !important; }
+    ::-ms-input-placeholder { color: #777777 !important; }
 
-.text-muted { color: #aaaaaa !important; }
-    /* Rende visibili i placeholder sui campi grigi scuri */
-::placeholder { color: #777777 !important; opacity: 1; }
-:-ms-input-placeholder { color: #777777 !important; }
-::-ms-input-placeholder { color: #777777 !important; }
+    .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;  overflow: hidden; }
+    .tiny { font-size: 0.7rem; letter-spacing: 0.5px; }
 
-
-    .text-truncate-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2; /* Taglia alla seconda riga con i puntini */
-  -webkit-box-orient: vertical;  
-  overflow: hidden;
-}
-.tiny { font-size: 0.7rem; letter-spacing: 0.5px; }
-
-    /* FIX ATTREZZATURA MOBILE: Blocca il checkbox e manda a capo il testo lungo */
-.od-eq {
-    flex-shrink: 0 !important; /* Impedisce al quadratino di rimpicciolirsi o sparire */
-    margin-top: 0.2rem;
-}
-.form-check-label {
-    word-wrap: break-word;
-    white-space: normal; /* Permette al testo di andare a capo serenamente */
-}
-    
+    .od-eq { flex-shrink: 0 !important; margin-top: 0.2rem; }
+    .form-check-label { word-wrap: break-word; white-space: normal; }
   </style>
 </head>
 <body>
@@ -142,11 +99,11 @@
   </div>
 </div>
   
-  <div id="auth-overlay" class="loader-overlay" style="display: none;">
+<div id="auth-overlay" class="loader-overlay" style="display: none;">
   <div class="text-center p-4 card bg-dark border-primary shadow-lg" style="max-width: 400px;">
     <h2 class="fw-bold text-white mb-3">Wildu Partner</h2>
     <p class="text-muted mb-4">Accedi con il tuo account Google per iniziare a configurare i tuoi eventi.</p>
-    <button class="btn btn-light rounded-pill w-100 fw-bold p-3" onclick="loginGoogle()">
+    <button class="btn btn-light rounded-pill w-100 fw-bold p-3" type="button" onclick="loginGoogle()">
       <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2">
       Accedi con Google
     </button>
@@ -163,51 +120,35 @@
       <label class="text-primary small fw-bold">WHATSAPP</label>
       <input type="tel" id="p_whatsapp" class="form-control mb-4" placeholder="Es. 3331234567">
     </div>
-    <button class="btn btn-primary rounded-pill w-100 fw-bold p-3" onclick="saveFirstProfile()">
-      SALVA E INIZIA
-    </button>
+    <button class="btn btn-primary rounded-pill w-100 fw-bold p-3" type="button" onclick="saveFirstProfile()">SALVA E INIZIA</button>
   </div>
 </div>
 
-
-  
 <script>
   const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
-  // COSTANTE GLOBALE LIMITE PROPOSTE (Così un domani la cambi solo qui!)
-let MAX_PROPOSTE_ATTIVE = 3; // Valore di base
+  let MAX_PROPOSTE_ATTIVE = 3;
 
-function aggiornaLimiteDalServer(data) {
-   // Aggiorna limite proposte
-   if (data && data.config && data.config.limiteProposte && !isNaN(data.config.limiteProposte)) {
-       MAX_PROPOSTE_ATTIVE = parseInt(data.config.limiteProposte, 10);
-   } else {
-       MAX_PROPOSTE_ATTIVE = 3; 
-   }
-
-   // 🔴 LOGO E TRADUTTORE GOOGLE DRIVE 2.0
-   if (data && data.config && data.config.logoUrl) {
-       const logoImg = document.getElementById('app-logo');
-       if (logoImg) {
-           let finalUrl = String(data.config.logoUrl);
-           
-           // Cerca l'ID segreto nel link
-           const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
-           const match = finalUrl.match(driveRegex);
-           
-           if (match && match[1]) {
-               // 🟢 IL NUOVO PASSAGGIO SEGRETO DI GOOGLE (Thumbnail API)
-               finalUrl = "https://drive.google.com/thumbnail?id=" + match[1] + "&sz=w500";
-           }
-           
-           logoImg.src = finalUrl;
-           logoImg.style.display = 'block'; // Lo rende visibile
-       }
-   }
-}
-
-  
+  function aggiornaLimiteDalServer(data) {
+     if (data && data.config && data.config.limiteProposte && !isNaN(data.config.limiteProposte)) {
+         MAX_PROPOSTE_ATTIVE = parseInt(data.config.limiteProposte, 10);
+     } else {
+         MAX_PROPOSTE_ATTIVE = 3; 
+     }
+     if (data && data.config && data.config.logoUrl) {
+         const logoImg = document.getElementById('app-logo');
+         if (logoImg) {
+             let finalUrl = String(data.config.logoUrl);
+             const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
+             const match = finalUrl.match(driveRegex);
+             if (match && match[1]) {
+                 finalUrl = "https://drive.google.com/thumbnail?id=" + match[1] + "&sz=w500";
+             }
+             logoImg.src = finalUrl;
+             logoImg.style.display = 'block'; 
+         }
+     }
+  }
 </script>
-
 
 <div class="util-nav d-flex justify-content-between align-items-center">
   <div class="d-flex align-items-center">
@@ -215,25 +156,21 @@ function aggiornaLimiteDalServer(data) {
      <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
   </div>
   <div>
-    <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" onclick="copyAppLink()">🔗 Condividi App</button>
-    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="showInstallInfo()">📱 Salva App</button>
+    <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" type="button" onclick="copyAppLink()">🔗 Condividi App</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3" type="button" onclick="showInstallInfo()">📱 Salva App</button>
   </div>
 </div>
-
 
 <div id="loader" class="loader-overlay">
   <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
   <h5 class="fw-bold text-white">Elaborazione in corso...</h5>
 </div>
-
   
 <div id="home-view" class="container" style="max-width: 500px;">
   <div class="mb-5 mt-4">
     <h1 class="fw-bold text-white">Area Partner 👋</h1>
     <p class="text-muted">Inizia la configurazione del tuo prossimo evento.</p>
-    <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">
-       ⏳ Caricamento slot...
-    </span>
+    <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">⏳ Caricamento slot...</span>
   </div>
 
   <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form')">
@@ -244,12 +181,12 @@ function aggiornaLimiteDalServer(data) {
 
   <div class="row g-2 mb-4">
     <div class="col-6">
-      <button class="btn btn-outline-primary w-100 py-3 rounded-4 shadow-sm" onclick="openProfile()">
+      <button type="button" class="btn btn-outline-primary w-100 py-3 rounded-4 shadow-sm" onclick="openProfile()">
         <i class="bi bi-person-circle d-block mb-1 fs-4"></i> Profilo
       </button>
     </div>
     <div class="col-6">
-      <button class="btn btn-outline-info w-100 py-3 rounded-4 shadow-sm" onclick="openMyProposals()">
+      <button type="button" class="btn btn-outline-info w-100 py-3 rounded-4 shadow-sm" onclick="openMyProposals()">
         <i class="bi bi-list-stars d-block mb-1 fs-4"></i> Mie Proposte
       </button>
     </div>
@@ -261,51 +198,28 @@ function aggiornaLimiteDalServer(data) {
     <div class="menu-desc">Hai dubbi o vuoi modificare un evento inviato? Scrivici su WhatsApp.</div>
   </a>
 
-  <p class="text-muted small mt-5" 
-   style="user-select: none; -webkit-user-select: none;"
-   onmousedown="startSyncTimer()" 
-   onmouseup="cancelSyncTimer()" 
-   onmouseleave="cancelSyncTimer()"
-   ontouchstart="startSyncTimer()" 
-   ontouchend="cancelSyncTimer()" 
-   ontouchcancel="cancelSyncTimer()">
-   Sistema Partner Hub v2.5
-</p>
+  <p class="text-muted small mt-5" style="user-select: none; -webkit-user-select: none;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
+    Sistema Partner Hub v2.5
+  </p>
 </div>
 
 <div id="form-view" class="container pb-5 pt-3" style="max-width: 850px; display:none;">
-
-
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="text-white fw-bold m-0">Nuova Proposta</h4>
-    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelProposal()">
+    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" type="button" onclick="cancelProposal()">
       <i class="bi bi-x-lg"></i> Esci e Annulla
     </button>
   </div>
 
-
-  <div class="progress-container mb-4">
-    <div id="progress-bar" class="progress-bar-fill"></div>
-  </div>
+  <div class="progress-container mb-4"><div id="progress-bar" class="progress-bar-fill"></div></div>
   
-<div id="step-1" class="step-content active">
+  <div id="step-1" class="step-content active">
     <span class="step-header">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="row g-3">
-        
-        <div class="col-md-6">
-          <label>Nome e Cognome Guida</label>
-          <input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly>
-        </div>
-        <div class="col-md-6">
-          <label>WhatsApp</label>
-          <input type="text" id="g_tel" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly>
-        </div>
-        <div class="col-12 mt-1 mb-3">
-          <p class="text-warning m-0" style="font-size: 0.7rem; line-height: 1.2;">
-            <i class="bi bi-lock-fill"></i> Dati collegati al tuo account. Per modificarli, esci dal modulo e vai in <b>Profilo</b>.
-          </p>
-        </div>
+        <div class="col-md-6"><label>Nome e Cognome Guida</label><input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
+        <div class="col-md-6"><label>WhatsApp</label><input type="text" id="g_tel" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
+        <div class="col-12 mt-1 mb-3"><p class="text-warning m-0" style="font-size: 0.7rem; line-height: 1.2;"><i class="bi bi-lock-fill"></i> Dati collegati al tuo account. Per modificarli, esci dal modulo e vai in <b>Profilo</b>.</p></div>
         <div class="section-title">DETTAGLI TEMPORALI</div>
         <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
         <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
@@ -313,7 +227,7 @@ function aggiornaLimiteDalServer(data) {
         <div class="col-6"><label>Orario Inizio *</label><input type="time" id="od_orario_inizio" class="form-control"></div>
         <div class="col-6"><label>Orario Fine *</label><input type="time" id="od_orario_fine" class="form-control"></div>
       </div>
-      <button class="btn btn-submit text-white w-100 mt-4" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
+      <button type="button" class="btn btn-submit text-white w-100 mt-4" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
     </div>
   </div>
 
@@ -342,32 +256,23 @@ function aggiornaLimiteDalServer(data) {
         <div class="col-12"><textarea id="od_descrizione" class="form-control" rows="5" placeholder="Scrivi qui la descrizione emozionale del tuo evento..."></textarea></div>
       </div>
       <div class="d-flex gap-2 mt-4">
-        <button class="btn btn-outline-light w-50" onclick="goToStep(1)">← Indietro</button>
-        <button class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti: Nutrizione →</button>
+        <button type="button" class="btn btn-outline-light w-50" onclick="goToStep(1)">← Indietro</button>
+        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti: Nutrizione →</button>
       </div>
     </div>
   </div>
 
   <div id="equipment-steps-container"></div>
 
-
-
-<div id="step-8" class="step-content">
+  <div id="step-8" class="step-content">
     <span class="step-header">Passo 8 di 8: Foto di Copertina</span>
     <div class="card shadow-lg p-4 text-center">
       <div class="section-title">📸 IMMAGINE DEL TREKKING</div>
       <p class="text-muted small mb-3">Carica una nuova foto o scegline una dal tuo archivio.</p>
-      
       <ul class="nav nav-pills nav-fill gap-2 p-1 bg-dark rounded-pill mb-4" id="pills-tab" role="tablist" style="border: 1px solid #333;">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active rounded-pill text-white fw-bold" id="tab-upload" data-bs-toggle="pill" data-bs-target="#pane-upload" type="button" role="tab" onclick="clearGallerySelection()">📤 Nuova</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link rounded-pill text-white fw-bold" id="tab-mie" data-bs-toggle="pill" data-bs-target="#pane-mie" type="button" role="tab" onclick="loadGallery('mie')">👤 Le Mie</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link rounded-pill text-white fw-bold" id="tab-archivio" data-bs-toggle="pill" data-bs-target="#pane-archivio" type="button" role="tab" onclick="loadGallery('archivio')">🌍 Wildu</button>
-        </li>
+        <li class="nav-item" role="presentation"><button class="nav-link active rounded-pill text-white fw-bold" data-bs-toggle="pill" data-bs-target="#pane-upload" type="button" role="tab" onclick="clearGallerySelection()">📤 Nuova</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link rounded-pill text-white fw-bold" data-bs-toggle="pill" data-bs-target="#pane-mie" type="button" role="tab" onclick="loadGallery('mie')">👤 Le Mie</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link rounded-pill text-white fw-bold" data-bs-toggle="pill" data-bs-target="#pane-archivio" type="button" role="tab" onclick="loadGallery('archivio')">🌍 Wildu</button></li>
       </ul>
 
       <div class="tab-content" id="pills-tabContent">
@@ -375,15 +280,13 @@ function aggiornaLimiteDalServer(data) {
           <div class="upload-box border-dashed p-4 rounded-3 mb-3" style="border: 2px dashed #444; background: #161616;">
             <input type="file" id="foto_input" accept="image/*" class="d-none" onchange="handleImageSelection(event)">
             <div id="preview_container" style="display:none;">
-                <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;">
-                <br>
-                <button class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
+                <img id="image_preview" src="#" class="img-fluid rounded-3 mb-3" style="max-height: 250px;"><br>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="resetImage()">❌ Rimuovi</button>
             </div>
-<div id="upload_prompt" class="text-center mt-2">
-                <button class="btn btn-primary rounded-pill px-4 py-3 mb-4 shadow w-100" onclick="document.getElementById('foto_input').click()" style="max-width: 300px;">
+            <div id="upload_prompt" class="text-center mt-2">
+                <button type="button" class="btn btn-primary rounded-pill px-4 py-3 mb-4 shadow w-100" onclick="document.getElementById('foto_input').click()" style="max-width: 300px;">
                     <i class="bi bi-folder2-open"></i> Seleziona Foto dal Telefono
                 </button>
-                
                 <div class="d-flex align-items-center text-start p-3 rounded-3" style="background: rgba(0,0,0,0.4); border: 1px solid #444;">
                     <div class="form-check form-switch m-0 d-flex align-items-center w-100">
                         <input class="form-check-input" type="checkbox" id="condividi_foto_community" checked style="width: 2.5em; height: 1.3em; flex-shrink: 0; cursor: pointer;">
@@ -394,48 +297,32 @@ function aggiornaLimiteDalServer(data) {
                     </div>
                 </div>
             </div>
+          </div>
         </div>
-
-        <div class="tab-pane fade" id="pane-mie" role="tabpanel">
-          <div id="gallery-mie" class="p-3 rounded-3" style="background: #161616; min-height: 150px;">
-             </div>
-        </div>
-
-        <div class="tab-pane fade" id="pane-archivio" role="tabpanel">
-          <div id="gallery-archivio" class="p-3 rounded-3" style="background: #161616; min-height: 150px;">
-             </div>
-        </div>
+        <div class="tab-pane fade" id="pane-mie" role="tabpanel"><div id="gallery-mie" class="p-3 rounded-3" style="background: #161616; min-height: 150px;"></div></div>
+        <div class="tab-pane fade" id="pane-archivio" role="tabpanel"><div id="gallery-archivio" class="p-3 rounded-3" style="background: #161616; min-height: 150px;"></div></div>
       </div>
-
       <div class="d-flex gap-2 mt-4">
-        <button class="btn btn-outline-light w-50" onclick="goToStep(7)">← Indietro</button>
-        <button class="btn btn-success p-3 w-50 fw-bold" id="final_submit_btn" onclick="sendToWildu()">🚀 INVIA PROPOSTA</button>
+        <button type="button" class="btn btn-outline-light w-50" onclick="goToStep(7)">← Indietro</button>
+        <button type="button" class="btn btn-success p-3 w-50 fw-bold" id="final_submit_btn" onclick="sendToWildu()">🚀 INVIA PROPOSTA</button>
       </div>
     </div>
   </div>
-
-
-  
 </div>
   
 <div id="my-proposals-view" class="container pb-5 pt-3" style="max-width: 600px; display:none;">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="text-white fw-bold m-0">Le mie Proposte</h2>
-    <button class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="showPage('home')">Indietro</button>
+    <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="showPage('home')">Indietro</button>
   </div>
-
   <div class="section-title text-warning" style="border-bottom-color: #ffc107;">⏳ In Valutazione</div>
-  <div id="list-pending" class="mb-4">
-    </div>
-
+  <div id="list-pending" class="mb-4"></div>
   <div class="section-title text-success" style="border-bottom-color: #198754;">✅ Accettate</div>
-  <div id="list-accepted">
-    </div>
+  <div id="list-accepted"></div>
 </div>
   
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // DEFINIZIONE CATEGORIE
   const eqCategories = [
     { name: "🍎 Nutrizione", step: 3, items: [{id:'eq1', val:'Acqua', icon:'💧'}, {id:'eq2', val:'Pranzo al sacco', icon:'🥪'}, {id:'eqSnack', val:'Snack', icon:'🍫'}] },
     { name: "🥾 Abbigliamento", step: 4, items: [{id:'eq3', val:'Scarpe da trekking', icon:'🥾'}, {id:'eq4', val:'Vestiti a strati', icon:'👕'}, {id:'eq5', val:'Giacca impermeabile', icon:'🧥'}] },
@@ -445,52 +332,30 @@ function aggiornaLimiteDalServer(data) {
   ];
 
   function showPage(page) {
-  // Nascondiamo SEMPRE tutto prima di decidere cosa mostrare
-  document.getElementById('home-view').style.display = 'none';
-  document.getElementById('form-view').style.display = 'none';
-  document.getElementById('my-proposals-view').style.display = 'none';
-
-  // Accendiamo solo la pagina richiesta
-  if (page === 'home') {
-    document.getElementById('home-view').style.display = 'block';
-  } else if (page === 'form') {
-    document.getElementById('form-view').style.display = 'block';
-  } else if (page === 'proposals') {
-    document.getElementById('my-proposals-view').style.display = 'block';
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('my-proposals-view').style.display = 'none';
+    if (page === 'home') document.getElementById('home-view').style.display = 'block';
+    else if (page === 'form') document.getElementById('form-view').style.display = 'block';
+    else if (page === 'proposals') document.getElementById('my-proposals-view').style.display = 'block';
+    window.scrollTo(0,0);
   }
 
-  window.scrollTo(0,0);
-}
-
-  // LOGICA DI NAVIGAZIONE E VALIDAZIONE
  function goToStep(step) {
     let current = parseInt(document.querySelector('.step-content.active').id.split('-')[1]);
-    
-    // Validazione Rigida Step 1 e 2
-    if (step > current && current === 1) {
-        if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
-    }
-    if (step > current && current === 2) {
-        if (!checkFields(['od_luogo_nome', 'od_regione', 'od_luogo_link', 'od_km', 'od_dislivello', 'od_descrizione'])) return;
-    }
-
-    // Validazione Morbida Categorie (Step 3-7)
+    if (step > current && current === 1) if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
+    if (step > current && current === 2) if (!checkFields(['od_luogo_nome', 'od_regione', 'od_luogo_link', 'od_km', 'od_dislivello', 'od_descrizione'])) return;
     if (step > current && current >= 3 && current <= 7) {
         let cat = eqCategories.find(c => c.step === current);
         let checked = cat.items.some(it => document.getElementById(it.id).checked || document.getElementById('note_' + it.id).value.trim() !== "");
         if (!checked) {
-            let confirmSkip = confirm("⚠️ Non hai selezionato nulla per \"" + cat.name + "\". Confermi di non voler richiedere attrezzatura per questa categoria?");
+            let confirmSkip = confirm("⚠️ Non hai selezionato nulla per \"" + cat.name + "\". Confermi di non voler richiedere attrezzatura?");
             if (!confirmSkip) return;
         }
     }
-
-    // Qui il codice cambia le pagine e muove la barra
     document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
     document.getElementById('step-' + step).classList.add('active');
-    
-    // Barra di avanzamento (ora diviso 8)
     document.getElementById('progress-bar').style.width = (step / 8 * 100) + "%";
-
     window.scrollTo(0,0);
   }
 
@@ -505,17 +370,12 @@ function aggiornaLimiteDalServer(data) {
     return ok;
   }
 
-  window.onload = function() {
-  renderEquipmentSteps();
-  // Ho rimosso il blocco "try/catch" del localStorage perché creava conflitto con Firebase
-};
+  window.onload = function() { renderEquipmentSteps(); };
 
 function renderEquipmentSteps() {
     let container = document.getElementById('equipment-steps-container');
     eqCategories.forEach((cat, idx) => {
       let isLast = (idx === eqCategories.length - 1);
-      
-      // Costruiamo tutta la stringa HTML in un unico blocco pulito
       let html = `
         <div id="step-${cat.step}" class="step-content">
           <span class="step-header">Passo ${cat.step} di 8: ${cat.name}</span>
@@ -523,7 +383,7 @@ function renderEquipmentSteps() {
             <div class="eq-category-card">
               <div class="row m-0">
                 ${cat.items.map(it => {
-                  let placeholder = (it.id === 'eq4') ? "Indumenti qtà e strati, gusci, giacche..." : "Qtà o tipologia...";
+                  let placeholder = (it.id === 'eq4') ? "Indumenti qtà e strati, gusci..." : "Qtà o tipologia...";
                   return `
                     <div class="col-12 d-flex align-items-center mb-3 eq-item">
                       <div class="d-flex align-items-center flex-grow-1 pe-2">
@@ -535,22 +395,16 @@ function renderEquipmentSteps() {
                 }).join('')}
               </div>
             </div>
-
             <div class="d-flex gap-2 mt-4">
-              <button class="btn btn-outline-light w-50" onclick="goToStep(${cat.step - 1})">← Indietro</button>
-              ${isLast ? 
-                `<button class="btn btn-submit text-white w-50" onclick="goToStep(8)">Avanti: Foto →</button>` : 
-                `<button class="btn btn-submit text-white w-50" onclick="goToStep(${cat.step + 1})">Avanti →</button>`
-              }
+              <button type="button" class="btn btn-outline-light w-50" onclick="goToStep(${cat.step - 1})">← Indietro</button>
+              ${isLast ? `<button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(8)">Avanti: Foto →</button>` : `<button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(${cat.step + 1})">Avanti →</button>`}
             </div>
           </div>
         </div>`;
-      
       container.innerHTML += html;
     });
   }
 
-  // UTILS
   async function smartPaste() {
     try {
       const text = await navigator.clipboard.readText();
@@ -564,25 +418,10 @@ function renderEquipmentSteps() {
   function openMapsSearch() {
     const ritrovo = document.getElementById('od_luogo_nome').value.trim();
     if(!ritrovo) return alert("⚠️ Scrivi prima il nome o l'indirizzo nel campo 'Punto di Ritrovo'!");
-    
-    // URL di ricerca per Google Maps
     const mapsUrl = "https://www.google.it/maps/search/" + encodeURIComponent(ritrovo + " Italia");
-    
-    // RILEVATORE: È uno smartphone?
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      /* SU MOBILE: Usiamo window.location. 
-         Il telefono intercetta il link e lancia l'App di Maps. 
-         Non si crea nessuna pagina bianca perché non apriamo nuove schede (_blank).
-      */
-      window.location.href = mapsUrl;
-    } else {
-      /* SU DESKTOP: Apriamo in una nuova scheda. 
-         Il partner cerca il punto e poi torna nella scheda dell'App Wildu.
-      */
-      window.open(mapsUrl, '_blank');
-    }
+    if (isMobile) window.location.href = mapsUrl;
+    else window.open(mapsUrl, '_blank');
   }
 
   function autoFetchRegion() {
@@ -604,45 +443,24 @@ function renderEquipmentSteps() {
   }
 
   async function sendToWildu() {
-
-    // =========================================================
-  // HARD GUARD: BLOCCO FISICO SE HA GIA' 3 PROPOSTE
-  // =========================================================
-const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  const memoria = sessionStorage.getItem('wildu_cache_proposte');
   if (memoria) {
     const datiCache = JSON.parse(memoria);
     aggiornaLimiteDalServer(datiCache);
-    
-    // 🔴 CONTA SOLO LE PENDING
     const totaleAttive = datiCache.pending ? datiCache.pending.length : 0;
-    
     if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
-       alert(`⚠️ ERRORE: Hai già ${MAX_PROPOSTE_ATTIVE} proposte in attesa di valutazione. Non puoi inviarne altre finché non vengono valutate dall'Admin.`);
+       alert(`⚠️ ERRORE: Hai già ${MAX_PROPOSTE_ATTIVE} proposte in attesa di valutazione.`);
        return; 
     }
   }
-  // =========================================================
-    
     const loader = document.getElementById('loader');
     loader.style.display = 'flex';
-    
-  
-// RECUPERO CHIAVE UTENTE DA FIREBASE
-    // Se l'utente è loggato, prendiamo il suo UID (quello z5jE...), altrimenti "Utente_Anonimo"
     const currentUserKey = firebase.auth().currentUser ? firebase.auth().currentUser.uid : "Utente_Anonimo";
-
-// 1. GESTIONE FOTO (Upload o Galleria)
-    let fotoUrl = selectedGalleryUrl; // Parte dal presupposto che abbia scelto una foto vecchia
+    let fotoUrl = selectedGalleryUrl; 
     try {
-      // Se c'è un file caricato fisicamente, ignora la galleria e fai l'upload
-      if (document.getElementById('foto_input').files.length > 0) {
-        fotoUrl = await uploadToCloudinary();
-      }
-    } catch (e) {
-      console.error("Errore caricamento immagine:", e);
-    }
+      if (document.getElementById('foto_input').files.length > 0) { fotoUrl = await uploadToCloudinary(); }
+    } catch (e) { console.error("Errore foto:", e); }
 
-    // 2. COSTRUZIONE PAYLOAD (Dati ordinati per le colonne dello Sheet)
     const payload = {
       guidaNome: document.getElementById('g_nome').value.trim(),
       guidaTel: document.getElementById('g_tel').value.trim(),
@@ -655,24 +473,13 @@ const memoria = sessionStorage.getItem('wildu_cache_proposte');
       luogoLink: document.getElementById('od_luogo_link').value.trim(),
       km: document.getElementById('od_km').value,
       dislivello: document.getElementById('od_dislivello').value,
-      
-      // COLONNA K: Descrizione
       descrizione: document.getElementById('od_descrizione').value.trim(),
-      
-      // COLONNA L: Regione (Recuperata dal menu a tendina)
       regione: document.getElementById('od_regione').value, 
-      
-      // COLONNA M: Foto URL (Il link ricevuto da Cloudinary)
       fotoUrl: fotoUrl, 
-
-      utente: currentUserKey, // <--- LA CHIAVE VIENE SPEDITA QUI
-
-      // LA RIGA CHE CI SALVA LA VITA: L'ID UNIVOCO GENERATO AL VOLO
+      utente: currentUserKey, 
       tempId: "PEND_" + new Date().getTime()
- 
     };
 
-    // 3. GESTIONE ATTREZZATURA (JSON)
     let eqArray = [];
     document.querySelectorAll('.od-eq').forEach(cb => {
       let n = document.getElementById('note_' + cb.id).value.trim();
@@ -680,61 +487,31 @@ const memoria = sessionStorage.getItem('wildu_cache_proposte');
     });
     payload.attrezzaturaJson = JSON.stringify(eqArray);
 
-    // 4. INVIO AL MOTORE GOOGLE
-    fetch(MOTORE_API_URL, { 
-      method: 'POST', 
-      body: JSON.stringify({ action: 'submit', payload: payload }) 
-    })
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', payload: payload }) })
     .then(r => r.json())
     .then(res => {
       if(res.success) {
-        // SUCCESSO: Salviamo i dati
         localStorage.setItem('wildu_p_nome', payload.guidaNome);
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
-        
-        // ========================================================
-        // IL TOCCO MAGICO: DISTRUGGIAMO LA CACHE DELLE PROPOSTE!
-        // Così la prossima volta che apre "Mie Proposte", vedrà quella nuova.
         sessionStorage.removeItem('wildu_cache_proposte');
         sessionStorage.removeItem('wildu_cache_time');
-        // ========================================================
-        
-        // NON SPEGNIAMO IL LOADER. Cambiamo solo il testo.
         document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
-        
         alert("🚀 Proposta inviata con successo!"); 
         location.reload(); 
       } else {
-
-        // ERRORE: Qui sì che spegniamo il loader per fargli correggere i dati
         loader.style.display = 'none'; 
         alert("❌ Errore: " + res.error);
       }
     })
-    .catch(() => { 
-      loader.style.display = 'none'; 
-      alert("❌ Errore rete o server non raggiungibile."); 
-    });
+    .catch(() => { loader.style.display = 'none'; alert("❌ Errore di rete."); });
   }
-  // Funzione per copiare il link (Condividi App)
-function copyAppLink() { 
-  navigator.clipboard.writeText(window.location.href); 
-  alert("🔗 Link dell'App copiato! Ora puoi inviarlo ai tuoi partner."); 
-}
 
-// Funzione per mostrare il Modal (Salva App)
-function showInstallInfo() { 
-  new bootstrap.Modal(document.getElementById('installModal')).show(); 
-}
-
-
-// NUOVE IMAGE
-  
+function copyAppLink() { navigator.clipboard.writeText(window.location.href); alert("🔗 Link copiato!"); }
+function showInstallInfo() { new bootstrap.Modal(document.getElementById('installModal')).show(); }
 
 function handleImageSelection(event) {
   const file = event.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function(e) {
     document.getElementById('image_preview').src = e.target.result;
@@ -748,36 +525,24 @@ function resetImage() {
   document.getElementById('foto_input').value = "";
   document.getElementById('preview_container').style.display = 'none';
   document.getElementById('upload_prompt').style.display = 'block';
-  finalFotoUrl = "";
+  selectedGalleryUrl = "";
 }
 
-// IL MOTORE DI COMPRESSIONE E CARICAMENTO
 async function uploadToCloudinary() {
   const fileInput = document.getElementById('foto_input');
-  if (fileInput.files.length === 0) return ""; // Nessuna foto selezionata
-
+  if (fileInput.files.length === 0) return ""; 
   const file = fileInput.files[0];
-  
-  // TRITACARNE: Compressione sul telefono del partner
   const compressedFile = await compressImage(file);
-
   const formData = new FormData();
   formData.append('file', compressedFile);
   formData.append('upload_preset', 'WILDU_s'); 
   formData.append('cloud_name', 'daiyrgmbb');
-  
-  // 🔴 LOGICA PRIVACY: Legge l'interruttore
   const shareCheckbox = document.getElementById('condividi_foto_community');
-  let tags = getGuideTag(); // Tag personale (sempre presente)
-  if (shareCheckbox && shareCheckbox.checked) {
-      tags = 'archivio_wildu,' + tags; // Aggiunge il tag globale solo se spuntato
-  }
+  let tags = getGuideTag(); 
+  if (shareCheckbox && shareCheckbox.checked) { tags = 'archivio_wildu,' + tags; }
   formData.append('tags', tags);
 
-  const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', {
-    method: 'POST',
-    body: formData
-  });
+  const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', { method: 'POST', body: formData });
   const data = await resp.json();
   return data.secure_url; 
 }
@@ -791,240 +556,144 @@ function compressImage(file) {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; // Qualità ottima ma leggera
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-        canvas.width = width;
-        canvas.height = height;
+        const MAX_WIDTH = 1200; 
+        let width = img.width; let height = img.height;
+        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-        }, 'image/jpeg', 0.8); // Qualità 80% (invisibile all'occhio, pesa pochissimo)
+        canvas.toBlob((blob) => { resolve(new File([blob], file.name, { type: 'image/jpeg' })); }, 'image/jpeg', 0.8);
       };
     };
   });
 }
 
-// NUOVE IMAGE
-
-
-let selectedGalleryUrl = ""; // Memorizza la foto cliccata dalla galleria
-
-// 1. MOTORE CREAZIONE NOME GUIDA (Il Cartellino)
+let selectedGalleryUrl = ""; 
 function getGuideTag() {
   let nomeRaw = document.getElementById('g_nome').value || localStorage.getItem('wildu_p_nome') || 'anonimo';
-  // Pulisce il nome: "Mario Rossi!" -> "guida_mario_rossi"
-  let nomePulito = nomeRaw.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-  return 'guida_' + nomePulito;
+  return 'guida_' + nomeRaw.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
 }
 
-// 2. MOTORE GALLERIA
 async function loadGallery(tipo) {
-  resetImage(); // Se aveva caricato un file nuovo, lo togliamo per evitare conflitti
-  
+  resetImage(); 
   let tag = (tipo === 'mie') ? getGuideTag() : 'archivio_wildu';
   let container = document.getElementById('gallery-' + tipo);
-  
-  container.innerHTML = '<div class="spinner-border text-primary mt-4"></div><p class="small text-muted mt-2">Ricerca in corso...</p>';
-  
+  container.innerHTML = '<div class="spinner-border text-primary mt-4"></div><p class="small text-muted mt-2">Ricerca...</p>';
   try {
-    // Il parametro 't' serve a ingannare la cache per vedere subito le nuove foto
     let url = `https://res.cloudinary.com/daiyrgmbb/image/list/${tag}.json?t=${new Date().getTime()}`;
     let res = await fetch(url);
-    
-    if (!res.ok) {
-      container.innerHTML = `<p class="text-muted small mt-4">Nessuna foto trovata in questa sezione.</p>`;
-      return;
-    }
-    
+    if (!res.ok) { container.innerHTML = `<p class="text-muted small mt-4">Nessuna foto trovata.</p>`; return; }
     let data = await res.json();
-    if (!data.resources || data.resources.length === 0) {
-      container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`;
-      return;
-    }
-    
-    // Genera la griglia
+    if (!data.resources || data.resources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
     let html = '<div class="d-flex flex-wrap gap-2 justify-content-center">';
     data.resources.forEach(img => {
       let imgUrl = `https://res.cloudinary.com/daiyrgmbb/image/upload/v${img.version}/${img.public_id}.${img.format}`;
-      html += `<img src="${imgUrl}" class="gallery-img rounded-3 shadow-sm" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent; transition: 0.2s;" onclick="selectGalleryImage(this, '${imgUrl}')">`;
+      html += `<img src="${imgUrl}" class="gallery-img rounded-3 shadow-sm" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;" onclick="selectGalleryImage(this, '${imgUrl}')">`;
     });
     html += '</div>';
     container.innerHTML = html;
-    
-  } catch (err) {
-    container.innerHTML = `<p class="text-danger small mt-4">Errore di connessione all'archivio.</p>`;
-  }
+  } catch (err) { container.innerHTML = `<p class="text-danger small mt-4">Errore di connessione.</p>`; }
 }
 
-// 3. SELEZIONE IMMAGINE DALLA GALLERIA
 function selectGalleryImage(imgElement, url) {
-  // Rimuovi il bordo blu da tutte le altre foto
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
-  // Metti il bordo blu a quella cliccata
   imgElement.style.borderColor = '#0d6efd';
   selectedGalleryUrl = url;
 }
 
-// 4. RESET SELEZIONE SE TORNA ALL'UPLOAD
 function clearGallerySelection() {
   selectedGalleryUrl = "";
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
 }
 
+function loginGoogle() { auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message)); }
 
-// Funzione Login
-function loginGoogle() {
-  auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message));
-}
-
-// NUOVO OSSERVATORE STATO AUTH (Sostituisci il tuo vecchio blocco con questo)
 auth.onAuthStateChanged(async (user) => {
-  const initScreen = document.getElementById('init-screen'); // Il velo nero di caricamento
-  const authOverlay = document.getElementById('auth-overlay'); // La schermata login
-  const profileOverlay = document.getElementById('profile-overlay'); // La schermata primo profilo
+  const initScreen = document.getElementById('init-screen'); 
+  const authOverlay = document.getElementById('auth-overlay'); 
+  const profileOverlay = document.getElementById('profile-overlay'); 
   
   if (user) {
-    // ===============================================
-    // AVVIO CONTROLLO LIMITE PROPOSTE IN BACKGROUND!
     checkProposalLimitAtStartup(user.uid);
-    // ===============================================
-
-    // 1. MANTENIAMO IL TUO CONTROLLO FIRESTORE (Non perdi nulla!)
     const docRef = db.collection("users_partners").doc(user.uid);
     const doc = await docRef.get();
 
     if (doc.exists) {
-      // PROFILO ESISTE: Carichiamo i dati come facevi prima
       const data = doc.data();
       document.getElementById('g_nome').value = data.nome_cognome;
       document.getElementById('g_tel').value = data.whatsapp;
-      
       authOverlay.style.display = 'none';
       profileOverlay.style.display = 'none';
-      showPage('home'); // Ti porta in Home in modo pulito
+      showPage('home'); 
     } else {
-      // PROFILO MANCA: Mostriamo il modulo di registrazione
       authOverlay.style.display = 'none';
       profileOverlay.style.display = 'flex';
     }
   } else {
-    // NON LOGGATO: Mostriamo il login
     authOverlay.style.display = 'flex';
     profileOverlay.style.display = 'none';
-    // Se non è loggato, ci assicuriamo che le altre viste siano chiuse
     document.getElementById('home-view').style.display = 'none';
   }
   
-  // IL TOCCO FINALE: Solo ora che Firebase ha deciso, togliamo il velo nero
   if (initScreen) {
     setTimeout(() => { 
       initScreen.style.opacity = '0';
-      setTimeout(() => { 
-        initScreen.style.display = 'none'; 
-      }, 500);
-    }, 1000); // 1 secondo di attesa per essere sicuri che Firebase sia pronto
+      setTimeout(() => { initScreen.style.display = 'none'; }, 500);
+    }, 1000); 
   }
 });
-// SALVATAGGIO PRIMO PROFILO
+
 async function saveFirstProfile() {
   const user = auth.currentUser;
   const nome = document.getElementById('p_nome_completo').value.trim();
   const tel = document.getElementById('p_whatsapp').value.trim();
-
   if (!nome || !tel) return alert("⚠️ Compila entrambi i campi!");
-
   try {
-    await db.collection("users_partners").doc(user.uid).set({
-      nome_cognome: nome,
-      whatsapp: tel,
-      email: user.email,
-      creato_il: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    // Popoliamo i campi del Passo 1 del modulo
+    await db.collection("users_partners").doc(user.uid).set({ nome_cognome: nome, whatsapp: tel, email: user.email, creato_il: firebase.firestore.FieldValue.serverTimestamp() });
     document.getElementById('g_nome').value = nome;
     document.getElementById('g_tel').value = tel;
-    
     document.getElementById('profile-overlay').style.display = 'none';
     alert("✅ Profilo creato! Benvenuto in Wildu.");
-  } catch (e) {
-    alert("Errore nel salvataggio: " + e.message);
-  }
+  } catch (e) { alert("Errore nel salvataggio: " + e.message); }
 }
 
-// Apre l'interfaccia di modifica (CON ANTI-INGORGO GRAFICO)
+// 🟢 FIX PROFILO: Anti-Freeze Grafico
 function openProfile() {
   try {
       const user = auth.currentUser;
-      if (!user) {
-          alert("⏳ Attendi un secondo, sto collegando l'account...");
-          return;
-      }
+      if (!user) return alert("Attendi il caricamento dell'utente...");
 
-      // 1. Prepara i dati in background
-      const gNome = document.getElementById('g_nome');
-      const gTel = document.getElementById('g_tel');
+      document.getElementById('edit_p_nome').value = document.getElementById('g_nome').value || "";
+      document.getElementById('edit_p_tel').value = document.getElementById('g_tel').value || "";
       
-      if (gNome) document.getElementById('edit_p_nome').value = gNome.value;
-      if (gTel) document.getElementById('edit_p_tel').value = gTel.value;
+      if (typeof refreshProfileLogoUI === "function") refreshProfileLogoUI(); 
+
+      const modal = document.getElementById('edit-profile-overlay');
+      modal.style.display = 'flex';
       
-      if (typeof refreshProfileLogoUI === "function") {
-          refreshProfileLogoUI(); 
-      }
-
-      // 2. IL "CALCIO" AL BROWSER: aspetta 10 millisecondi e forza il ricalcolo grafico!
-      setTimeout(() => {
-          const modal = document.getElementById('edit-profile-overlay');
-          if (modal) {
-              modal.style.display = 'flex';
-          } else {
-              alert("Errore grafico: Impossibile trovare la finestra profilo.");
-          }
-      }, 10);
-
+      // La "scossa" che obbliga il browser a disegnare il modale all'istante
+      modal.offsetHeight; 
   } catch(e) {
-      console.error("ERRORE PROFILO:", e);
-      alert("Errore nell'apertura del profilo.");
+      alert("Errore nell'apertura profilo. Ricarica la pagina.");
   }
 }
 
-function closeProfile() {
-  document.getElementById('edit-profile-overlay').style.display = 'none';
-}
+function closeProfile() { document.getElementById('edit-profile-overlay').style.display = 'none'; }
 
-// Salva le modifiche su Firebase e aggiorna i campi del modulo
 async function updateProfile() {
   const user = auth.currentUser;
   const nuovoNome = document.getElementById('edit_p_nome').value.trim();
   const nuovoTel = document.getElementById('edit_p_tel').value.trim();
-
   if (!nuovoNome || !nuovoTel) return alert("Inserisci tutti i campi!");
-
   try {
-    await db.collection("users_partners").doc(user.uid).update({
-      nome_cognome: nuovoNome,
-      whatsapp: nuovoTel
-    });
-    
-    // Aggiorna anche i campi "nascosti" del passo 1 per i nuovi invii
+    await db.collection("users_partners").doc(user.uid).update({ nome_cognome: nuovoNome, whatsapp: nuovoTel });
     document.getElementById('g_nome').value = nuovoNome;
     document.getElementById('g_tel').value = nuovoTel;
-    
     alert("Profilo aggiornato!");
     closeProfile();
-  } catch (e) {
-    alert("Errore nell'aggiornamento: " + e.message);
-  }
+  } catch (e) { alert("Errore nell'aggiornamento: " + e.message); }
 }
 
-// --- MOTORE GESTIONE LOGO DAL PROFILO ---
 function refreshProfileLogoUI() {
   const logo = localStorage.getItem('wildu_partner_logo');
   const img = document.getElementById('profile-logo-img');
@@ -1033,18 +702,12 @@ function refreshProfileLogoUI() {
   const removeBtn = document.getElementById('profile-logo-remove-btn');
 
   if (logo) {
-    img.src = logo;
-    img.style.display = 'block';
-    icon.style.display = 'none';
-    status.innerText = "✅ Logo attivo";
-    status.className = "small text-success mb-1 fw-bold";
+    img.src = logo; img.style.display = 'block'; icon.style.display = 'none';
+    status.innerText = "✅ Logo attivo"; status.className = "small text-success mb-1 fw-bold";
     removeBtn.style.display = 'inline-block';
   } else {
-    img.src = "";
-    img.style.display = 'none';
-    icon.style.display = 'block';
-    status.innerText = "⚠️ Nessun logo salvato";
-    status.className = "small text-warning mb-1 fw-bold";
+    img.src = ""; img.style.display = 'none'; icon.style.display = 'block';
+    status.innerText = "⚠️ Nessun logo salvato"; status.className = "small text-warning mb-1 fw-bold";
     removeBtn.style.display = 'none';
   }
 }
@@ -1052,33 +715,26 @@ function refreshProfileLogoUI() {
 function saveProfileLogo(event) {
   const file = event.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
-          // Rimpicciolisce il logo (Max 300px) per risparmiare memoria
           const canvas = document.createElement('canvas');
-          const MAX = 300;
-          let w = img.width, h = img.height;
+          const MAX = 300; let w = img.width, h = img.height;
           if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
           else if (h > w && h > MAX) { w *= MAX / h; h = MAX; }
           else if (w === h && w > MAX) { w = MAX; h = MAX; }
-
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          
-          // Salva in PNG per mantenere le trasparenze
           const base64Logo = canvas.toDataURL('image/png');
           localStorage.setItem('wildu_partner_logo', base64Logo);
-          
-          refreshProfileLogoUI(); // Mostra subito l'anteprima!
+          refreshProfileLogoUI(); 
       };
       img.src = e.target.result;
   };
   reader.readAsDataURL(file);
-  event.target.value = ""; // Resetta l'input
+  event.target.value = ""; 
 }
 
 function removeProfileLogo() {
@@ -1087,33 +743,22 @@ function removeProfileLogo() {
     refreshProfileLogoUI();
   }
 }
-// ----------------------------------------
 
-// Funzione per Annullare il Modulo
 function cancelProposal() {
   if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
-    // Pulisce tutti i campi TRANNE Nome e Telefono
-    document.querySelectorAll('.form-control').forEach(i => {
-      if (i.id !== 'g_nome' && i.id !== 'g_tel') {
-        i.value = ""; 
-      }
-    }); 
+    document.querySelectorAll('.form-control').forEach(i => { if (i.id !== 'g_nome' && i.id !== 'g_tel') i.value = ""; }); 
     showPage('home');
   }
 }
 
-
-// 1. HELPER: Gestione grafica del limite proposte (Solo Pending)
 function gestisciLimiteProposte(data) {
   const btnNuova = document.getElementById('btn-nuova-proposta');
   const badgeContatore = document.getElementById('contatore-proposte'); 
-  
-  // 🔴 CONTA SOLO QUELLE IN ATTESA (PENDING)
-  const totaleAttive = (data && data.pending) ? data.pending.length : 0;
+  const pendingArr = (data && data.pending) ? data.pending : [];
+  const totaleAttive = pendingArr.length;
   
   if (badgeContatore) {
       badgeContatore.style.display = 'inline-block'; 
-      
       if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
           badgeContatore.innerHTML = `🛑 Slot in Attesa Pieni (${totaleAttive}/${MAX_PROPOSTE_ATTIVE})`;
           badgeContatore.className = "badge bg-danger text-white px-3 py-2 rounded-pill shadow-sm mt-2";
@@ -1128,7 +773,7 @@ function gestisciLimiteProposte(data) {
       btnNuova.style.opacity = "0.4";
       btnNuova.style.pointerEvents = "none";
       const desc = btnNuova.querySelector('.menu-desc');
-      if (desc) desc.innerHTML = `<b class='text-danger'>Hai raggiunto il limite di ${MAX_PROPOSTE_ATTIVE} proposte in valutazione.</b>`;
+      if (desc) desc.innerHTML = `<b class='text-danger'>Hai raggiunto il limite di ${MAX_PROPOSTE_ATTIVE} proposte.</b>`;
     } else {
       btnNuova.style.opacity = "1";
       btnNuova.style.pointerEvents = "auto";
@@ -1137,72 +782,52 @@ function gestisciLimiteProposte(data) {
     }
   }
 }
-// CONTROLLO SILENZIOSO ALL'AVVIO DELL'APP (BLINDATO E AGGIORNATO)
+
 async function checkProposalLimitAtStartup(uid) {
   const btnNuova = document.getElementById('btn-nuova-proposta');
   const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
-
-  // 🔴 BLOCCO FISICO IMMEDIATO: Spengiamo il bottone finché non sappiamo la verità
-  if (btnNuova) {
-      btnNuova.style.pointerEvents = "none";
-      btnNuova.style.opacity = "0.7";
-  }
-
+  if (btnNuova) { btnNuova.style.pointerEvents = "none"; btnNuova.style.opacity = "0.7"; }
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // ==========================================
-  // CASO 1: LEGGE DALLA MEMORIA DEL TELEFONO
-  // ==========================================
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
-    const datiCache = JSON.parse(memoria); // Estraiamo i dati
-    aggiornaLimiteDalServer(datiCache);    // 1. Aggiorna la variabile globale
-    gestisciLimiteProposte(datiCache);     // 2. Aggiorna la grafica
-    return;
+    try {
+      const datiCache = JSON.parse(memoria); 
+      aggiornaLimiteDalServer(datiCache);    
+      gestisciLimiteProposte(datiCache);     
+      return;
+    } catch(e){}
   }
 
   if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Verifica permessi in corso...</span>";
-
   try {
-    const response = await fetch(MOTORE_API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: "getUserData", uid: uid })
-    });
-    
-    // ==========================================
-    // CASO 2: LEGGE FRESCO DAL SERVER
-    // ==========================================
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", uid: uid }) });
     if (response.ok) {
       const data = await response.json();
-      sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-      sessionStorage.setItem('wildu_cache_time', adesso.toString());
-      
-      aggiornaLimiteDalServer(data); // 1. Aggiorna la variabile globale
-      gestisciLimiteProposte(data);  // 2. Questa funzione riattiva il bottone automaticamente se serve!
+      if (!data.error) {
+          sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+          sessionStorage.setItem('wildu_cache_time', adesso.toString());
+          aggiornaLimiteDalServer(data); 
+          gestisciLimiteProposte(data);  
+      }
     } else {
-        // Se c'è un errore server, ripristiniamo
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
         if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
     }
   } catch (e) {
-    console.log("Errore nel controllo limiti in background", e);
-    // Se non c'è internet, ripristiniamo
     if (desc) desc.innerText = "Wizard guidato in pochi passi.";
     if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
   }
 }
   
-// 2. FUNZIONE PRINCIPALE: Caricamento Proposte (con Cache Intelligente)
 async function openMyProposals() {
   const user = auth.currentUser;
   if (!user) return alert("Devi essere loggato!");
-
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // CASO 1: LEGGE DALLA MEMORIA
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
     try {
         const data = JSON.parse(memoria);
@@ -1213,24 +838,16 @@ async function openMyProposals() {
             gestisciLimiteProposte(data);
             return; 
         }
-    } catch(e) {} // Se la memoria è rotta, la ignora e scarica da Google
+    } catch(e) {} 
   }
 
-  // CASO 2: CHIAMA GOOGLE
   document.getElementById('loader').style.display = 'flex';
-  
   try {
-    const response = await fetch(MOTORE_API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: "getUserData", uid: user.uid })
-    });
-    
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", uid: user.uid }) });
     if (!response.ok) throw new Error("Errore di rete");
     const data = await response.json();
 
-    if (data.error || data.success === false) {
-        throw new Error(data.error || "Dati non validi");
-    }
+    if (data.error || data.success === false) throw new Error(data.error || "Errore dati dal server");
 
     sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
     sessionStorage.setItem('wildu_cache_time', adesso.toString());
@@ -1241,20 +858,19 @@ async function openMyProposals() {
     gestisciLimiteProposte(data);
 
   } catch (e) {
-    console.error("Errore:", e);
-    alert("Errore nel recupero dati. Tieni premuta la scritta in basso per 3 secondi per pulire la memoria.");
-    showPage('home'); // PARACADUTE: Se fallisce, ti riporta in Home e NON ti lascia sulla pagina vuota!
+    console.error(e);
+    alert("Errore nel database. Aggiorna usando la scritta in basso.");
+    showPage('home'); 
   } finally {
     document.getElementById('loader').style.display = 'none';
   }
 }
-
   
+// 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti
 function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
-  
-  if (!pList || !aList) return; // Paracadute di sicurezza
+  if (!pList || !aList) return; 
 
   const pendingArr = (data && data.pending) ? data.pending : [];
   const acceptedArr = (data && data.accepted) ? data.accepted : [];
@@ -1269,22 +885,13 @@ function renderProposals(data) {
     const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
     const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
-
     let itemStr = "";
     try { itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27"); } catch(e) {}
 
-    const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
-
-    let btnRiproponi = "";
-    if (limiteRaggiunto) {
-       btnRiproponi = `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite In Attesa Raggiunto</button>`;
-    } else {
-       btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
-    }
-    
-    const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
-
-    const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
+    const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
+    let btnRiproponi = limiteRaggiunto ? `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite Raggiunto</button>` : `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
+    const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
+    const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
@@ -1293,25 +900,13 @@ function renderProposals(data) {
             <h6 class="text-white fw-bold m-0">${item.titolo || "Senza Titolo"}</h6>
             <span class="badge bg-primary small">${item.regione || "N/D"}</span>
           </div>
-          
-          <div class="small text-info fw-bold mb-3">
-            <i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} 
-            <br>
-            <i class="bi bi-geo-alt"></i> ${item.luogo || ""}
-          </div>
-
+          <div class="small text-info fw-bold mb-3"><i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} <br><i class="bi bi-geo-alt"></i> ${item.luogo || ""}</div>
           <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc || ""}</p>
-
           <div class="d-flex gap-2">
-            <a href="${item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1">
-              <i class="bi bi-map"></i> Mappa
-            </a>
+            <a href="${item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1"><i class="bi bi-map"></i> Mappa</a>
             ${btnInfo}
           </div>
-          
-          ${btnRiproponi}
-          ${btnAnnulla}
-          ${btnLocandina}
+          ${btnRiproponi} ${btnAnnulla} ${btnLocandina}
         </div>
       </div>
     `;
@@ -1321,28 +916,15 @@ function renderProposals(data) {
   acceptedArr.forEach(item => aList.innerHTML += generateCard(item, 'success', false));
 }
 
-// Funzione sicura per mostrare Info & Kit
 function mostraInfoKit(itemEncoded) {
   const item = JSON.parse(decodeURIComponent(itemEncoded));
-  
   let eqFormatted = "";
-  try {
-    const eqArray = JSON.parse(item.eq);
-    eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\n');
-  } catch(e) { 
-    eqFormatted = "Dotazione standard"; 
-  }
-
-  const infoTecniche = `DATI TECNICI:\n🏃 Km: ${item.km || 0}\n⛰️ Dislivello: ${item.dislivello || 0}m D+\n\nKIT RICHIESTO:\n${eqFormatted}`;
-  
-  alert(infoTecniche);
+  try { const eqArray = JSON.parse(item.eq); eqFormatted = eqArray.map(e => `• ${e.item}${e.note ? ' ('+e.note+')' : ''}`).join('\n'); } catch(e) { eqFormatted = "Dotazione standard"; }
+  alert(`DATI TECNICI:\n🏃 Km: ${item.km || 0}\n⛰️ Dislivello: ${item.dislivello || 0}m D+\n\nKIT RICHIESTO:\n${eqFormatted}`);
 }  
 
-// --- MAGIA A COSTO ZERO: RIPROPONI EVENTO LOCALE ---
 function riproponiEvento(itemEncoded) {
   const item = JSON.parse(decodeURIComponent(itemEncoded));
-  
-  // 1. Compila i campi di testo base
   document.getElementById('od_titolo').value = item.titolo || "";
   document.getElementById('od_luogo_nome').value = item.luogo || "";
   document.getElementById('od_luogo_link').value = item.link || "";
@@ -1351,203 +933,109 @@ function riproponiEvento(itemEncoded) {
   document.getElementById('od_regione').value = item.regione || "";
   document.getElementById('od_orario_inizio').value = item.oraIn || "";
   document.getElementById('od_orario_fine').value = item.oraOut || "";
-
-  // 🔴 LA SPUGNA MAGIC (LAVACERVELLI DELLA FIRMA)
-  let testoSporco = item.desc || "";
-  // La Regex cerca "Guida: QualsiasiCosa |" all'inizio del testo e lo vaporizza
-  let testoPulito = testoSporco.replace(/^Guida:.*?\|\s*/i, "");
+  let testoPulito = (item.desc || "").replace(/^Guida:.*?\|\s*/i, "");
   document.getElementById('od_descrizione').value = testoPulito.trim();
 
+  if (item.dataInizio) document.getElementById('od_data_inizio').value = item.dataInizio.split('/').reverse().join('-');
+  if (item.dataFine) document.getElementById('od_data_fine').value = item.dataFine.split('/').reverse().join('-');
 
-  // 2. Formatta le date per gli input HTML (Da GG/MM/AAAA a AAAA-MM-GG)
-  if (item.dataInizio) {
-    document.getElementById('od_data_inizio').value = item.dataInizio.split('/').reverse().join('-');
-  }
-  if (item.dataFine) {
-    document.getElementById('od_data_fine').value = item.dataFine.split('/').reverse().join('-');
-  }
-
-  // 3. Resetta e compila l'attrezzatura dal JSON
   document.querySelectorAll('.od-eq').forEach(cb => cb.checked = false);
   document.querySelectorAll('.note-input').forEach(n => n.value = "");
-  
   try {
     const eqArray = JSON.parse(item.eq);
     eqArray.forEach(eqItem => {
-      // Cerca la checkbox che ha come valore il nome dell'oggetto (es. "Acqua")
       const checkbox = Array.from(document.querySelectorAll('.od-eq')).find(cb => cb.value === eqItem.item);
-      if(checkbox) {
-        checkbox.checked = true;
-        document.getElementById('note_' + checkbox.id).value = eqItem.note || "";
-      }
+      if(checkbox) { checkbox.checked = true; document.getElementById('note_' + checkbox.id).value = eqItem.note || ""; }
     });
   } catch(e) {}
-
-  // 4. Cambia pagina e porta l'utente allo step 1 del modulo!
-  showPage('form');
-  goToStep(1);
+  showPage('form'); goToStep(1);
 }
 
-// --- FUNZIONE KILLER: ANNULLA PROPOSTA ---
 async function annullaProposta(itemEncoded) {
   const item = JSON.parse(decodeURIComponent(itemEncoded));
   const user = auth.currentUser;
   if (!user) return;
+  if (!item.tempId) return alert("⚠️ ERRORE: Dati vecchi in memoria. Forza l'aggiornamento tenendo premuto il testo in basso!");
+  if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}"?\nEliminazione irreversibile.`)) return;
 
-  // 🔴 SCUDO 1: CONTROLLO MEMORIA VECCHIA
-  // Blocca tutto PRIMA ancora di chiedere conferma!
-  if (!item.tempId) {
-      alert("⚠️ ERRORE DI SINCRONIZZAZIONE\nStai leggendo dati vecchi dalla memoria.\nTieni premuta per 3 secondi la scritta in basso 'Sistema Partner Hub v2.5' per scaricare i dati aggiornati!");
-      return;
-  }
-
-  // Blocco di sicurezza Anti-Ansia e Anti-Sbaglio
-  if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}" del ${item.dataInizio}?\n\nL'operazione eliminerà il viaggio in modo irreversibile.`)) {
-    return;
-  }
-
-  // Attiva subito lo scudo nero anti-doppioclick
   document.getElementById('loader').style.display = 'flex';
-
   try {
-    // IL PAYLOAD CECCHINO
-    const payload = {
-      tempId: item.tempId
-    };
-
-    const response = await fetch(MOTORE_API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: "DELETE_PENDING", payload: payload })
-    });
-    
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "DELETE_PENDING", payload: { tempId: item.tempId } }) });
     const res = await response.json();
-    
     if(res.success) {
-      // Il Postino ha fatto il suo dovere. Distruggiamo la cache e ricarichiamo.
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
-      
       document.querySelector('#loader h5').innerText = "Proposta ritirata!";
-      alert("Proposta eliminata con successo.");
-      location.reload();
+      alert("Proposta eliminata con successo."); location.reload();
     } else {
       document.getElementById('loader').style.display = 'none';
       alert("Impossibile annullare: " + res.error);
     }
-  } catch(e) {
-    document.getElementById('loader').style.display = 'none';
-    alert("Errore di connessione. Riprova tra poco.");
-  }
+  } catch(e) { document.getElementById('loader').style.display = 'none'; alert("Errore di connessione."); }
 }
-
-// =========================================================================
-// MOTORE LOCANDINA PRO - BLOCCO COMPLETO E UNICO (NON SEPARARE)
-// =========================================================================
 
 window.currentLocandinaItem = null;
 window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
 
-// 1. CLICK SUL BOTTONE DELLA CARD (CON CONTROLLO LOGO)
 function generaLocandina(itemEncoded) {
   window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
-  
   const logoSalvato = localStorage.getItem('wildu_partner_logo');
-  const logoSaltato = sessionStorage.getItem('wildu_skip_logo'); // Cache temporanea se rifiuta
-
-  // Se non ha il logo e non ha ancora rifiutato in questa sessione
+  const logoSaltato = sessionStorage.getItem('wildu_skip_logo'); 
   if (!logoSalvato && !logoSaltato) {
-      if (confirm("💡 Vuoi inserire il tuo Logo Partner nella locandina?\n\nIl logo verrà salvato nella memoria del telefono per i prossimi utilizzi.\n- Fai 'OK' per caricarlo ora.\n- Fai 'Annulla' per procedere senza logo.")) {
-          // Apre il caricatore del logo e FERMA la funzione
-          document.getElementById('logo-upload-input').click();
-          return; 
-      } else {
-          // Ha rifiutato. Non glielo chiediamo più finché non riavvia l'app.
-          sessionStorage.setItem('wildu_skip_logo', 'true'); 
-      }
+      if (confirm("💡 Vuoi inserire il tuo Logo Partner nella locandina?\n\n- Fai 'OK' per caricarlo ora.\n- Fai 'Annulla' per procedere senza logo.")) {
+          document.getElementById('logo-upload-input').click(); return; 
+      } else { sessionStorage.setItem('wildu_skip_logo', 'true'); }
   }
-
-  // Se ha già il logo, o ha appena rifiutato, prosegue aprendo la foto di sfondo
   document.getElementById('locandina-upload').click();
 }
 
-// NUOVO MOTORE: SALVA IL LOGO NEL TELEFONO E RIPRENDE IL LAVORO
 function handleLogoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
-          // Rimpiccioliamo il logo per non intasare la memoria del telefono (Max 300px)
           const canvas = document.createElement('canvas');
-          const MAX = 300;
-          let w = img.width, h = img.height;
+          const MAX = 300; let w = img.width, h = img.height;
           if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
           else if (h > w && h > MAX) { w *= MAX / h; h = MAX; }
           else if (w === h && w > MAX) { w = MAX; h = MAX; }
-
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          
-          // Salva come PNG per non perdere lo sfondo trasparente
           const base64Logo = canvas.toDataURL('image/png');
           localStorage.setItem('wildu_partner_logo', base64Logo);
-          
-          alert("✅ Logo salvato con successo! Ora scegli la foto di sfondo della locandina.");
-          
-          // RIPRENDE DA SOLO IL FLUSSO DELLA LOCANDINA
+          alert("✅ Logo salvato con successo! Ora scegli la foto di sfondo.");
           document.getElementById('locandina-upload').click();
       };
       img.src = e.target.result;
   };
   reader.readAsDataURL(file);
-  event.target.value = ""; // Resetta l'input per poter ricaricare lo stesso file se serve
+  event.target.value = ""; 
 }
 
-// 2. SELEZIONE FOTO E AVVIO MODALE CON MATEMATICA PROPORZIONALE E LOADER
 function handleLocandinaSelect(event) {
   const file = event.target.files[0];
   if (!file) return;
-
-  // 🔴 NOVITÀ 1: ACCENDIAMO LO SCUDO NERO ANTI-CLICK!
   const loader = document.getElementById('loader');
-  if (loader) {
-      loader.style.display = 'flex';
-      const loaderText = loader.querySelector('h5');
-      if(loaderText) loaderText.innerText = "Caricamento foto...";
-  }
+  if (loader) { loader.style.display = 'flex'; const loaderText = loader.querySelector('h5'); if(loaderText) loaderText.innerText = "Caricamento foto..."; }
 
   const pBox = document.getElementById('loc-preview-price');
   const prezzo = window.currentLocandinaItem.prezzo;
   if (!prezzo || prezzo == "0" || prezzo == 0) {
-    if(pBox) { 
-        pBox.innerText = "PARTECIPAZIONE GRATUITA"; 
-        pBox.style.borderColor = "#fff"; 
-        pBox.style.background = "rgba(255,255,255,0.2)"; 
-        pBox.style.color = "#fff"; // Fix Colore testo Bianco
-    }
+    if(pBox) { pBox.innerText = "PARTECIPAZIONE GRATUITA"; pBox.style.borderColor = "#fff"; pBox.style.background = "rgba(255,255,255,0.2)"; pBox.style.color = "#fff"; }
   } else {
-    if(pBox) { 
-        pBox.innerText = "€ " + prezzo; 
-        pBox.style.borderColor = "#FFD700"; 
-        pBox.style.background = "rgba(255,215,0,0.2)"; 
-        pBox.style.color = "#FFD700"; // Fix Colore testo Giallo
-    }
+    if(pBox) { pBox.innerText = "€ " + prezzo; pBox.style.borderColor = "#FFD700"; pBox.style.background = "rgba(255,215,0,0.2)"; pBox.style.color = "#FFD700"; }
   }
 
-  // Aggiorna dinamicamente il titolo nell'anteprima (Intatto dal tuo originale)
   const pTitle = document.getElementById('loc-preview-title');
-  if (pTitle) {
-    pTitle.innerText = window.currentLocandinaItem.titolo.toUpperCase();
-  }
+  if (pTitle) pTitle.innerText = window.currentLocandinaItem.titolo.toUpperCase();
   
   const reader = new FileReader();
   reader.onload = function(e) {
     const img = document.getElementById('loc-crop-img');
     img.onload = function() {
-      // RESET STATO E ZOOM
       window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
       const slider = document.getElementById('loc-zoom-slider');
       if(slider) slider.value = 1;
@@ -1557,30 +1045,15 @@ function handleLocandinaSelect(event) {
       const ratioImg = img.naturalWidth / img.naturalHeight;
       let baseW, baseH;
       
-      if(ratioImg > ratioStage) {
-          baseH = stageH; baseW = stageH * ratioImg;
-      } else {
-          baseW = stageW; baseH = stageW / ratioImg;
-      }
+      if(ratioImg > ratioStage) { baseH = stageH; baseW = stageH * ratioImg; } 
+      else { baseW = stageW; baseH = stageW / ratioImg; }
       
-      window.locCropState.baseW = baseW;
-      window.locCropState.baseH = baseH;
-
-      img.style.width = baseW + "px"; 
-      img.style.height = baseH + "px";
-      
-      window.locCropState.currentX = (stageW - baseW) / 2; 
-      window.locCropState.currentY = (stageH - baseH) / 2;
-      
+      window.locCropState.baseW = baseW; window.locCropState.baseH = baseH;
+      img.style.width = baseW + "px"; img.style.height = baseH + "px";
+      window.locCropState.currentX = (stageW - baseW) / 2; window.locCropState.currentY = (stageH - baseH) / 2;
       img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(1)`;
       
-      // 🟢 NOVITÀ 2: SPEGNIAMO LO SCUDO NERO E APRIAMO L'ANTEPRIMA
-      if (loader) {
-          loader.style.display = 'none';
-          const loaderText = loader.querySelector('h5');
-          if(loaderText) loaderText.innerText = "Elaborazione in corso..."; // Ripristina il testo per i prossimi usi
-      }
-
+      if (loader) { loader.style.display = 'none'; const loaderText = loader.querySelector('h5'); if(loaderText) loaderText.innerText = "Elaborazione in corso..."; }
       new bootstrap.Modal(document.getElementById('modalCropLocandina')).show();
       document.getElementById('locandina-upload').value = ""; 
     };
@@ -1589,58 +1062,44 @@ function handleLocandinaSelect(event) {
   reader.readAsDataURL(file);
 }
 
-// 3. GESTIONE ZOOM
 function updateLocZoom() {
   const slider = document.getElementById('loc-zoom-slider');
   if(!slider) return;
   window.locCropState.scale = parseFloat(slider.value);
-  document.getElementById('loc-crop-img').style.transform = 
-    `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(${window.locCropState.scale})`;
+  document.getElementById('loc-crop-img').style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(${window.locCropState.scale})`;
 }
 
-// 4. TRASCINAMENTO (DRAG & DROP)
 function startDragLoc(e) {
-  e.preventDefault();
-  window.locCropState.isDragging = true;
+  e.preventDefault(); window.locCropState.isDragging = true;
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   window.locCropState.startX = clientX - window.locCropState.currentX;
   window.locCropState.startY = clientY - window.locCropState.currentY;
-  
-  document.addEventListener('mousemove', onDragLoc);
-  document.addEventListener('touchmove', onDragLoc, {passive: false});
-  document.addEventListener('mouseup', endDragLoc);
-  document.addEventListener('touchend', endDragLoc);
+  document.addEventListener('mousemove', onDragLoc); document.addEventListener('touchmove', onDragLoc, {passive: false});
+  document.addEventListener('mouseup', endDragLoc); document.addEventListener('touchend', endDragLoc);
 }
 
 function onDragLoc(e) {
-  if (!window.locCropState.isDragging) return;
-  e.preventDefault();
+  if (!window.locCropState.isDragging) return; e.preventDefault();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   window.locCropState.currentX = clientX - window.locCropState.startX;
   window.locCropState.currentY = clientY - window.locCropState.startY;
-  
-  document.getElementById('loc-crop-img').style.transform = 
-    `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(${window.locCropState.scale})`;
+  document.getElementById('loc-crop-img').style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(${window.locCropState.scale})`;
 }
 
 function endDragLoc() {
   window.locCropState.isDragging = false;
-  document.removeEventListener('mousemove', onDragLoc);
-  document.removeEventListener('touchmove', onDragLoc);
-  document.removeEventListener('mouseup', endDragLoc);
-  document.removeEventListener('touchend', endDragLoc);
+  document.removeEventListener('mousemove', onDragLoc); document.removeEventListener('touchmove', onDragLoc);
+  document.removeEventListener('mouseup', endDragLoc); document.removeEventListener('touchend', endDragLoc);
 }
 
-// 5. STAMPA E DOWNLOAD FINALE (ORA E' ASYNC PER CARICARE IL LOGO)
 async function generaLocandinaFinale() {
   try {
       const item = window.currentLocandinaItem;
-      if(!item) return alert("Errore: Dati dell'evento non trovati in memoria.");
-
+      if(!item) return alert("Errore: Dati dell'evento non trovati.");
       const canvas = document.getElementById('poster-canvas');
-      if(!canvas) return alert("Errore: Manca l'elemento canvas nell'HTML.");
+      if(!canvas) return alert("Errore canvas HTML.");
       
       const ctx = canvas.getContext('2d');
       const W = 1080; const H = 1920;
@@ -1648,14 +1107,11 @@ async function generaLocandinaFinale() {
 
       const imgHTML = document.getElementById('loc-crop-img');
       const scale = window.locCropState.scale;
-      
       const trueX = window.locCropState.currentX + (window.locCropState.baseW / 2) * (1 - scale);
       const trueY = window.locCropState.currentY + (window.locCropState.baseH / 2) * (1 - scale);
 
       ctx.save(); 
-      const M = 4;
-      ctx.translate(trueX * M, trueY * M);
-      ctx.scale(scale, scale);
+      const M = 4; ctx.translate(trueX * M, trueY * M); ctx.scale(scale, scale);
       ctx.drawImage(imgHTML, 0, 0, window.locCropState.baseW * M, window.locCropState.baseH * M);
       ctx.restore(); 
 
@@ -1667,201 +1123,106 @@ async function generaLocandinaFinale() {
       gradBot.addColorStop(0, "rgba(0,0,0,0)"); gradBot.addColorStop(0.4, "rgba(0,0,0,0.8)"); gradBot.addColorStop(1, "rgba(0,0,0,0.95)");
       ctx.fillStyle = gradBot; ctx.fillRect(0, H - 1000, W, 1000);
 
-      ctx.textAlign = "center";
-      let cursorY = 180; // PARTENZA SAFE ZONE SOCIAL BASE
+      ctx.textAlign = "center"; let cursorY = 180; 
       
-      // ==========================================
-      // CONTROLLO E STAMPA LOGO PARTNER (WATERMARK)
-      // ==========================================
       const logoBase64 = localStorage.getItem('wildu_partner_logo');
       if (logoBase64) {
-          const logoImg = await new Promise((resolve) => {
-              const img = new Image();
-              img.onload = () => resolve(img);
-              img.onerror = () => resolve(null);
-              img.src = logoBase64;
-          });
-
+          const logoImg = await new Promise((resolve) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = logoBase64; });
           if (logoImg) {
-              const maxLogoSize = 200; // Molto più piccolo (Watermark)
-              let lw = logoImg.width;
-              let lh = logoImg.height;
-              
+              const maxLogoSize = 200; let lw = logoImg.width; let lh = logoImg.height;
               if (lh > maxLogoSize) { lw *= maxLogoSize / lh; lh = maxLogoSize; }
               if (lw > maxLogoSize) { lh *= maxLogoSize / lw; lw = maxLogoSize; }
-              
-              ctx.save();
-              ctx.globalAlpha = 0.5; // SEMI-TRASPARENZA AL 50%
-              // Posizionato in alto a destra, parzialmente fuori dalle safe zones
-              ctx.drawImage(logoImg, W - lw - 40, 40, lw, lh);
-              ctx.restore();
-              
-              // NON spinge giù il testo. Il cursore rimane fermo.
+              ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(logoImg, W - lw - 40, 40, lw, lh); ctx.restore();
           }
       }
     
-      // ==========================================
-      
-      // --- BOLLO DINAMICO (REGIONE + LUOGO) ---
       ctx.font = "bold 26px 'Inter', sans-serif";
       let regStr = item.regione ? "🌍 " + item.regione.toUpperCase() : "";
       let luogoRaw = item.luogo ? item.luogo.toUpperCase() : "";
-      
-      let badgeTxt = "";
-      const maxTextW = 850; 
+      let badgeTxt = ""; const maxTextW = 850; 
       
       if (regStr && luogoRaw) {
           let testTxt = regStr + "  |  📍 " + luogoRaw;
           if (ctx.measureText(testTxt).width > maxTextW) {
               let tronco = luogoRaw;
-              while (ctx.measureText(regStr + "  |  📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
-                  tronco = tronco.slice(0, -1);
-              }
+              while (ctx.measureText(regStr + "  |  📍 " + tronco + "...").width > maxTextW && tronco.length > 0) tronco = tronco.slice(0, -1);
               badgeTxt = regStr + "  |  📍 " + tronco.trim() + "...";
-          } else {
-              badgeTxt = testTxt;
-          }
-      } else if (regStr) {
-          badgeTxt = regStr;
-      } else if (luogoRaw) {
+          } else badgeTxt = testTxt;
+      } else if (regStr) { badgeTxt = regStr; } 
+      else if (luogoRaw) {
           let tronco = luogoRaw;
           if (ctx.measureText("📍 " + tronco).width > maxTextW) {
-              while (ctx.measureText("📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
-                  tronco = tronco.slice(0, -1);
-              }
+              while (ctx.measureText("📍 " + tronco + "...").width > maxTextW && tronco.length > 0) tronco = tronco.slice(0, -1);
               badgeTxt = "📍 " + tronco.trim() + "...";
-          } else {
-              badgeTxt = "📍 " + tronco;
-          }
-      } else {
-          badgeTxt = "⭐ OPEN DAY";
-      }
+          } else badgeTxt = "📍 " + tronco;
+      } else badgeTxt = "⭐ OPEN DAY";
 
-      let textW = ctx.measureText(badgeTxt).width;
-      let badgeW = Math.max(450, textW + 80); 
-      
-      ctx.fillStyle = "#0d6efd"; 
-      ctx.beginPath(); ctx.roundRect((W - badgeW) / 2, cursorY, badgeW, 60, 30); ctx.fill();
-      ctx.fillStyle = "white"; 
-      ctx.fillText(badgeTxt, W/2, cursorY + 40);
-      
+      let textW = ctx.measureText(badgeTxt).width; let badgeW = Math.max(450, textW + 80); 
+      ctx.fillStyle = "#0d6efd"; ctx.beginPath(); ctx.roundRect((W - badgeW) / 2, cursorY, badgeW, 60, 30); ctx.fill();
+      ctx.fillStyle = "white"; ctx.fillText(badgeTxt, W/2, cursorY + 40);
       cursorY += 100;
 
-      // --- DATA E ORARI (CON AUTO-RESIZE E COLORE AZZURRO) ---
       const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
       const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
       const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
-      
-      let dateTxt = "📅 " + dIn + dFine + orari;
-      let dateFontSize = 35;
+      let dateTxt = "📅 " + dIn + dFine + orari; let dateFontSize = 35;
       ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
-      
-      while(ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 18) {
-          dateFontSize -= 2;
-          ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
-      }
-
-      ctx.fillStyle = "#00d4ff"; // Ciano Elettrico Potenziato
-      ctx.shadowColor = "rgba(0,0,0,1)"; // Ombra Nera Assoluta
-      ctx.shadowBlur = 25; // Alone espanso
-      ctx.fillText(dateTxt, W/2, cursorY);
-      ctx.shadowColor = "transparent";
-      
+      while(ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 18) { dateFontSize -= 2; ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif"; }
+      ctx.fillStyle = "#00d4ff"; ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 25; ctx.fillText(dateTxt, W/2, cursorY); ctx.shadowColor = "transparent";
       cursorY += 70; 
 
-      // --- TITOLO SMART A TRE STADI (Con Force-Fit) ---
-      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; 
-      ctx.fillStyle = "white"; 
+      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; ctx.fillStyle = "white"; 
       const titleText = (item.titolo || "Evento").toUpperCase();
-      
-      ctx.font = "900 85px 'Playfair Display', serif";
-      let interlinea = 90;
-
-      if (ctx.measureText(titleText).width > (W - 160)) {
-          ctx.font = "900 65px 'Playfair Display', serif";
-          interlinea = 70; 
-      }
-      
+      ctx.font = "900 85px 'Playfair Display', serif"; let interlinea = 90;
+      if (ctx.measureText(titleText).width > (W - 160)) { ctx.font = "900 65px 'Playfair Display', serif"; interlinea = 70; }
       const words = titleText.split(' '); let line = '';
       for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
-        if (ctx.measureText(testLine).width > (W - 160) && n > 0) {
-            ctx.fillText(line.trim(), W/2, cursorY, W - 160);
-            line = words[n] + ' '; 
-            cursorY += interlinea;
-        } else { line = testLine; }
+        if (ctx.measureText(testLine).width > (W - 160) && n > 0) { ctx.fillText(line.trim(), W/2, cursorY, W - 160); line = words[n] + ' '; cursorY += interlinea; } 
+        else line = testLine; 
       }
-      ctx.fillText(line.trim(), W/2, cursorY, W - 160);
-      ctx.shadowColor = "transparent";
+      ctx.fillText(line.trim(), W/2, cursorY, W - 160); ctx.shadowColor = "transparent";
 
-      // --- LOGICA ANCORAGGIO DAL BASSO ---
-      const boxW = 850; const boxH = 140; 
-      const boxY = H - boxH - 280; 
-
-      const prezzo = item.prezzo;
-      const isFree = (!prezzo || prezzo == "0" || prezzo == 0);
-      
+      const boxW = 850; const boxH = 140; const boxY = H - boxH - 280; 
+      const prezzo = item.prezzo; const isFree = (!prezzo || prezzo == "0" || prezzo == 0);
       const gradBox = ctx.createLinearGradient(0, boxY, 0, boxY + boxH);
       gradBox.addColorStop(0, isFree ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.9)"); 
       gradBox.addColorStop(1, isFree ? "rgba(230,230,230,0.9)" : "rgba(0,0,0,0.7)");
-      
-      ctx.fillStyle = gradBox;
-      ctx.beginPath(); ctx.roundRect((W - boxW)/2, boxY, boxW, boxH, 40); ctx.fill();
+      ctx.fillStyle = gradBox; ctx.beginPath(); ctx.roundRect((W - boxW)/2, boxY, boxW, boxH, 40); ctx.fill();
       ctx.strokeStyle = isFree ? "#000" : "rgba(255,215,0,0.8)"; ctx.lineWidth = 4; ctx.stroke();
-      
-      ctx.fillStyle = isFree ? "#000" : "#FFD700";
-      ctx.font = isFree ? "900 48px 'Inter', sans-serif" : "900 65px 'Inter', sans-serif";
+      ctx.fillStyle = isFree ? "#000" : "#FFD700"; ctx.font = isFree ? "900 48px 'Inter', sans-serif" : "900 65px 'Inter', sans-serif";
       ctx.fillText(isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo, W/2, boxY + 92);
 
       let currentDrawY = boxY - 40;
-
       const telNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "Vedi Link";
-      ctx.font = "bold 32px 'Inter', sans-serif";
-      ctx.fillStyle = "#25D366"; 
-      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 10; 
-      ctx.fillText("📲 INFO E PRENOTAZIONI: " + telNum, W/2, currentDrawY);
-      ctx.shadowColor = "transparent";
+      ctx.font = "bold 32px 'Inter', sans-serif"; ctx.fillStyle = "#25D366"; ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 10; 
+      ctx.fillText("📲 INFO E PRENOTAZIONI: " + telNum, W/2, currentDrawY); ctx.shadowColor = "transparent";
 
       currentDrawY -= 60; 
-
       const desc = item.descrizione || item.desc || ""; 
       if (desc) {
-          ctx.font = "500 26px 'Inter', sans-serif";
-          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          ctx.font = "500 26px 'Inter', sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.95)";
           const cleanDesc = desc.replace(/\n/g, ' ').trim();
           const shortDesc = cleanDesc.length > 200 ? cleanDesc.substring(0, 197) + "..." : cleanDesc;
-          
-          const descWords = shortDesc.split(' ');
-          let descLine = ''; let linesArr = [];
+          const descWords = shortDesc.split(' '); let descLine = ''; let linesArr = [];
           for(let n = 0; n < descWords.length; n++) {
               const testDescLine = descLine + descWords[n] + ' ';
-              if (ctx.measureText(testDescLine).width > (W - 200) && n > 0) {
-                  linesArr.push(descLine); descLine = descWords[n] + ' ';
-              } else { descLine = testDescLine; }
+              if (ctx.measureText(testDescLine).width > (W - 200) && n > 0) { linesArr.push(descLine); descLine = descWords[n] + ' '; } 
+              else { descLine = testDescLine; }
           }
           linesArr.push(descLine);
-          
-          const lineHeight = 38;
-          currentDrawY -= (linesArr.length - 1) * lineHeight; 
-          let tempY = currentDrawY;
-          
+          const lineHeight = 38; currentDrawY -= (linesArr.length - 1) * lineHeight; let tempY = currentDrawY;
           ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 10; 
-          for(let l=0; l<linesArr.length; l++) {
-              ctx.fillText(linesArr[l], W/2, tempY); 
-              tempY += lineHeight;
-          }
-          ctx.shadowColor = "transparent";
-          currentDrawY -= 60; 
+          for(let l=0; l<linesArr.length; l++) { ctx.fillText(linesArr[l], W/2, tempY); tempY += lineHeight; }
+          ctx.shadowColor = "transparent"; currentDrawY -= 60; 
       }
 
       let techStr = [];
       if(item.km) techStr.push("🥾 " + item.km + " KM");
       if(item.dislivello) techStr.push("⛰️ " + item.dislivello + " M D+");
       if(techStr.length > 0) {
-        ctx.fillStyle = "#FFD700"; ctx.font = "bold 42px 'Inter', sans-serif";
-        ctx.shadowColor = "black"; ctx.shadowBlur = 15; 
-        ctx.fillText(techStr.join("    |    "), W/2, currentDrawY);
-        ctx.shadowColor = "transparent";
+        ctx.fillStyle = "#FFD700"; ctx.font = "bold 42px 'Inter', sans-serif"; ctx.shadowColor = "black"; ctx.shadowBlur = 15; 
+        ctx.fillText(techStr.join("    |    "), W/2, currentDrawY); ctx.shadowColor = "transparent";
       }
 
       const link = document.createElement('a');
@@ -1870,89 +1231,53 @@ async function generaLocandinaFinale() {
       link.click();
 
       const cropModalEl = document.getElementById('modalCropLocandina');
-      if(cropModalEl) {
-         const modalInstance = bootstrap.Modal.getInstance(cropModalEl);
-         if(modalInstance) modalInstance.hide();
-      }
+      if(cropModalEl) { const modalInstance = bootstrap.Modal.getInstance(cropModalEl); if(modalInstance) modalInstance.hide(); }
       
-  } catch (erroreLocandina) {
-      alert("🚨 Si è verificato un errore durante la generazione:\n\n" + erroreLocandina.message);
-      console.error(erroreLocandina);
-  }
+  } catch (e) { alert("🚨 Errore locandina:\n\n" + e.message); console.error(e); }
 }
-  
   
 function logout() {
-  if(confirm("Vuoi uscire dall'app? Dovrai rifare il login per inviare nuove proposte.")) {
-    auth.signOut().then(() => {
-      // Puliamo anche eventuali dati locali per sicurezza
-      localStorage.removeItem('wildu_p_nome');
-      localStorage.removeItem('wildu_p_tel');
-      location.reload(); // Ricarica la pagina per mostrare l'overlay di login
-    }).catch(e => alert("Errore durante il logout: " + e.message));
+  if(confirm("Vuoi uscire dall'app?")) {
+    auth.signOut().then(() => { localStorage.removeItem('wildu_p_nome'); localStorage.removeItem('wildu_p_tel'); location.reload(); })
+    .catch(e => alert("Errore: " + e.message));
   }
 }
 
-
-let pressTimer; // La variabile che terrà in memoria il nostro cronometro
-
-function startSyncTimer() {
-  // Quando appoggi il dito, parte un timer di 3000 millisecondi (3 secondi)
-  pressTimer = setTimeout(() => {
-    forceSync();
-  }, 3000);
-}
-
-function cancelSyncTimer() {
-  // Se alzi il dito o ti sposti prima dei 3 secondi, cancelliamo il timer
-  clearTimeout(pressTimer);
-}
-
-// La funzione che avevamo già preparato
+let pressTimer;
+function startSyncTimer() { pressTimer = setTimeout(() => { forceSync(); }, 3000); }
+function cancelSyncTimer() { clearTimeout(pressTimer); }
 function forceSync() {
-  if(confirm("🛠️ MODALITÀ TECNICA 🛠️\n\nVuoi forzare il download dei dati scavalcando la memoria del telefono?")) {
-    sessionStorage.removeItem('wildu_cache_proposte');
-    sessionStorage.removeItem('wildu_cache_time');
-    location.reload(); 
+  if(confirm("🛠️ MODALITÀ TECNICA 🛠️\n\nVuoi forzare il download scavalcando la memoria?")) {
+    sessionStorage.removeItem('wildu_cache_proposte'); sessionStorage.removeItem('wildu_cache_time'); location.reload(); 
   }
 }
-  
 </script>
 
-  <div class="modal fade" id="installModal" tabindex="-1">
+<div class="modal fade" id="installModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered text-dark">
     <div class="modal-content rounded-4 border-0 shadow">
       <div class="modal-body text-center p-4">
         <h5 class="fw-bold mb-3">📱 Salva l'App sulla Home</h5>
-        <p class="text-muted small mb-4">Per usare Wildu Partner come una vera App:</p>
-        <div class="text-start bg-light p-3 rounded-3 small">
-          <strong>Su iPhone (Safari):</strong><br>
-          1. Clicca l'icona "Condividi" (quadrato con freccia) in basso.<br>
-          2. Seleziona <strong>"Aggiungi alla schermata Home"</strong>.<br><br>
-          <strong>Su Android (Chrome):</strong><br>
-          1. Clicca i tre puntini in alto.<br>
-          2. Seleziona <strong>"Installa App"</strong> o "Aggiungi a Home".
+        <div class="text-start bg-light p-3 rounded-3 small mb-4">
+          <strong>Su iPhone (Safari):</strong><br>1. Condividi.<br>2. <strong>"Aggiungi alla schermata Home"</strong>.<br><br>
+          <strong>Su Android (Chrome):</strong><br>1. Menu (tre puntini).<br>2. <strong>"Installa App"</strong> o "Aggiungi a Home".
         </div>
-        <button type="button" class="btn btn-dark rounded-pill mt-4 w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
+        <button type="button" class="btn btn-dark rounded-pill w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
       </div>
     </div>
   </div>
 </div>
 
-  
-<div id="edit-profile-overlay" class="loader-overlay" style="display: none;">
+<div id="edit-profile-overlay" class="loader-overlay" style="display: none; z-index: 10500 !important;">
   <div class="card bg-dark border-primary p-4 shadow-lg w-100 m-3" style="max-width: 450px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h3 class="text-white fw-bold m-0">Il tuo Profilo</h3>
-      <button class="btn-close btn-close-white" onclick="closeProfile()"></button>
+      <button type="button" class="btn-close btn-close-white" onclick="closeProfile()"></button>
     </div>
-    
     <label class="text-primary small fw-bold mb-1">NOME E COGNOME</label>
     <input type="text" id="edit_p_nome" class="form-control mb-3">
-    
     <label class="text-primary small fw-bold mb-1">TELEFONO (WHATSAPP)</label>
     <input type="tel" id="edit_p_tel" class="form-control mb-4">
-
 
     <label class="text-primary small fw-bold mb-1 mt-2">LOGO PARTNER (Locandine)</label>
     <div class="d-flex align-items-center mb-4 p-2 rounded-3" style="background: #252525; border: 1px solid #444;">
@@ -1963,30 +1288,24 @@ function forceSync() {
       <div class="flex-grow-1">
         <p id="profile-logo-status" class="small text-warning mb-1 fw-bold">Nessun logo salvato</p>
         <div class="d-flex gap-2">
-          <button class="btn btn-sm btn-outline-light rounded-pill px-3" onclick="document.getElementById('profile-logo-upload').click()">Carica</button>
-          <button id="profile-logo-remove-btn" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="display: none;" onclick="removeProfileLogo()">Rimuovi</button>
+          <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3" onclick="document.getElementById('profile-logo-upload').click()">Carica</button>
+          <button type="button" id="profile-logo-remove-btn" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="display: none;" onclick="removeProfileLogo()">Rimuovi</button>
         </div>
       </div>
     </div>
     <input type="file" id="profile-logo-upload" accept="image/png, image/jpeg" style="display:none;" onchange="saveProfileLogo(event)">
     
-
+    <button type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
     
-    <button class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">
-      AGGIORNA DATI
-    </button>
-    
-<div class="mt-4 pt-3 border-top border-secondary text-center">
-      <button class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="logout()">
-        <i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT
-      </button>
+    <div class="mt-4 pt-3 border-top border-secondary text-center">
+      <button type="button" class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
     </div>
   </div>
 </div>
 
 <input type="file" id="locandina-upload" accept="image/*" style="display: none;" onchange="handleLocandinaSelect(event)">
-  <input type="file" id="logo-upload-input" accept="image/png, image/jpeg" style="display:none;" onchange="handleLogoUpload(event)">
+<input type="file" id="logo-upload-input" accept="image/png, image/jpeg" style="display:none;" onchange="handleLogoUpload(event)">
 
 <div class="modal fade" id="modalCropLocandina" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -1997,34 +1316,22 @@ function forceSync() {
       </div>
       <div class="modal-body text-center d-flex flex-column align-items-center">
         <p class="small text-muted mb-3">Usa la barra per lo zoom e trascina la foto per centrarla.</p>
-        
-<div id="loc-crop-container" style="width: 270px; height: 480px; overflow: hidden; position: relative; border: 2px solid #fff; border-radius: 8px; background: #000; cursor: grab; text-align: left; box-sizing: content-box;">
-          
+        <div id="loc-crop-container" style="width: 270px; height: 480px; overflow: hidden; position: relative; border: 2px solid #fff; border-radius: 8px; background: #000; cursor: grab; text-align: left; box-sizing: content-box;">
           <img id="loc-crop-img" style="position: absolute; top: 0; left: 0; transform-origin: center center;" onmousedown="startDragLoc(event)" ontouchstart="startDragLoc(event)">
-          
           <div style="position: absolute; top: 0; left: 0; width: 100%; height: 150px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); pointer-events: none;"></div>
           <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 250px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); pointer-events: none;"></div>
-
           <div style="position: absolute; top: 45px; left: 50%; transform: translateX(-50%); width: 112px; height: 15px; background: #0d6efd; border-radius: 8px; pointer-events: none;"></div>
-          
           <div style="position: absolute; top: 70px; left: 50%; transform: translateX(-50%); width: 150px; height: 8px; background: #0d6efd; pointer-events: none;"></div>
-          
           <div id="loc-preview-title" style="position: absolute; top: 87px; left: 10%; width: 80%; height: 25px; border: 1px dashed rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; color: white; text-align: center; pointer-events: none;">TITOLO EVENTO</div>
-
           <div style="position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%); width: 120px; height: 8px; background: #FFD700; pointer-events: none;"></div>
-          
           <div style="position: absolute; bottom: 130px; left: 10%; width: 80%; height: 25px; border: 1px dashed rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; font-size: 8px; font-weight:bold; color: rgba(255,255,255,0.8); text-align:center; pointer-events: none;">DESCRIZIONE EMOZIONALE</div>
-          
           <div style="position: absolute; bottom: 115px; left: 50%; transform: translateX(-50%); width: 150px; height: 8px; background: #25D366; pointer-events: none;"></div>
-          
           <div id="loc-preview-price" style="position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); width: 212px; height: 35px; border: 1px dashed #FFD700; background: rgba(255,215,0,0.2); display:flex; align-items:center; justify-content:center; font-size: 10px; font-weight:bold; color: #FFD700; pointer-events: none;">BOX PREZZO</div>
         </div>
-
         <div class="w-100 mt-4 px-3">
           <label class="form-label small fw-bold text-info"><i class="bi bi-zoom-in"></i> Zoom Immagine</label>
           <input type="range" class="form-range" id="loc-zoom-slider" min="0.5" max="3" step="0.05" value="1" oninput="updateLocZoom()">
         </div>
-
       </div>
       <div class="modal-footer border-secondary">
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Annulla</button>
@@ -2036,6 +1343,5 @@ function forceSync() {
 
 <canvas id="poster-canvas" style="display:none;"></canvas>
 
-  
 </body>
 </html>
