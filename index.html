@@ -184,20 +184,19 @@ function aggiornaLimiteDalServer(data) {
        MAX_PROPOSTE_ATTIVE = 3; 
    }
 
-   // 🔴 NOVITA': Accende il logo e "traduce" i link di Google Drive!
+   // 🔴 LOGO E TRADUTTORE GOOGLE DRIVE 2.0
    if (data && data.config && data.config.logoUrl) {
        const logoImg = document.getElementById('app-logo');
        if (logoImg) {
-           let finalUrl = data.config.logoUrl;
+           let finalUrl = String(data.config.logoUrl);
            
-           // TRADUTTORE GOOGLE DRIVE
-           // Cerca l'ID segreto nel link (la stringa lunga di lettere e numeri)
+           // Cerca l'ID segreto nel link
            const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
            const match = finalUrl.match(driveRegex);
            
            if (match && match[1]) {
-               // Se è un link di Drive, lo trasforma nel link diretto all'immagine pura
-               finalUrl = "https://drive.google.com/uc?export=view&id=" + match[1];
+               // 🟢 IL NUOVO PASSAGGIO SEGRETO DI GOOGLE (Thumbnail API)
+               finalUrl = "https://drive.google.com/thumbnail?id=" + match[1] + "&sz=w500";
            }
            
            logoImg.src = finalUrl;
@@ -205,6 +204,8 @@ function aggiornaLimiteDalServer(data) {
        }
    }
 }
+
+  
 </script>
 
 
@@ -1179,30 +1180,26 @@ async function openMyProposals() {
   const user = auth.currentUser;
   if (!user) return alert("Devi essere loggato!");
 
-  // --- CONTROLLO MEMORIA (CACHE) ---
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
   
-  // ==========================================
   // CASO 1: LEGGE DALLA MEMORIA DEL TELEFONO
-  // ==========================================
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
     console.log("Dati caricati istantaneamente dalla memoria del telefono!");
     const data = JSON.parse(memoria);
     
-    // 🔴 AGGIUNGIAMO IL LAVACERVELLI QUI
-    aggiornaLimiteDalServer(data);
-    
-    // Aggiorniamo la grafica in una frazione di secondo
-    showPage('proposals');
-    renderProposals(data); // L'ho ripristinato, era sparito dal tuo snippet!
-    gestisciLimiteProposte(data);
-    
-    return; // STOP! Esce dalla funzione e RISPARMIA la chiamata a Google
+    // 🔴 BLOCCO ERRORI CACHE: Se avevamo salvato un errore per sbaglio, lo saltiamo e forziamo Google
+    if (!data.error && data.success !== false) {
+        aggiornaLimiteDalServer(data);
+        showPage('proposals');
+        renderProposals(data); 
+        gestisciLimiteProposte(data);
+        return; 
+    }
   }
 
-  // --- SE LA MEMORIA È VUOTA O SCADUTA, CHIAMA GOOGLE ---
+  // CASO 2: CHIAMA GOOGLE
   document.getElementById('loader').style.display = 'flex';
   
   try {
@@ -1211,27 +1208,25 @@ async function openMyProposals() {
       body: JSON.stringify({ action: "getUserData", uid: user.uid })
     });
     
-    if (!response.ok) throw new Error("Errore server");
+    if (!response.ok) throw new Error("Errore server HTTP");
     const data = await response.json();
 
-    // SALVA NELLA MEMORIA DEL TELEFONO PER I PROSSIMI 30 MINUTI
+    // 🔴 BLOCCO SALVATAGGIO ERRORI
+    if (data.error || data.success === false) {
+        throw new Error(data.error || "Errore sconosciuto dal Master Script");
+    }
+
     sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
     sessionStorage.setItem('wildu_cache_time', adesso.toString());
 
-    // ==========================================
-    // CASO 2: LEGGE FRESCO DAL SERVER
-    // ==========================================
-    // 🔴 AGGIUNGIAMO IL LAVACERVELLI QUI
     aggiornaLimiteDalServer(data);
-
-    // Aggiorniamo la grafica
     showPage('proposals'); 
     renderProposals(data);
     gestisciLimiteProposte(data);
 
   } catch (e) {
     console.error("Errore recupero proposte:", e);
-    alert("Errore nel recupero dati dal database. Riprova tra poco.");
+    alert("Errore nel database: " + e.message + "\nRiprova tra poco.");
   } finally {
     document.getElementById('loader').style.display = 'none';
   }
@@ -1242,15 +1237,17 @@ function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
   
-  pList.innerHTML = data.pending.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
-  aList.innerHTML = data.accepted.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
+  // 🔴 SCUDO ANTI-CRASH: Se i dati mancano o c'è un errore, crea liste vuote
+  const pendingArr = (data && data.pending) ? data.pending : [];
+  const acceptedArr = (data && data.accepted) ? data.accepted : [];
 
-  // 🔴 CONTA SOLO LE PENDING PER BLOCCARE IL TASTO RIPROPONI
-  const totaleAttive = data.pending ? data.pending.length : 0;
+  pList.innerHTML = pendingArr.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
+  aList.innerHTML = acceptedArr.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
+
+  const totaleAttive = pendingArr.length;
   const limiteRaggiunto = totaleAttive >= MAX_PROPOSTE_ATTIVE;
 
   const generateCard = (item, colorClass, isPending) => {
-    
     const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
     const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
@@ -1268,27 +1265,26 @@ function renderProposals(data) {
     
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
 
-    // 🔴 LOCANDINA SBLOCCATA PER TUTTE LE PROPOSTE (Pending e Accepted)
     const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
         <div class="card-body p-3">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <h6 class="text-white fw-bold m-0">${item.titolo}</h6>
+            <h6 class="text-white fw-bold m-0">${item.titolo || "Senza Titolo"}</h6>
             <span class="badge bg-primary small">${item.regione || "N/D"}</span>
           </div>
           
           <div class="small text-info fw-bold mb-3">
             <i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} 
             <br>
-            <i class="bi bi-geo-alt"></i> ${item.luogo}
+            <i class="bi bi-geo-alt"></i> ${item.luogo || ""}
           </div>
 
-          <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc}</p>
+          <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc || ""}</p>
 
           <div class="d-flex gap-2">
-            <a href="${item.link}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1">
+            <a href="${item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1">
               <i class="bi bi-map"></i> Mappa
             </a>
             ${btnInfo}
@@ -1302,8 +1298,8 @@ function renderProposals(data) {
     `;
   };
 
-  data.pending.forEach(item => pList.innerHTML += generateCard(item, 'warning', true));
-  data.accepted.forEach(item => aList.innerHTML += generateCard(item, 'success', false));
+  pendingArr.forEach(item => pList.innerHTML += generateCard(item, 'warning', true));
+  acceptedArr.forEach(item => aList.innerHTML += generateCard(item, 'success', false));
 }
 
 // Funzione sicura per mostrare Info & Kit
