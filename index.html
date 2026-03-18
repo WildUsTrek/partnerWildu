@@ -1186,6 +1186,7 @@ function renderProposals(data) {
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
     const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
     const btnCondividi = !isPending ? `<button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Genera Post Condivisione</button>` : '';
+    const btnIscritti = !isPending ? `<button class="btn btn-sm btn-primary text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="vediIscrittiPartner('${itemStr}')"><i class="bi bi-people-fill"></i> Vedi Iscritti</button>` : '';
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
@@ -1200,7 +1201,7 @@ function renderProposals(data) {
             <a href="${item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1"><i class="bi bi-map"></i> Mappa</a>
             ${btnInfo}
           </div>
-          ${btnRiproponi} ${btnAnnulla} ${btnLocandina} ${btnCondividi}
+          ${btnRiproponi} ${btnAnnulla} ${btnLocandina} ${btnCondividi} ${btnIscritti}
         </div>
       </div>
     `;
@@ -1545,6 +1546,108 @@ function forceSync() {
     sessionStorage.removeItem('wildu_cache_proposte'); sessionStorage.removeItem('wildu_cache_time'); location.reload(); 
   }
 }
+
+
+// =========================================================
+// MOTORE ISCRITTI PARTNER (Il Ponte)
+// =========================================================
+function vediIscrittiPartner(itemEncoded) {
+    const item = JSON.parse(decodeURIComponent(itemEncoded));
+    
+    // 1. Crea il modale se non esiste
+    let oldModal = document.getElementById('modalIscrittiPartner');
+    if(oldModal) oldModal.remove();
+
+    const modalHtml = `
+    <div class="modal fade" id="modalIscrittiPartner" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-dark text-white border-primary border-2 rounded-4 shadow-lg">
+                <div class="modal-header border-secondary p-4">
+                    <h5 class="modal-title fw-bold mb-0 text-primary"><i class="bi bi-people-fill"></i> Iscritti: ${item.titolo}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3" id="iscritti-list-container">
+                    <div class="text-center mt-5 mb-5">
+                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                        <h6 class="text-white fw-bold">Cerco gli iscritti...</h6>
+                        <p class="text-muted small">Sto interrogando il database globale di Wildu.</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary rounded-pill w-100 fw-bold" data-bs-dismiss="modal">Chiudi</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    new bootstrap.Modal(document.getElementById('modalIscrittiPartner')).show();
+
+    // 2. Chiama il server centrale (via Postino)
+    const payload = {
+        titolo: item.titolo,
+        dataInizio: item.dataInizio
+    };
+
+    fetch(MOTORE_API_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ action: 'GET_SUBSCRIBERS', payload: payload }) 
+    })
+    .then(r => r.json())
+    .then(res => {
+        const container = document.getElementById('iscritti-list-container');
+        if(!res.success) {
+            container.innerHTML = `<div class="alert alert-danger fw-bold">❌ Errore: ${res.error}</div>`;
+            return;
+        }
+        
+        const iscritti = res.iscritti || [];
+        if(iscritti.length === 0) {
+            container.innerHTML = `
+                <div class="text-center mt-4 mb-4">
+                    <i class="bi bi-emoji-frown display-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Nessun iscritto (per ora)</h5>
+                    <p class="text-muted small">Condividi la locandina per trovare partecipanti!</p>
+                </div>`;
+            return;
+        }
+
+        let html = `<div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-primary fs-6 rounded-pill px-3 py-2">${iscritti.length} Partecipanti confermati</span>
+                    </div>
+                    <ul class="list-group list-group-flush rounded-3 shadow-sm border border-secondary">`;
+        
+        iscritti.forEach((u, idx) => {
+            // Generatore Intelligente Link WhatsApp
+            let waLink = '';
+            if(u.telefono) {
+                let phoneStr = u.telefono.toString().replace(/[^0-9\+]/g, '');
+                if (phoneStr.length <= 10 && !phoneStr.startsWith('+')) phoneStr = '39' + phoneStr;
+                else phoneStr = phoneStr.replace('+', '');
+                waLink = `<a href="https://wa.me/${phoneStr}" target="_blank" class="btn btn-sm btn-success rounded-circle shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-whatsapp fs-5"></i></a>`;
+            }
+
+            html += `
+            <li class="list-group-item bg-dark text-white border-secondary p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-bold mb-1 fs-5">${idx + 1}. ${u.nome}</div>
+                    <div class="small text-info d-flex align-items-center gap-2 fw-bold">
+                        <i class="bi bi-telephone"></i> ${u.telefono || 'Nessun numero'}
+                    </div>
+                </div>
+                <div>${waLink}</div>
+            </li>`;
+        });
+        html += `</ul>`;
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        document.getElementById('iscritti-list-container').innerHTML = `<div class="alert alert-danger fw-bold">❌ Errore di rete: Impossibile collegarsi al server centrale.</div>`;
+    });
+}
+  
+
+  
 </script>
 
 <div class="modal fade" id="installModal" tabindex="-1">
