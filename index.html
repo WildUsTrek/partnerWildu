@@ -1760,13 +1760,17 @@ function forceSync() {
 // =========================================================
 // MOTORE ISCRITTI PARTNER (Il Ponte)
 // =========================================================
+// =========================================================
+// MOTORE ISCRITTI PARTNER (Versione con DEBUG Integrato)
+// =========================================================
 function vediIscrittiPartner(itemEncoded) {
     const item = JSON.parse(decodeURIComponent(itemEncoded));
     
-    // 1. Crea il modale se non esiste
+    // 1. Rimuoviamo eventuali modali vecchi
     let oldModal = document.getElementById('modalIscrittiPartner');
     if(oldModal) oldModal.remove();
 
+    // 2. Costruzione del Modale con lo spazio per il DEBUG
     const modalHtml = `
     <div class="modal fade" id="modalIscrittiPartner" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -1774,17 +1778,19 @@ function vediIscrittiPartner(itemEncoded) {
                 <div class="modal-header border-secondary p-4">
                     <div class="w-100">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="modal-title fw-bold mb-0 text-primary"><i class="bi bi-people-fill"></i> Iscritti: ${item.titolo}</h5>
+                            <h5 class="modal-title fw-bold mb-0 text-primary">
+                                <i class="bi bi-people-fill"></i> Iscritti: ${item.titolo}
+                            </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <small id="debugLabel" style="color: #666; font-size: 10px; font-family: monospace; display: block; margin-top: 8px;"></small>
+                        <div id="debugLabel" style="color: #666; font-size: 10px; font-family: monospace; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px; display: none;"></div>
                     </div>
                 </div>
                 <div class="modal-body p-3" id="iscritti-list-container">
                     <div class="text-center mt-5 mb-5">
                         <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
                         <h6 class="text-white fw-bold">Cerco gli iscritti...</h6>
-                        <p class="text-muted small">Sto interrogando il database globale di Wildu.</p>
+                        <p class="text-muted small">Interrogazione database in corso...</p>
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
@@ -1795,73 +1801,66 @@ function vediIscrittiPartner(itemEncoded) {
     </div>`;
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    new bootstrap.Modal(document.getElementById('modalIscrittiPartner')).show();
+    const myModal = new bootstrap.Modal(document.getElementById('modalIscrittiPartner'));
+    myModal.show();
 
-    // 2. Chiama il server centrale (via Postino)
-    const payload = {
-        titolo: item.titolo,
-        dataInizio: item.dataInizio
-    };
-
+    // 3. Chiamata al Master
     fetch(MOTORE_API_URL, { 
-        method: 'POST', 
-        body: JSON.stringify({ action: 'GET_SUBSCRIBERS', token: "WILDU_TOKEN_2026_XYZ", payload: payload }) 
-    })
+        method: 'POST', 
+        body: JSON.stringify({ 
+            action: 'GET_SUBSCRIBERS', 
+            token: "WILDU_TOKEN_2026_XYZ", 
+            payload: { titolo: item.titolo, dataInizio: item.dataInizio } 
+        }) 
+    })
     .then(r => r.json())
     .then(res => {
         const container = document.getElementById('iscritti-list-container');
-        
-        // 🟢 AGGIORNA IL DEBUG CON I DATI REALI DEL MASTER
         const debugLabel = document.getElementById('debugLabel');
-        if(debugLabel) debugLabel.innerText = res.debugInfo || "In attesa di dati...";
+
+        // Mostriamo il debug appena arriva la risposta
+        if(debugLabel && res.debugInfo) {
+            debugLabel.innerText = res.debugInfo;
+            debugLabel.style.display = 'block';
+        }
 
         if(!res.success) {
-            container.innerHTML = `<div class="alert alert-danger fw-bold">❌ Errore: ${res.error}</div>`;
+            container.innerHTML = `<div class="alert alert-danger">❌ Errore: ${res.error}</div>`;
             return;
         }
         
         const iscritti = res.iscritti || [];
         if(iscritti.length === 0) {
-            container.innerHTML = `
-                <div class="text-center mt-4 mb-4">
-                    <i class="bi bi-emoji-frown display-1 text-muted opacity-50 mb-3 d-block"></i>
-                    <h5 class="text-white fw-bold">Nessun iscritto (per ora)</h5>
-                    <p class="text-muted small">Condividi la locandina per trovare partecipanti!</p>
-                </div>`;
+            container.innerHTML = `<div class="text-center mt-4 mb-4">
+                <i class="bi bi-emoji-frown display-1 text-muted opacity-50 mb-3 d-block"></i>
+                <h5 class="text-white fw-bold">Nessun iscritto</h5>
+            </div>`;
             return;
         }
 
-        let html = `<div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="badge bg-primary fs-6 rounded-pill px-3 py-2">${iscritti.length} Partecipanti confermati</span>
-                    </div>
-                    <ul class="list-group list-group-flush rounded-3 shadow-sm border border-secondary">`;
+        let html = `<div class="badge bg-primary fs-6 rounded-pill px-3 py-2 mb-3">${iscritti.length} Confermati</div>
+                    <ul class="list-group list-group-flush rounded-3 border border-secondary">`;
         
         iscritti.forEach((u, idx) => {
-            // Generatore Intelligente Link WhatsApp
-            let waLink = '';
-            if(u.telefono) {
-                let phoneStr = u.telefono.toString().replace(/[^0-9\+]/g, '');
-                if (phoneStr.length <= 10 && !phoneStr.startsWith('+')) phoneStr = '39' + phoneStr;
-                else phoneStr = phoneStr.replace('+', '');
-                waLink = `<a href="https://wa.me/${phoneStr}" target="_blank" class="btn btn-sm btn-success rounded-circle shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-whatsapp fs-5"></i></a>`;
-            }
-
+            let phoneStr = u.telefono ? u.telefono.toString().replace(/[^0-9]/g, '') : '';
+            if (phoneStr.length === 10) phoneStr = '39' + phoneStr;
+            
             html += `
             <li class="list-group-item bg-dark text-white border-secondary p-3 d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="fw-bold mb-1 fs-5">${idx + 1}. ${u.nome}</div>
-                    <div class="small text-info d-flex align-items-center gap-2 fw-bold">
-                        <i class="bi bi-telephone"></i> ${u.telefono || 'Nessun numero'}
-                    </div>
+                    <div class="fw-bold fs-5">${idx + 1}. ${u.nome}</div>
+                    <div class="small text-info fw-bold"><i class="bi bi-telephone"></i> ${u.telefono}</div>
                 </div>
-                <div>${waLink}</div>
+                <a href="https://wa.me/${phoneStr}" target="_blank" class="btn btn-success rounded-circle shadow-sm">
+                    <i class="bi bi-whatsapp fs-5"></i>
+                </a>
             </li>`;
         });
         html += `</ul>`;
         container.innerHTML = html;
     })
     .catch(err => {
-        document.getElementById('iscritti-list-container').innerHTML = `<div class="alert alert-danger fw-bold">❌ Errore di rete: Impossibile collegarsi al server centrale.</div>`;
+        document.getElementById('iscritti-list-container').innerHTML = `<div class="alert alert-danger">❌ Errore di connessione.</div>`;
     });
 }
   
