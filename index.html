@@ -1094,6 +1094,23 @@ function executeSharePartner() {
             
             // Stampa il Logo Partner (se presente)
             var logoBase64 = localStorage.getItem('wildu_partner_logo');
+            var triggerFinalAction = function() {
+                if (isWA) {
+                    // Strada WhatsApp: Magia del Doppio Incolla negli appunti
+                    copyToClipboard(canvas, txt, isWA);
+                } else {
+                    // Strada Telegram/FB: Scarica immagine + Copia testo
+                    var link = document.createElement('a');
+                    link.download = 'Locandina_' + (ev.titolo || "Evento").replace(/[^a-zA-Z0-9]/g,'_') + '.jpg';
+                    link.href = canvas.toDataURL('image/jpeg', 0.95);
+                    link.click();
+                    
+                    navigator.clipboard.writeText(txt).then(function() {
+                        finishSharePartner(true, false, true); // L'ultimo "true" segnala che l'abbiamo scaricata
+                    }).catch(function() { fallbackCopy(txt); });
+                }
+            };
+
             if (logoBase64) {
                 var logoImg = new Image();
                 logoImg.onload = function() {
@@ -1101,12 +1118,12 @@ function executeSharePartner() {
                     var lW = w * 0.15; var lH = lW * (logoImg.height / logoImg.width);
                     ctx.drawImage(logoImg, w - lW - 20, 20, lW, lH);
                     ctx.restore();
-                    copyToClipboard(canvas, txt, isWA);
+                    triggerFinalAction();
                 };
-                logoImg.onerror = function() { copyToClipboard(canvas, txt, isWA); };
+                logoImg.onerror = triggerFinalAction;
                 logoImg.src = logoBase64;
             } else {
-                copyToClipboard(canvas, txt, isWA);
+                triggerFinalAction();
             }
         };
         img.onerror = function() { fallbackCopy(txt); };
@@ -1145,21 +1162,26 @@ function fallbackCopy(txt) {
     navigator.clipboard.writeText(txt).then(function() { finishSharePartner(false, false); });
 }
 
-function finishSharePartner(hasImage, isWA) {
+function finishSharePartner(hasImage, isWA, isDownloaded = false) {
     // 1. Riabilitiamo e ripristiniamo il bottone del modale precedente
     var btn = document.getElementById('btn-do-share');
     if(btn) { btn.disabled = false; btn.innerHTML = '✨ Genera e Copia'; }
     
-    // 2. Chiudiamo il modale delle opzioni (quello dove ha scelto gancio/foto)
+    // 2. Chiudiamo il modale delle opzioni
     var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
     if(mOpts) mOpts.hide();
     
-    // 3. Apriamo il nuovo modale UX con le icone e la microguida (se abbiamo copiato l'immagine)
+    // 3. Smistamento intelligente
     if (hasImage && isWA) {
+        // WhatsApp: Modale con micro-guida
         new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
+    } else if (hasImage && !isWA && isDownloaded) {
+        // Telegram/FB: Immagine scaricata + Testo copiato (A prova di nonno)
+        alert("📥 LOCANDINA SALVATA!\nAbbiamo scaricato l'immagine nella tua Galleria e copiato il testo.\n\nPer Telegram o Facebook:\n1️⃣ Apri l'App.\n2️⃣ Allega la foto dalla tua galleria.\n3️⃣ Fai 'Incolla' per aggiungere il testo.\n\nFacilissimo!");
     } else {
-        // Fallback: se ha copiato solo il testo, un alert standard basta.
-        alert("✅ Testo copiato negli appunti! Ora vai su WhatsApp e incollalo.");
+        // Fallback: Solo Testo
+        var nomeApp = isWA ? "WhatsApp" : "Telegram/Facebook";
+        alert("✅ Testo copiato negli appunti con successo!\nOra vai su " + nomeApp + " e incollalo.");
     }
 }
 
