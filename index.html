@@ -378,7 +378,7 @@
   // --- GENERATORE MENU A TENDINA ORARI (Solo :00 e :30) ---
   function popolaMenuOrari() {
       let options = '<option value="">Seleziona...</option>';
-      for (let h = 5; h <= 23; h++) { // Genera dalle 05:00 alle 23:30
+      for (let h = 1; h <= 24; h++) { // Genera dalle 05:00 alle 23:30
           let hh = h < 10 ? '0' + h : h;
           options += `<option value="${hh}:00">${hh}:00</option>`;
           options += `<option value="${hh}:30">${hh}:30</option>`;
