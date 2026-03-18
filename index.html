@@ -1102,20 +1102,20 @@ function executeSharePartner() {
             // Stampa il Logo Partner (se presente)
             var logoBase64 = localStorage.getItem('wildu_partner_logo');
             var triggerFinalAction = function() {
+                // SALVIAMO SEMPRE IN MEMORIA PRIMA DI AGIRE (Bypassa i blocchi)
+                window.tempTgCanvas = canvas;
+                window.tempTgText = txt;
+                
+                var btn = document.getElementById('btn-do-share');
+                if(btn) { btn.disabled = false; btn.innerHTML = '✨ Genera e Copia'; }
+                
+                var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
+                if(mOpts) mOpts.hide();
+                
+                // Smistamento visivo Modali
                 if (isWA) {
-                    // Strada WhatsApp: Magia del Doppio Incolla
-                    copyToClipboard(canvas, txt, isWA);
+                    new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
                 } else {
-                    // Strada Telegram: Salviamo in RAM e apriamo il modale interattivo
-                    window.tempTgCanvas = canvas;
-                    window.tempTgText = txt;
-                    
-                    var btn = document.getElementById('btn-do-share');
-                    if(btn) { btn.disabled = false; btn.innerHTML = '✨ Genera e Copia'; }
-                    
-                    var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
-                    if(mOpts) mOpts.hide();
-                    
                     new bootstrap.Modal(document.getElementById('modalShareTelegram')).show();
                 }
             };
@@ -1251,29 +1251,46 @@ function copiaTestoTg() {
   
 // Funzione legata ai bottoni di lancio WhatsApp
 function finalLaunchWA(isBusiness) {
+    // 1. COPIA ATOMICA SUL CLICK (Bypassa i blocchi di iOS/Android)
+    if (window.tempTgCanvas) {
+        try {
+            var imagePromise = new Promise(function(resolve) {
+                window.tempTgCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
+            });
+            var item = new ClipboardItem({
+                "text/plain": new Blob([window.tempTgText], { type: "text/plain" }),
+                "image/png": imagePromise
+            });
+            navigator.clipboard.write([item]).catch(function(e) {
+                navigator.clipboard.writeText(window.tempTgText); // Fallback: solo testo
+            });
+        } catch(e) {
+            navigator.clipboard.writeText(window.tempTgText); // Fallback browser obsoleti
+        }
+    }
+
+    // 2. CHIUDI MODALE
     var mInstr = bootstrap.Modal.getInstance(document.getElementById('modalShareInstructions'));
     if(mInstr) mInstr.hide();
     
-    // Rilevamento ambiente (Smartphone vs PC)
-    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
-    if (!isMobile) {
-        // SU PC: Non esiste separazione di App tra WA Normale e Business. Il protocollo è univoco.
-        window.location.href = 'whatsapp://send';
-        return;
-    }
-    
-    // SU SMARTPHONE: Smistamento protocolli
-    if (isBusiness) {
-        var isAndroid = /Android/i.test(navigator.userAgent);
-        if (isAndroid) {
-            window.location.href = 'intent://send/#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end';
-        } else {
-            window.location.href = 'whatsapp-smb://send';
+    // 3. RITARDO STRATEGICO E LANCIO (Garantisce che la copia finisca prima di uscire dal browser)
+    setTimeout(function() {
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (!isMobile) {
+            window.location.href = 'whatsapp://send';
+            return;
         }
-    } else {
-        window.location.href = 'whatsapp://send';
-    }
+        if (isBusiness) {
+            var isAndroid = /Android/i.test(navigator.userAgent);
+            if (isAndroid) {
+                window.location.href = 'intent://send/#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end';
+            } else {
+                window.location.href = 'whatsapp-smb://send';
+            }
+        } else {
+            window.location.href = 'whatsapp://send';
+        }
+    }, 150);
 }
   
 // 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti
@@ -1298,8 +1315,14 @@ function renderProposals(data) {
     let itemStr = "";
     try { itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27"); } catch(e) {}
 
+    // IL FIX VISIVO: Etichetta per i Pay-Day
+    const isPaid = (item.tipo === 'PAID' || (item.prezzo && item.prezzo != "0"));
+    const badgeTipo = isPaid 
+        ? `<div class="badge bg-warning text-dark fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-cash-coin"></i> PAY-DAY: € ${item.prezzo} a persona</div>`
+        : `<div class="badge bg-success text-white fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-star-fill"></i> OPEN DAY (Gratuito)</div>`;
+
     const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
-    let btnRiproponi = limiteRaggiunto ? `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite Raggiunto</button>` : `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
+    let btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
     const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
     const btnCondividi = !isPending ? `<button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Genera Post Condivisione</button>` : '';
@@ -1308,9 +1331,10 @@ function renderProposals(data) {
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
         <div class="card-body p-3">
-          <div class="d-flex justify-content-between align-items-start mb-2">
+          ${badgeTipo}
+          <div class="d-flex justify-content-between align-items-start mb-2 mt-1">
             <h6 class="text-white fw-bold m-0">${item.titolo || "Senza Titolo"}</h6>
-            <span class="badge bg-primary small">${item.regione || "N/D"}</span>
+            <span class="badge bg-secondary small">${item.regione || "N/D"}</span>
           </div>
           <div class="small text-info fw-bold mb-3"><i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} <br><i class="bi bi-geo-alt"></i> ${item.luogo || ""}</div>
           <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc || ""}</p>
@@ -1872,8 +1896,8 @@ function vediIscrittiPartner(itemEncoded) {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-success border-2 rounded-4 shadow-lg">
             <div class="modal-header border-0 p-4 pb-2 text-center d-block">
-                <h3 class="modal-title fw-bold text-success m-0"><i class="bi bi-patch-check-fill"></i> Copiato!</h3>
-                <p class="text-muted small mt-2">Manca l'ultimo passo. Ecco cosa fare su WhatsApp:</p>
+                <h3 class="modal-title fw-bold text-success m-0"><i class="bi bi-patch-check-fill"></i> Locandina Pronta!</h3>
+                <p class="text-muted small mt-2">Leggi i 3 passaggi, poi <b>clicca sul pulsante WhatsApp qui sotto</b> per copiare i dati e lanciare l'App:</p>
             </div>
             <div class="modal-body p-4 pt-2">
                 
