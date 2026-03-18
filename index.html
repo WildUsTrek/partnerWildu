@@ -529,7 +529,7 @@ function renderEquipmentSteps() {
     const s = document.getElementById('od_regione');
     if(!l || s.value !== "") return; 
     s.classList.add('auto-calculating');
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', luogo: l }) })
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', token: "WILDU_TOKEN_2026_XYZ", luogo: l }) })
     .then(r => r.json()).then(d => {
       s.classList.remove('auto-calculating');
       if(d.regione) s.value = d.regione;
@@ -589,7 +589,7 @@ function renderEquipmentSteps() {
     });
     payload.attrezzaturaJson = JSON.stringify(eqArray);
 
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', payload: payload }) })
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: "WILDU_TOKEN_2026_XYZ", payload: payload }) })
     .then(r => r.json())
     .then(res => {
       if(res.success) {
@@ -904,7 +904,7 @@ async function checkProposalLimitAtStartup(uid) {
 
   if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Verifica permessi in corso...</span>";
   try {
-    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", uid: uid }) });
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: uid }) });
     if (response.ok) {
       const data = await response.json();
       if (!data.error) {
@@ -945,7 +945,7 @@ async function openMyProposals() {
 
   document.getElementById('loader').style.display = 'flex';
   try {
-    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", uid: user.uid }) });
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid }) });
     if (!response.ok) throw new Error("Errore di rete");
     const data = await response.json();
 
@@ -1415,7 +1415,7 @@ async function annullaProposta(itemEncoded) {
 
   document.getElementById('loader').style.display = 'flex';
   try {
-    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "DELETE_PENDING", payload: { tempId: item.tempId } }) });
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "DELETE_PENDING", token: "WILDU_TOKEN_2026_XYZ", payload: { tempId: item.tempId } }) });
     const res = await response.json();
     if(res.success) {
       sessionStorage.removeItem('wildu_cache_proposte');
