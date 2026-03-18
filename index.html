@@ -1318,8 +1318,8 @@ function renderProposals(data) {
   const limiteRaggiunto = totaleAttive >= MAX_PROPOSTE_ATTIVE;
 
   const generateCard = (item, colorClass, isPending) => {
-    const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "N/D";
-    const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
+    const dIn = item.dataInizio || "N/D";
+    const dFine = item.dataFine ? " - " + item.dataFine : "";
     const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
     let itemStr = "";
     try { itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27"); } catch(e) {}
