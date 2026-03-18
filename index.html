@@ -1036,6 +1036,11 @@ function openSharePartner(itemEncoded) {
 }
 
 function executeSharePartner() {
+  // PULIZIA PREVENTIVA MODALI ISTRUZIONI
+    var oldWA = bootstrap.Modal.getInstance(document.getElementById('modalShareInstructions'));
+    if(oldWA) oldWA.dispose();
+    var oldTG = bootstrap.Modal.getInstance(document.getElementById('modalShareTelegram'));
+    if(oldTG) oldTG.dispose();
     var ev = window.currentShareItem;
     var btn = document.getElementById('btn-do-share');
     btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Elaborazione...';
@@ -1149,27 +1154,36 @@ function executeSharePartner() {
 }
 
 function copyToClipboard(canvas, txt, isWA) {
+    var btn = document.getElementById('btn-do-share');
+    if(btn) { btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Copia...'; }
+
     try {
-        // Protocollo sicuro per bypassare i blocchi asincroni di iOS/Android
-        var textBlob = new Blob([txt], { type: "text/plain" });
-        var imagePromise = new Promise(function(resolve) {
-            canvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
-        });
-
-        var item = new ClipboardItem({
-            "text/plain": textBlob,
-            "image/png": imagePromise
-        });
-
-        navigator.clipboard.write([item]).then(function() {
-            finishSharePartner(true, isWA);
-        }).catch(function(e) {
-            console.warn("Il browser mobile ha bloccato l'immagine negli appunti", e);
-            // Il fallback sblocca il caricamento e copia almeno il testo
-            fallbackCopy(txt);
-        });
+        canvas.toBlob(function(blob) {
+            if (!blob) {
+                console.warn("Canvas toBlob ha restituito null.");
+                fallbackCopy(txt);
+                return;
+            }
+            try {
+                // Costruzione atomica dell'Item
+                var item = new ClipboardItem({
+                    "text/plain": new Blob([txt], { type: "text/plain" }),
+                    "image/png": blob
+                });
+                
+                navigator.clipboard.write([item]).then(function() {
+                    finishSharePartner(true, isWA);
+                }).catch(function(e) {
+                    console.warn("Write clipboard negato (spesso su iOS):", e);
+                    fallbackCopy(txt);
+                });
+            } catch(e) {
+                console.warn("Errore generazione ClipboardItem", e);
+                fallbackCopy(txt);
+            }
+        }, 'image/png');
     } catch(e) {
-        console.warn("Clipboard API non supportata dal dispositivo", e);
+        console.warn("Errore generale Clipboard API", e);
         fallbackCopy(txt);
     }
 }
