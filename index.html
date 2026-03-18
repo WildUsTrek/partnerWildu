@@ -213,19 +213,34 @@
 
   <div class="progress-container mb-4"><div id="progress-bar" class="progress-bar-fill"></div></div>
   
-  <div id="step-1" class="step-content active">
+ <div id="step-1" class="step-content active">
     <span class="step-header">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="row g-3">
         <div class="col-md-6"><label>Nome e Cognome Guida</label><input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
         <div class="col-md-6"><label>WhatsApp</label><input type="text" id="g_tel" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
         <div class="col-12 mt-1 mb-3"><p class="text-warning m-0" style="font-size: 0.7rem; line-height: 1.2;"><i class="bi bi-lock-fill"></i> Dati collegati al tuo account. Per modificarli, esci dal modulo e vai in <b>Profilo</b>.</p></div>
+        
+        <div class="section-title">TIPO DI PROPOSTA</div>
+        <div class="col-12">
+            <label>Formato Evento *</label>
+            <select id="od_tipo_evento" class="form-select border-warning text-warning fw-bold" onchange="togglePrezzoField()">
+                <option value="FREE">⭐ OPEN DAY (Partecipazione Gratuita)</option>
+                <option value="PAID">💶 PAY-DAY (Evento a Pagamento)</option>
+            </select>
+        </div>
+        <div class="col-12" id="box_prezzo" style="display: none;">
+            <label class="text-warning">Prezzo a persona (€) *</label>
+            <input type="number" id="od_prezzo" class="form-control border-warning" placeholder="Es. 15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <p class="text-muted small mt-1" id="payday_status_msg"></p>
+        </div>
+
         <div class="section-title">DETTAGLI TEMPORALI</div>
         <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
         <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
         <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
-        <div class="col-6"><label>Orario Inizio *</label><input type="time" id="od_orario_inizio" class="form-control" step="1800"></div>
-        <div class="col-6"><label>Orario Fine *</label><input type="time" id="od_orario_fine" class="form-control" step="1800"></div>
+        <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
+        <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
       </div>
       <button type="button" class="btn btn-submit text-white w-100 mt-4" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
     </div>
@@ -359,6 +374,79 @@
     window.scrollTo(0,0);
   }
 
+
+  // --- GENERATORE MENU A TENDINA ORARI (Solo :00 e :30) ---
+  function popolaMenuOrari() {
+      let options = '<option value="">Seleziona...</option>';
+      for (let h = 5; h <= 23; h++) { // Genera dalle 05:00 alle 23:30
+          let hh = h < 10 ? '0' + h : h;
+          options += `<option value="${hh}:00">${hh}:00</option>`;
+          options += `<option value="${hh}:30">${hh}:30</option>`;
+      }
+      document.getElementById('od_orario_inizio').innerHTML = options;
+      document.getElementById('od_orario_fine').innerHTML = options;
+  }
+
+  // --- FORZATURA ORARI A :00 o :30 ---
+  function forceHalfHour(input) {
+      if (!input.value) return;
+      let parts = input.value.split(':');
+      if (parts.length < 2) return;
+      let h = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10);
+      
+      if (m > 15 && m <= 45) m = 30;
+      else if (m > 45) { m = 0; h = (h + 1) % 24; }
+      else m = 0;
+      
+      let hh = h < 10 ? '0' + h : h;
+      let mm = m === 0 ? '00' : '30';
+      input.value = hh + ':' + mm;
+  }
+
+  // --- LOGICA MOSTRA/NASCONDI PREZZO E VERIFICA 1:1 ---
+  function togglePrezzoField() {
+      const tipo = document.getElementById('od_tipo_evento').value;
+      const boxPrezzo = document.getElementById('box_prezzo');
+      const inputPrezzo = document.getElementById('od_prezzo');
+      const msg = document.getElementById('payday_status_msg');
+      
+      if (tipo === 'PAID') {
+          boxPrezzo.style.display = 'block';
+          
+          // Contiamo quanti Free e quanti Paid ha in storico (Cache)
+          let countFree = 0;
+          let countPaid = 0;
+          const memoria = sessionStorage.getItem('wildu_cache_proposte');
+          if (memoria) {
+              try {
+                  const data = JSON.parse(memoria);
+                  const allEvents = (data.pending || []).concat(data.accepted || []);
+                  allEvents.forEach(e => {
+                      if (!e.prezzo || e.prezzo == "0") countFree++;
+                      else countPaid++;
+                  });
+              } catch(e) {}
+          }
+          
+          // Logica di Sblocco
+          if (countPaid >= countFree) {
+              msg.innerHTML = `⚠️ <b>Blocco Pay-Day:</b> Hai ${countFree} Open Day e ${countPaid} Pay-Day. Devi caricare almeno un nuovo evento gratuito prima di poter inserire un altro evento a pagamento.`;
+              msg.className = "text-danger small mt-1";
+              inputPrezzo.disabled = true;
+          } else {
+              msg.innerHTML = `✅ <b>Sbloccato:</b> Hai ${countFree} Open Day e ${countPaid} Pay-Day nello storico.`;
+              msg.className = "text-success small mt-1";
+              inputPrezzo.disabled = false;
+          }
+      } else {
+          boxPrezzo.style.display = 'none';
+          inputPrezzo.value = "";
+          inputPrezzo.disabled = false;
+      }
+  }
+
+  
   function checkFields(ids) {
     let ok = true;
     ids.forEach(id => {
@@ -370,7 +458,10 @@
     return ok;
   }
 
-  window.onload = function() { renderEquipmentSteps(); };
+  window.onload = function() { 
+      renderEquipmentSteps(); 
+      popolaMenuOrari(); // <-- AGGIUNTA QUI
+  };
 
 function renderEquipmentSteps() {
     let container = document.getElementById('equipment-steps-container');
@@ -475,6 +566,8 @@ function renderEquipmentSteps() {
       dislivello: document.getElementById('od_dislivello').value,
       descrizione: document.getElementById('od_descrizione').value.trim(),
       regione: document.getElementById('od_regione').value, 
+      tipo: document.getElementById('od_tipo_evento').value, // <--- NUOVO
+      prezzo: document.getElementById('od_tipo_evento').value === 'PAID' ? document.getElementById('od_prezzo').value : "0", // <--- NUOVO
       fotoUrl: fotoUrl, 
       utente: currentUserKey, 
       tempId: "PEND_" + new Date().getTime()
