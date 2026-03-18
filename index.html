@@ -1308,6 +1308,12 @@ function renderProposals(data) {
   const aList = document.getElementById('list-accepted');
   if (!pList || !aList) return; 
 
+  // 🟢 ORDINA LE PROPOSTE PRIMA DI DISEGNARLE
+  if (data.pending) data.pending.sort((a, b) => a.dataOrdinamento - b.dataOrdinamento);
+  if (data.accepted) data.accepted.sort((a, b) => a.dataOrdinamento - b.dataOrdinamento);
+
+  // ... tutto il resto del codice rimane uguale
+
   const pendingArr = (data && data.pending) ? data.pending : [];
   const acceptedArr = (data && data.accepted) ? data.accepted : [];
 
