@@ -1629,15 +1629,25 @@ async function generaLocandinaFinale() {
       }
       ctx.fillText(line.trim(), W/2, cursorY, W - 160); ctx.shadowColor = "transparent";
 
-      const boxW = 850; const boxH = 140; const boxY = H - boxH - 280; 
       const prezzo = item.prezzo; const isFree = (!prezzo || prezzo == "0" || prezzo == 0);
+      const boxH = 140; const boxY = H - boxH - 280; 
+      
+      // Definiamo il font e il testo PRIMA per misurarlo
+      ctx.font = isFree ? "900 48px 'Inter', sans-serif" : "900 65px 'Inter', sans-serif";
+      const testoSfondo = isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo;
+      
+      // MAGIA MATEMATICA: Box dinamico
+      let textW = ctx.measureText(testoSfondo).width;
+      let boxW = isFree ? 850 : Math.max(350, textW + 160); // Largo 850 se gratis, altrimenti si adatta al prezzo
+      
       const gradBox = ctx.createLinearGradient(0, boxY, 0, boxY + boxH);
       gradBox.addColorStop(0, isFree ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.9)"); 
       gradBox.addColorStop(1, isFree ? "rgba(230,230,230,0.9)" : "rgba(0,0,0,0.7)");
       ctx.fillStyle = gradBox; ctx.beginPath(); ctx.roundRect((W - boxW)/2, boxY, boxW, boxH, 40); ctx.fill();
       ctx.strokeStyle = isFree ? "#000" : "rgba(255,215,0,0.8)"; ctx.lineWidth = 4; ctx.stroke();
-      ctx.fillStyle = isFree ? "#000" : "#FFD700"; ctx.font = isFree ? "900 48px 'Inter', sans-serif" : "900 65px 'Inter', sans-serif";
-      ctx.fillText(isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo, W/2, boxY + 92);
+      
+      ctx.fillStyle = isFree ? "#000" : "#FFD700"; 
+      ctx.fillText(testoSfondo, W/2, boxY + 92);
 
       let currentDrawY = boxY - 40;
       const telNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "Vedi Link";
@@ -1671,13 +1681,27 @@ async function generaLocandinaFinale() {
         ctx.fillText(techStr.join("    |    "), W/2, currentDrawY); ctx.shadowColor = "transparent";
       }
 
-      const link = document.createElement('a');
-      link.download = 'Locandina_' + (item.titolo || "Evento").replace(/[^a-zA-Z0-9]/g,'_') + '.jpg';
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
-      link.click();
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const fileName = 'Locandina_' + (item.titolo || "Evento").replace(/[^a-zA-Z0-9]/g,'_') + '.jpg';
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
       const cropModalEl = document.getElementById('modalCropLocandina');
       if(cropModalEl) { const modalInstance = bootstrap.Modal.getInstance(cropModalEl); if(modalInstance) modalInstance.hide(); }
+
+      if (isMobile && navigator.share) {
+          // OPZIONE 1: Menu nativo di condivisione del telefono (Permette "Salva in Galleria")
+          canvas.toBlob(function(blob) {
+              const file = new File([blob], fileName, { type: 'image/jpeg' });
+              navigator.share({ title: item.titolo, files: [file] }).catch(() => showLocandinaFallback(dataUrl));
+          }, 'image/jpeg', 0.95);
+      } else if (isMobile) {
+          // OPZIONE 2: Fallback visivo per vecchi smartphone
+          showLocandinaFallback(dataUrl);
+      } else {
+          // OPZIONE 3: PC Desktop (Download classico)
+          const link = document.createElement('a');
+          link.download = fileName; link.href = dataUrl; link.click();
+      }
       
   } catch (e) { alert("🚨 Errore locandina:\n\n" + e.message); console.error(e); }
 }
@@ -1797,7 +1821,33 @@ function vediIscrittiPartner(itemEncoded) {
     });
 }
   
+function showLocandinaFallback(dataUrl) {
+    var old = document.getElementById('modalLocandinaFallback'); if(old) old.remove();
+    var html = `<div class="modal fade" id="modalLocandinaFallback" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white"><div class="modal-header border-0"><h5 class="modal-title text-success fw-bold"><i class="bi bi-image"></i> Locandina Pronta</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p class="small text-muted mb-3">Tieni premuto il dito sulla foto qui sotto e scegli <b>"Salva immagine"</b> per metterla in Galleria.</p><img src="${dataUrl}" class="img-fluid rounded shadow-lg" style="max-height: 60vh;"></div><div class="modal-footer border-0"><button class="btn btn-secondary w-100 rounded-pill" data-bs-dismiss="modal">Ho fatto, Chiudi</button></div></div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    new bootstrap.Modal(document.getElementById('modalLocandinaFallback')).show();
+}
 
+
+function copiaImmagineWa() {
+    var btn = document.getElementById('btn-wa-img');
+    if(!window.tempTgCanvas) return alert("Errore Immagine.");
+    try {
+        var imagePromise = new Promise(function(resolve) { window.tempTgCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png'); });
+        navigator.clipboard.write([new ClipboardItem({ "image/png": imagePromise })]).then(function() {
+            btn.classList.remove('btn-outline-success'); btn.classList.add('btn-success', 'text-white'); btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
+            setTimeout(() => { btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; btn.classList.add('btn-outline-success'); btn.classList.remove('btn-success', 'text-white'); }, 3000);
+        }).catch(function(e) { alert("⚠️ Il browser blocca la copia diretta. Usa 'Genera Locandina'."); });
+    } catch(e) { alert("⚠️ Funzione non supportata."); }
+}
+
+function copiaTestoWa() {
+    var btn = document.getElementById('btn-wa-txt');
+    navigator.clipboard.writeText(window.tempTgText).then(function() {
+        btn.classList.remove('btn-outline-warning'); btn.classList.add('btn-warning', 'text-dark'); btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Testo Copiato!';
+        setTimeout(() => { btn.innerHTML = '<i class="bi bi-fonts"></i> Copia Testo'; btn.classList.add('btn-outline-warning'); btn.classList.remove('btn-warning', 'text-dark'); }, 3000);
+    });
+}
   
 </script>
 
@@ -1896,54 +1946,28 @@ function vediIscrittiPartner(itemEncoded) {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-success border-2 rounded-4 shadow-lg">
             <div class="modal-header border-0 p-4 pb-2 text-center d-block">
-                <h3 class="modal-title fw-bold text-success m-0"><i class="bi bi-patch-check-fill"></i> Locandina Pronta!</h3>
-                <p class="text-muted small mt-2">Leggi i 3 passaggi, poi <b>clicca sul pulsante WhatsApp qui sotto</b> per copiare i dati e lanciare l'App:</p>
+                <h3 class="modal-title fw-bold text-success m-0"><i class="bi bi-whatsapp"></i> WhatsApp Pronto</h3>
+                <p class="text-muted small mt-2">Segui questi 2 passaggi per incollare l'evento su WhatsApp:</p>
             </div>
-            <div class="modal-body p-4 pt-2">
-                
-                <div class="d-flex align-items-start mb-4 bg-black p-3 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
-                    <div class="text-success fs-1 me-3 pt-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 0 3.582 0 7.946c0 1.396.366 2.76 1.057 3.96L0 16l4.155-1.073a7.856 7.856 0 0 0 3.839.925h.001c4.367 0 7.95-3.582 7.95-7.946a7.94 7.94 0 0 0-2.343-5.58zM7.994 14.52a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.611-4.757c-.195-.097-1.15-.567-1.327-.631-.177-.064-.306-.097-.436.097-.13.195-.502.631-.614.763-.113.133-.226.148-.42.05-.194-.097-.819-.302-1.56-.963-.578-.517-.969-1.155-1.082-1.35-.112-.194-.012-.298.085-.395.088-.088.195-.226.293-.34.098-.113.131-.19.196-.319.065-.13.033-.243-.016-.34-.049-.097-.436-1.05-.597-1.436-.157-.389-.314-.335-.43-.342-.112-.007-.24-.007-.368-.007-.128 0-.339.048-.517.243-.178.195-.678.662-.678 1.613 0 .952.693 1.87 0 .952-.693 1.87 0 1.87a7.206 7.206 0 0 0-.191.24c-.21.041-.302.211-.377.25-.194.097-1.15.567-1.327.631z"/></svg>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 mb-1 text-white">1. Scegli a chi inviare</div>
-                        <p class="text-muted small m-0">Apri WhatsApp e seleziona la **Chat** o la **Lista Broadcast**.</p>
-                    </div>
+            <div class="modal-body p-4 pt-0">
+                <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
+                    <div class="fw-bold text-white fs-5 mb-2">1. La Locandina</div>
+                    <p class="text-muted small mb-3">Copia l'immagine, apri WhatsApp, incollala nella chat, <b>poi torna qui</b>.</p>
+                    <button id="btn-wa-img" class="btn btn-outline-success w-100 rounded-pill fw-bold" onclick="copiaImmagineWa()">
+                        <i class="bi bi-image"></i> Copia Immagine
+                    </button>
                 </div>
-
-                <div class="d-flex align-items-start mb-4 bg-black p-3 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
-                    <div class="text-info fs-1 me-3 pt-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-file-earmark-image" viewBox="0 0 16 16"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/><path d="M10.648 7.646a.5.5 0 0 1 .577-.093L15.002 9.5V14h-14v-2l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71z"/></svg>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 mb-1 text-white">2. Incolla la Foto</div>
-                        <p class="text-muted small m-0">Fai tap nella chat e fai **Incolla** per inserire la Locandina.</p>
-                    </div>
+                <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
+                    <div class="fw-bold text-white fs-5 mb-2">2. Il Testo</div>
+                    <p class="text-muted small mb-3">Ora copia il testo, torna su WhatsApp e incollalo nello spazio sotto la foto.</p>
+                    <button id="btn-wa-txt" class="btn btn-outline-warning w-100 rounded-pill fw-bold" onclick="copiaTestoWa()">
+                        <i class="bi bi-fonts"></i> Copia Testo
+                    </button>
                 </div>
-
-                <div class="d-flex align-items-start mb-4 bg-black p-3 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
-                    <div class="text-warning fs-1 me-3 pt-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-fonts" viewBox="0 0 16 16"><path d="M12.258 3h-8.51l-.083 2.46h.479c.26-1.544.758-1.783 2.693-1.845l.424-.013v7.827c0 1.163-.045 1.692-.759 1.845l-.712.145v.469h4.523v-.469l-.712-.145c-.714-.153-.759-.682-.759-1.845V3.612l.424.013c1.935.062 2.434.301 2.693 1.845h.479L12.258 3z"/></svg>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 mb-1 text-white">3. Incolla il Testo</div>
-                        <p class="text-muted small m-0">Tieni premuto per **'Aggiungi didascalia' o 'incolla come solo testo'** e fai di nuovo **Incolla** per aggiungere il testo alla locandina immagine.</p>
-                    </div>
+                <div class="mt-4 pt-3 border-top border-secondary row g-2">
+                    <div class="col-6"><a href="whatsapp://send" class="btn btn-success w-100 rounded-pill fw-bold p-3 shadow-sm"><i class="bi bi-whatsapp"></i> Apri App</a></div>
+                    <div class="col-6"><button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold p-3" data-bs-dismiss="modal">Chiudi</button></div>
                 </div>
-
-               <div class="mt-4 pt-3 border-top border-secondary row g-2">
-                    <div class="col-6">
-                        <button type="button" class="btn btn-success w-100 rounded-pill fw-bold p-3 shadow-sm" onclick="finalLaunchWA(false)">
-                            <i class="bi bi-whatsapp"></i> WA Normale
-                        </button>
-                    </div>
-                    <div class="col-6">
-                        <button type="button" class="btn text-white w-100 rounded-pill fw-bold p-3 shadow-sm" style="background-color: #128C7E; border-color: #128C7E;" onclick="finalLaunchWA(true)">
-                            <i class="bi bi-briefcase-fill"></i> WA Business
-                        </button>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
