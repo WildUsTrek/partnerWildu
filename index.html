@@ -134,7 +134,7 @@
 </div>
 
 <script>
-  const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
+  const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec";
   let MAX_PROPOSTE_ATTIVE = 3;
 
   function aggiornaLimiteDalServer(data) {
@@ -1799,9 +1799,9 @@ function vediIscrittiPartner(itemEncoded) {
     };
 
     fetch(MOTORE_API_URL, { 
-        method: 'POST', 
-        body: JSON.stringify({ action: 'GET_SUBSCRIBERS', payload: payload }) 
-    })
+        method: 'POST', 
+        body: JSON.stringify({ action: 'GET_SUBSCRIBERS', token: "WILDU_TOKEN_2026_XYZ", payload: payload }) 
+    })
     .then(r => r.json())
     .then(res => {
         const container = document.getElementById('iscritti-list-container');
