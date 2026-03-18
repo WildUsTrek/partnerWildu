@@ -958,6 +958,206 @@ async function openMyProposals() {
     document.getElementById('loader').style.display = 'none';
   }
 }
+
+
+// =========================================================
+// MOTORE CONDIVISIONE PARTNER (Testo + Immagine Copertina)
+// =========================================================
+window.currentShareItem = null;
+
+function openSharePartner(itemEncoded) {
+    window.currentShareItem = JSON.parse(decodeURIComponent(itemEncoded));
+    var ev = window.currentShareItem;
+
+    var oldModal = document.getElementById('modalSharePartner');
+    if(oldModal) oldModal.remove();
+
+    var imageSection = '';
+    if(ev.fotoUrl && ev.fotoUrl.trim() !== '') {
+        imageSection = `
+        <div class="card p-3 border-0 shadow-sm mb-4" style="background: #252525;">
+            <h6 class="fw-bold text-info mb-3">2. Immagine Copertina</h6>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="imageChoice" id="imgChoice1" value="original" checked onchange="document.getElementById('customImageDiv').style.display='none'">
+                <label class="form-check-label fw-bold text-light" for="imgChoice1">Usa foto originale</label>
+            </div>
+            <div class="mb-3 ms-4">
+                <img src="${ev.fotoUrl}" class="img-fluid rounded shadow-sm border border-secondary" style="max-height: 140px; object-fit: cover;">
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="imageChoice" id="imgChoice2" value="custom" onchange="document.getElementById('customImageDiv').style.display='block'">
+                <label class="form-check-label fw-bold text-light" for="imgChoice2">Carica una nuova foto al volo</label>
+            </div>
+            <div id="customImageDiv" style="display:none;" class="mt-3 pt-2 border-top border-secondary ms-4">
+                <input type="file" id="shareImage" class="form-control form-control-sm bg-dark text-white" accept="image/*">
+            </div>
+        </div>`;
+    }
+
+    var html = `
+    <div class="modal fade" id="modalSharePartner" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-secondary p-4">
+                    <h5 class="modal-title fw-bold mb-0 text-info"><i class="bi bi-share"></i> Condividi Evento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <h6 class="fw-bold mb-3 text-light">1. Scegli il gancio</h6>
+                    <div class="card p-3 border-0 shadow-sm mb-4" style="background: #252525;">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="hookType" id="h1" value="Nuovo evento in arrivo 🔥" checked>
+                            <label class="form-check-label fw-bold" for="h1">Nuovo evento in arrivo 🔥</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="hookType" id="h2" value="Andiamo a camminare! 🥾">
+                            <label class="form-check-label fw-bold" for="h2">Andiamo a camminare! 🥾</label>
+                        </div>
+                    </div>
+
+                    ${imageSection}
+
+                    <h6 class="fw-bold mb-3 text-light">3. Destinazione</h6>
+                    <select id="shareApp" class="form-select mb-4 shadow-sm border-secondary bg-dark text-white">
+                        <option value="WA">📱 WhatsApp</option>
+                        <option value="TG">✈️ Telegram / Facebook</option>
+                    </select>
+                    
+                    <button class="btn btn-info text-white btn-lg w-100 rounded-pill fw-bold shadow" onclick="executeSharePartner()" id="btn-do-share">✨ Genera e Copia</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', html);
+    new bootstrap.Modal(document.getElementById('modalSharePartner')).show();
+}
+
+function executeSharePartner() {
+    var ev = window.currentShareItem;
+    var btn = document.getElementById('btn-do-share');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Elaborazione...';
+
+    var hookVal = "";
+    var radios = document.getElementsByName('hookType');
+    for(var i=0; i<radios.length; i++) { if(radios[i].checked) { hookVal = radios[i].value; break; } }
+    
+    var isWA = (document.getElementById('shareApp').value === 'WA');
+    var b = isWA ? "*" : "**";
+
+    // Costruzione del testo formattato
+    var txt = "";
+    if(hookVal) txt += b + hookVal.toUpperCase() + b + "\n\n";
+    txt += b + "🥾 " + (ev.titolo || "").toUpperCase() + b + "\n\n";
+    
+    const dIn = ev.dataInizio ? new Date(ev.dataInizio).toLocaleDateString('it-IT') : "N/D";
+    const dFine = ev.dataFine ? " ➡️ " + new Date(ev.dataFine).toLocaleDateString('it-IT') : "";
+    txt += "📅 " + b + "Data:" + b + " " + dIn + dFine + "\n";
+    if(ev.oraIn) txt += "🕒 " + b + "Orari:" + b + " " + ev.oraIn + (ev.oraOut ? " ➡️ " + ev.oraOut : "") + "\n\n";
+    if(ev.luogo) txt += "📍 " + b + "Luogo:" + b + " " + ev.luogo + (ev.link ? " (" + ev.link + ")" : "") + "\n\n";
+    
+    if(ev.km || ev.dislivello) txt += "⛰️ " + b + "Dati Tecnici:" + b + " " + (ev.km ? ev.km + " km" : "") + (ev.dislivello ? " | " + ev.dislivello + " m D+" : "") + "\n\n";
+    
+    var eqStrs = []; try { 
+        var eqList = JSON.parse(ev.eq); 
+        eqList.forEach(function(item) {
+            var s = item.item; if (item.note) s += " (" + item.note + ")"; eqStrs.push(s);
+        });
+    } catch(e){}
+    if(eqStrs.length > 0) txt += "🎒 " + b + "Attrezzatura necessaria:" + b + "\n" + eqStrs.join(", ") + "\n\n";
+    
+    var cleanDesc = (ev.desc || "").replace(/^Guida:.*?\|\s*/i, "").trim();
+    if(cleanDesc) txt += "📝 " + b + "Info Evento:" + b + "\n" + cleanDesc + "\n\n";
+
+    var infoNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    if(infoNum) txt += "📲 " + b + "Info e Prenotazioni:" + b + " " + infoNum + "\n\n";
+
+    // Gestione Immagine
+    var useOriginal = false;
+    if(ev.fotoUrl && ev.fotoUrl.trim() !== '') {
+        var imgRadios = document.getElementsByName('imageChoice');
+        for(var r=0; r<imgRadios.length; r++) { if(imgRadios[r].checked && imgRadios[r].value === 'original') useOriginal = true; }
+    }
+
+    var processImageBase64 = function(base64Src) {
+        var img = new Image();
+        img.crossOrigin = "Anonymous"; // Cruciale per scaricare da Cloudinary senza blocchi
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+            var max_size = 1000;
+            var w = img.width, h = img.height;
+            if(w > h && w > max_size) { h *= max_size / w; w = max_size; }
+            else if(h > w && h > max_size) { w *= max_size / h; h = max_size; }
+            canvas.width = w; canvas.height = h;
+            ctx.drawImage(img, 0, 0, w, h);
+            
+            // Stampa il Logo Partner (se presente)
+            var logoBase64 = localStorage.getItem('wildu_partner_logo');
+            if (logoBase64) {
+                var logoImg = new Image();
+                logoImg.onload = function() {
+                    ctx.save(); ctx.globalAlpha = 0.8;
+                    var lW = w * 0.15; var lH = lW * (logoImg.height / logoImg.width);
+                    ctx.drawImage(logoImg, w - lW - 20, 20, lW, lH);
+                    ctx.restore();
+                    copyToClipboard(canvas, txt, isWA);
+                };
+                logoImg.onerror = function() { copyToClipboard(canvas, txt, isWA); };
+                logoImg.src = logoBase64;
+            } else {
+                copyToClipboard(canvas, txt, isWA);
+            }
+        };
+        img.onerror = function() { fallbackCopy(txt); };
+        img.src = base64Src;
+    };
+
+    if(useOriginal) {
+        processImageBase64(ev.fotoUrl);
+    } else {
+        var fileInput = document.getElementById('shareImage');
+        if(fileInput && fileInput.files && fileInput.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) { processImageBase64(e.target.result); };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            fallbackCopy(txt);
+        }
+    }
+}
+
+function copyToClipboard(canvas, txt, isWA) {
+    canvas.toBlob(function(blob) {
+        try {
+            var item = new ClipboardItem({ "text/plain": new Blob([txt], { type: "text/plain" }), "image/png": blob });
+            navigator.clipboard.write([item]).then(function() {
+                finishSharePartner(true, isWA);
+            }).catch(function(e) {
+                console.warn("Clipboard API image failed, copying text only", e);
+                fallbackCopy(txt);
+            });
+        } catch(e) { fallbackCopy(txt); }
+    }, 'image/png');
+}
+
+function fallbackCopy(txt) {
+    navigator.clipboard.writeText(txt).then(function() { finishSharePartner(false, false); });
+}
+
+function finishSharePartner(hasImage, isWA) {
+    var btn = document.getElementById('btn-do-share');
+    if(btn) { btn.disabled = false; btn.innerHTML = '✨ Genera e Copia'; }
+    var m = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
+    if(m) m.hide();
+    
+    if (hasImage && isWA) {
+        alert("✅ MAGIA FATTA!\nImmagine e Testo copiati negli appunti.\nApri WhatsApp, fai 'Incolla', e il testo apparirà sotto la foto!");
+    } else {
+        alert("✅ Testo copiato negli appunti con successo! (Immagine non supportata o non selezionata).");
+    }
+}
+
   
 // 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti
 function renderProposals(data) {
@@ -985,6 +1185,7 @@ function renderProposals(data) {
     let btnRiproponi = limiteRaggiunto ? `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-3 fw-bold" disabled><i class="bi bi-lock-fill"></i> Limite Raggiunto</button>` : `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
     const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
+    const btnCondividi = !isPending ? `<button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Genera Post Condivisione</button>` : '';
 
     return `
       <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
@@ -999,7 +1200,7 @@ function renderProposals(data) {
             <a href="${item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1"><i class="bi bi-map"></i> Mappa</a>
             ${btnInfo}
           </div>
-          ${btnRiproponi} ${btnAnnulla} ${btnLocandina}
+          ${btnRiproponi} ${btnAnnulla} ${btnLocandina} ${btnCondividi}
         </div>
       </div>
     `;
