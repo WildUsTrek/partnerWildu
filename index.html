@@ -1637,8 +1637,8 @@ async function generaLocandinaFinale() {
       const testoSfondo = isFree ? "PARTECIPAZIONE GRATUITA" : "€ " + prezzo;
       
       // MAGIA MATEMATICA: Box dinamico
-      let textW = ctx.measureText(testoSfondo).width;
-      let boxW = isFree ? 850 : Math.max(350, textW + 160); // Largo 850 se gratis, altrimenti si adatta al prezzo
+      let prezzoTextW = ctx.measureText(testoSfondo).width;
+      let boxW = isFree ? 850 : Math.max(350, prezzoTextW + 160); // Largo 850 se gratis, altrimenti si adatta al prezzo
       
       const gradBox = ctx.createLinearGradient(0, boxY, 0, boxY + boxH);
       gradBox.addColorStop(0, isFree ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.9)"); 
