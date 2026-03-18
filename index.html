@@ -1302,7 +1302,7 @@ function finalLaunchWA(isBusiness) {
     }, 150);
 }
   
-// 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti
+// 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti + BULK READING ISCRITTI SULLA CARD
 function renderProposals(data) {
   const pList = document.getElementById('list-pending');
   const aList = document.getElementById('list-accepted');
@@ -1311,8 +1311,6 @@ function renderProposals(data) {
   // 🟢 ORDINA LE PROPOSTE PRIMA DI DISEGNARLE
   if (data.pending) data.pending.sort((a, b) => a.dataOrdinamento - b.dataOrdinamento);
   if (data.accepted) data.accepted.sort((a, b) => a.dataOrdinamento - b.dataOrdinamento);
-
-  // ... tutto il resto del codice rimane uguale
 
   const pendingArr = (data && data.pending) ? data.pending : [];
   const acceptedArr = (data && data.accepted) ? data.accepted : [];
@@ -1336,6 +1334,16 @@ function renderProposals(data) {
         ? `<div class="badge bg-warning text-dark fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-cash-coin"></i> PAY-DAY: € ${item.prezzo} a persona</div>`
         : `<div class="badge bg-success text-white fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-star-fill"></i> OPEN DAY (Gratuito)</div>`;
 
+    // 🟢 LA NOVITÀ: Badge iscritti calcolato offline dalla cache
+    let conteggioIscritti = 0;
+    if (item.iscritti && Array.isArray(item.iscritti)) {
+        conteggioIscritti = item.iscritti.length;
+    }
+    // Mostra il badge iscritti solo se l'evento è accettato (non in attesa)
+    const badgeIscritti = !isPending 
+        ? `<span class="badge ${conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary'} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti}</span>` 
+        : '';
+
     const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
     let btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
     const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
@@ -1349,7 +1357,10 @@ function renderProposals(data) {
           ${badgeTipo}
           <div class="d-flex justify-content-between align-items-start mb-2 mt-1">
             <h6 class="text-white fw-bold m-0">${item.titolo || "Senza Titolo"}</h6>
-            <span class="badge bg-secondary small">${item.regione || "N/D"}</span>
+            <div class="text-end">
+                <span class="badge bg-secondary small">${item.regione || "N/D"}</span>
+                ${badgeIscritti}
+            </div>
           </div>
           <div class="small text-info fw-bold mb-3"><i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} <br><i class="bi bi-geo-alt"></i> ${item.luogo || ""}</div>
           <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc || ""}</p>
@@ -1763,20 +1774,61 @@ function forceSync() {
 }
 
 
+
 // =========================================================
-// MOTORE ISCRITTI PARTNER (Il Ponte)
-// =========================================================
-// =========================================================
-// MOTORE ISCRITTI PARTNER (Versione con DEBUG Integrato)
+// MOTORE ISCRITTI PARTNER (OFFLINE / CACHED BULK READING)
 // =========================================================
 function vediIscrittiPartner(itemEncoded) {
     const item = JSON.parse(decodeURIComponent(itemEncoded));
     
-    // 1. Rimuoviamo eventuali modali vecchi
+    // Rimuoviamo il vecchio modale se esiste
     let oldModal = document.getElementById('modalIscrittiPartner');
     if(oldModal) oldModal.remove();
 
-    // 2. Costruzione del Modale con lo spazio per il DEBUG
+    // Estraiamo gli iscritti dal "pacchetto" ricevuto all'avvio
+    const iscritti = item.iscritti || [];
+    let contentHtml = "";
+
+    // Se non ci sono iscritti...
+    if(iscritti.length === 0) {
+        contentHtml = `
+            <div class="text-center mt-4 mb-4">
+                <i class="bi bi-emoji-frown display-1 text-muted opacity-50 mb-3 d-block"></i>
+                <h5 class="text-white fw-bold">Nessun iscritto (per ora)</h5>
+                <p class="text-muted small">Condividi la locandina per trovare partecipanti!</p>
+            </div>`;
+    } else {
+        // Se ci sono iscritti, costruiamo subito la lista
+        contentHtml = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge bg-primary fs-6 rounded-pill px-3 py-2">${iscritti.length} Partecipanti confermati</span>
+            </div>
+            <ul class="list-group list-group-flush rounded-3 shadow-sm border border-secondary">`;
+        
+        iscritti.forEach((u, idx) => {
+            let waLink = '';
+            if(u.telefono) {
+                let phoneStr = u.telefono.toString().replace(/[^0-9\+]/g, '');
+                if (phoneStr.length <= 10 && !phoneStr.startsWith('+')) phoneStr = '39' + phoneStr;
+                else phoneStr = phoneStr.replace('+', '');
+                waLink = `<a href="https://wa.me/${phoneStr}" target="_blank" class="btn btn-sm btn-success rounded-circle shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-whatsapp fs-5"></i></a>`;
+            }
+
+            contentHtml += `
+            <li class="list-group-item bg-dark text-white border-secondary p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-bold mb-1 fs-5">${idx + 1}. ${u.nome}</div>
+                    <div class="small text-info d-flex align-items-center gap-2 fw-bold">
+                        <i class="bi bi-telephone"></i> ${u.telefono || 'Nessun numero'}
+                    </div>
+                </div>
+                <div>${waLink}</div>
+            </li>`;
+        });
+        contentHtml += `</ul>`;
+    }
+
+    // Costruiamo e stampiamo il modale con la lista già pronta
     const modalHtml = `
     <div class="modal fade" id="modalIscrittiPartner" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -1784,20 +1836,13 @@ function vediIscrittiPartner(itemEncoded) {
                 <div class="modal-header border-secondary p-4">
                     <div class="w-100">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="modal-title fw-bold mb-0 text-primary">
-                                <i class="bi bi-people-fill"></i> Iscritti: ${item.titolo}
-                            </h5>
+                            <h5 class="modal-title fw-bold mb-0 text-primary"><i class="bi bi-people-fill"></i> Iscritti: ${item.titolo}</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <div id="debugLabel" style="color: #666; font-size: 10px; font-family: monospace; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px; display: none;"></div>
                     </div>
                 </div>
-                <div class="modal-body p-3" id="iscritti-list-container">
-                    <div class="text-center mt-5 mb-5">
-                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
-                        <h6 class="text-white fw-bold">Cerco gli iscritti...</h6>
-                        <p class="text-muted small">Interrogazione database in corso...</p>
-                    </div>
+                <div class="modal-body p-3">
+                    ${contentHtml}
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary rounded-pill w-100 fw-bold" data-bs-dismiss="modal">Chiudi</button>
@@ -1807,67 +1852,7 @@ function vediIscrittiPartner(itemEncoded) {
     </div>`;
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const myModal = new bootstrap.Modal(document.getElementById('modalIscrittiPartner'));
-    myModal.show();
-
-    // 3. Chiamata al Master
-    fetch(MOTORE_API_URL, { 
-        method: 'POST', 
-        body: JSON.stringify({ 
-            action: 'GET_SUBSCRIBERS', 
-            token: "WILDU_TOKEN_2026_XYZ", 
-            payload: { titolo: item.titolo, dataInizio: item.dataInizio } 
-        }) 
-    })
-    .then(r => r.json())
-    .then(res => {
-        const container = document.getElementById('iscritti-list-container');
-        const debugLabel = document.getElementById('debugLabel');
-
-        // Mostriamo il debug appena arriva la risposta
-        if(debugLabel && res.debugInfo) {
-            debugLabel.innerText = res.debugInfo;
-            debugLabel.style.display = 'block';
-        }
-
-        if(!res.success) {
-            container.innerHTML = `<div class="alert alert-danger">❌ Errore: ${res.error}</div>`;
-            return;
-        }
-        
-        const iscritti = res.iscritti || [];
-        if(iscritti.length === 0) {
-            container.innerHTML = `<div class="text-center mt-4 mb-4">
-                <i class="bi bi-emoji-frown display-1 text-muted opacity-50 mb-3 d-block"></i>
-                <h5 class="text-white fw-bold">Nessun iscritto</h5>
-            </div>`;
-            return;
-        }
-
-        let html = `<div class="badge bg-primary fs-6 rounded-pill px-3 py-2 mb-3">${iscritti.length} Confermati</div>
-                    <ul class="list-group list-group-flush rounded-3 border border-secondary">`;
-        
-        iscritti.forEach((u, idx) => {
-            let phoneStr = u.telefono ? u.telefono.toString().replace(/[^0-9]/g, '') : '';
-            if (phoneStr.length === 10) phoneStr = '39' + phoneStr;
-            
-            html += `
-            <li class="list-group-item bg-dark text-white border-secondary p-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="fw-bold fs-5">${idx + 1}. ${u.nome}</div>
-                    <div class="small text-info fw-bold"><i class="bi bi-telephone"></i> ${u.telefono}</div>
-                </div>
-                <a href="https://wa.me/${phoneStr}" target="_blank" class="btn btn-success rounded-circle shadow-sm">
-                    <i class="bi bi-whatsapp fs-5"></i>
-                </a>
-            </li>`;
-        });
-        html += `</ul>`;
-        container.innerHTML = html;
-    })
-    .catch(err => {
-        document.getElementById('iscritti-list-container').innerHTML = `<div class="alert alert-danger">❌ Errore di connessione.</div>`;
-    });
+    new bootstrap.Modal(document.getElementById('modalIscrittiPartner')).show();
 }
   
 function showLocandinaFallback(dataUrl) {
