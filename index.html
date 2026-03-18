@@ -231,7 +231,7 @@
         </div>
         <div class="col-12" id="box_prezzo" style="display: none;">
             <label class="text-warning">Prezzo a persona (€) *</label>
-            <input type="number" id="od_prezzo" class="form-control border-warning" placeholder="Es. 15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <input type="number" id="od_prezzo" class="form-control border-warning" placeholder="Es. 15" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
             <p class="text-muted small mt-1" id="payday_status_msg"></p>
         </div>
 
@@ -476,12 +476,12 @@ function renderEquipmentSteps() {
                 ${cat.items.map(it => {
                   let placeholder = (it.id === 'eq4') ? "Indumenti qtà e strati, gusci..." : "Qtà o tipologia...";
                   return `
-                    <div class="col-12 d-flex align-items-center mb-3 eq-item">
-                      <div class="d-flex align-items-center flex-grow-1 pe-2">
+                    <div class="col-12 mb-3 eq-item pb-2 border-bottom" style="border-color: #2a2a2a !important;">
+                      <div class="d-flex align-items-center mb-2">
                         <input class="form-check-input od-eq m-0" type="checkbox" value="${it.val}" id="${it.id}">
-                        <label class="form-check-label ms-3 mb-0" for="${it.id}">${it.icon} ${it.val}</label>
+                        <label class="form-check-label ms-3 mb-0 text-white" for="${it.id}">${it.icon} ${it.val}</label>
                       </div>
-                      <input type="text" class="form-control form-control-sm note-input w-50" id="note_${it.id}" placeholder="${placeholder}">
+                      <input type="text" class="form-control form-control-sm note-input w-100" id="note_${it.id}" placeholder="${placeholder}">
                     </div>`;
                 }).join('')}
               </div>
@@ -1149,17 +1149,29 @@ function executeSharePartner() {
 }
 
 function copyToClipboard(canvas, txt, isWA) {
-    canvas.toBlob(function(blob) {
-        try {
-            var item = new ClipboardItem({ "text/plain": new Blob([txt], { type: "text/plain" }), "image/png": blob });
-            navigator.clipboard.write([item]).then(function() {
-                finishSharePartner(true, isWA);
-            }).catch(function(e) {
-                console.warn("Clipboard API image failed, copying text only", e);
-                fallbackCopy(txt);
-            });
-        } catch(e) { fallbackCopy(txt); }
-    }, 'image/png');
+    try {
+        // Protocollo sicuro per bypassare i blocchi asincroni di iOS/Android
+        var textBlob = new Blob([txt], { type: "text/plain" });
+        var imagePromise = new Promise(function(resolve) {
+            canvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
+        });
+
+        var item = new ClipboardItem({
+            "text/plain": textBlob,
+            "image/png": imagePromise
+        });
+
+        navigator.clipboard.write([item]).then(function() {
+            finishSharePartner(true, isWA);
+        }).catch(function(e) {
+            console.warn("Il browser mobile ha bloccato l'immagine negli appunti", e);
+            // Il fallback sblocca il caricamento e copia almeno il testo
+            fallbackCopy(txt);
+        });
+    } catch(e) {
+        console.warn("Clipboard API non supportata dal dispositivo", e);
+        fallbackCopy(txt);
+    }
 }
 
 function fallbackCopy(txt) {
@@ -1191,19 +1203,26 @@ function finishSharePartner(hasImage, isWA, isDownloaded = false) {
 
 function copiaImmagineTg() {
     var btn = document.getElementById('btn-tg-img');
-    if(!window.tempTgCanvas) return alert("Errore immagine");
-    
-    window.tempTgCanvas.toBlob(function(blob) {
-        try {
-            var item = new ClipboardItem({ "image/png": blob });
-            navigator.clipboard.write([item]).then(function() {
-                btn.classList.remove('btn-outline-info');
-                btn.classList.add('btn-info', 'text-white');
-                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-                setTimeout(() => { btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; btn.classList.add('btn-outline-info'); btn.classList.remove('btn-info', 'text-white'); }, 3000);
-            });
-        } catch(e) { alert("Il tuo dispositivo non supporta la copia diretta dell'immagine."); }
-    }, 'image/png');
+    if(!window.tempTgCanvas) return alert("Errore: Immagine non trovata in memoria.");
+
+    try {
+        var imagePromise = new Promise(function(resolve) {
+            window.tempTgCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
+        });
+
+        var item = new ClipboardItem({ "image/png": imagePromise });
+
+        navigator.clipboard.write([item]).then(function() {
+            btn.classList.remove('btn-outline-info');
+            btn.classList.add('btn-info', 'text-white');
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
+            setTimeout(() => { btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; btn.classList.add('btn-outline-info'); btn.classList.remove('btn-info', 'text-white'); }, 3000);
+        }).catch(function(e) {
+            alert("⚠️ Il tuo browser blocca la copia diretta delle immagini. Usa la funzione 'Genera Locandina' per salvarla nella galleria.");
+        });
+    } catch(e) {
+        alert("⚠️ Il tuo dispositivo o browser non supporta questa funzione.");
+    }
 }
 
 function copiaTestoTg() {
@@ -1218,26 +1237,30 @@ function copiaTestoTg() {
   
 // Funzione legata ai bottoni di lancio WhatsApp
 function finalLaunchWA(isBusiness) {
-    // Chiudiamo il modale UX
     var mInstr = bootstrap.Modal.getInstance(document.getElementById('modalShareInstructions'));
     if(mInstr) mInstr.hide();
     
+    // Rilevamento ambiente (Smartphone vs PC)
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (!isMobile) {
+        // SU PC: Non esiste separazione di App tra WA Normale e Business. Il protocollo è univoco.
+        window.location.href = 'whatsapp://send';
+        return;
+    }
+    
+    // SU SMARTPHONE: Smistamento protocolli
     if (isBusiness) {
-        // Lancio WhatsApp BUSINESS
         var isAndroid = /Android/i.test(navigator.userAgent);
         if (isAndroid) {
-            // Sintassi "Intent" specifica per Android per forzare l'app Business
             window.location.href = 'intent://send/#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end';
         } else {
-            // Sintassi per iOS (iPhone)
             window.location.href = 'whatsapp-smb://send';
         }
     } else {
-        // Lancio WhatsApp NORMALE
         window.location.href = 'whatsapp://send';
     }
 }
-
   
 // 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti
 function renderProposals(data) {
@@ -1313,6 +1336,16 @@ function riproponiEvento(itemEncoded) {
 
   if (item.dataInizio) document.getElementById('od_data_inizio').value = item.dataInizio.split('/').reverse().join('-');
   if (item.dataFine) document.getElementById('od_data_fine').value = item.dataFine.split('/').reverse().join('-');
+
+  // FIX BUG CLONA (Forziamo il tipo evento originale, se non esiste lo mettiamo FREE, ma sblocchiamo la logica visiva)
+  const menuTipo = document.getElementById('od_tipo_evento');
+  menuTipo.value = item.tipo || "FREE";
+  if (item.tipo === 'PAID') {
+      document.getElementById('od_prezzo').value = item.prezzo || "";
+  } else {
+      document.getElementById('od_prezzo').value = "";
+  }
+  togglePrezzoField(); // Attiva la logica dei messaggi di blocco/sblocco
 
   document.querySelectorAll('.od-eq').forEach(cb => cb.checked = false);
   document.querySelectorAll('.note-input').forEach(n => n.value = "");
