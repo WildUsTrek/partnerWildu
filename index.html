@@ -1216,14 +1216,26 @@ function copiaTestoTg() {
     });
 }
   
-// Funzione legata al mega-bottone finale del modale
-function finalLaunchWA() {
+// Funzione legata ai bottoni di lancio WhatsApp
+function finalLaunchWA(isBusiness) {
     // Chiudiamo il modale UX
     var mInstr = bootstrap.Modal.getInstance(document.getElementById('modalShareInstructions'));
     if(mInstr) mInstr.hide();
     
-    // Lanciamo WhatsApp (apre l'app)
-    window.location.href = 'whatsapp://send';
+    if (isBusiness) {
+        // Lancio WhatsApp BUSINESS
+        var isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            // Sintassi "Intent" specifica per Android per forzare l'app Business
+            window.location.href = 'intent://send/#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end';
+        } else {
+            // Sintassi per iOS (iPhone)
+            window.location.href = 'whatsapp-smb://send';
+        }
+    } else {
+        // Lancio WhatsApp NORMALE
+        window.location.href = 'whatsapp://send';
+    }
 }
 
   
@@ -1848,10 +1860,17 @@ function vediIscrittiPartner(itemEncoded) {
                     </div>
                 </div>
 
-                <div class="mt-4 pt-3 border-top border-secondary">
-                    <button type="button" class="btn btn-success btn-lg w-100 rounded-pill fw-bold p-3 shadow-sm" onclick="finalLaunchWA()">
-                        Capito, vai a WhatsApp 🚀
-                    </button>
+               <div class="mt-4 pt-3 border-top border-secondary row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-success w-100 rounded-pill fw-bold p-3 shadow-sm" onclick="finalLaunchWA(false)">
+                            <i class="bi bi-whatsapp"></i> WA Normale
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn text-white w-100 rounded-pill fw-bold p-3 shadow-sm" style="background-color: #128C7E; border-color: #128C7E;" onclick="finalLaunchWA(true)">
+                            <i class="bi bi-briefcase-fill"></i> WA Business
+                        </button>
+                    </div>
                 </div>
 
             </div>
