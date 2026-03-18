@@ -93,11 +93,20 @@
 <body>
 
 <div id="init-screen">
-  <div class="text-center">
-    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+  <div class="text-center px-4">
+    <img src="https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png" alt="Wildu" style="height: 90px; margin-bottom: 20px; animation: fadeIn 0.5s ease;">
+    
+    <div class="spinner-border text-primary mb-3 d-block mx-auto" style="width: 2rem; height: 2rem;"></div>
     <h5 class="text-white fw-bold">WILDU <span class="text-primary">PARTNER</span></h5>
+    
+    <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.href = window.location.pathname + '?reset=' + new Date().getTime();" class="btn btn-outline-danger btn-sm rounded-pill mt-4" style="opacity: 0; animation: showParachute 0.5s forwards; animation-delay: 5s;">
+       <i class="bi bi-arrow-clockwise"></i> App bloccata? Ripristina
+    </button>
   </div>
 </div>
+<style>
+    @keyframes showParachute { to { opacity: 1; } }
+</style>
   
 <div id="auth-overlay" class="loader-overlay" style="display: none;">
   <div class="text-center p-4 card bg-dark border-primary shadow-lg" style="max-width: 400px;">
@@ -152,7 +161,7 @@
 
 <div class="util-nav d-flex justify-content-between align-items-center">
   <div class="d-flex align-items-center">
-     <img id="app-logo" src="" alt="Wildu" style="height: 32px; width: auto; display: none; margin-right: 12px; border-radius: 6px;">
+     <img id="app-logo" src="https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png" alt="Wildu" style="height: 32px; width: auto; margin-right: 12px; border-radius: 6px;">
      <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
   </div>
   <div>
