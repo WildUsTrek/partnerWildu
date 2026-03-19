@@ -29,6 +29,25 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
+
+// 🎯 SENSORE DI RITORNO DA STRIPE (Success URL)
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+        // 1. Svuotiamo la cache per forzare il refresh dei dati VIP
+        sessionStorage.clear();
+        
+        // 2. 🟢 AGGIUNGIAMO IL MESSAGGIO DI SUCCESSO (Così l'utente esulta!)
+        alert("✨ PAGAMENTO COMPLETATO! ✨\n\nBenvenuto tra i Partner VIP di Wildu. Da ora puoi pubblicare i tuoi viaggi senza limiti e il tuo logo apparirà sulle locandine!");
+
+        console.log("✅ Ritorno da Stripe confermato: Cache svuotata e messaggio mostrato.");
+        
+        // 3. Puliamo l'URL per estetica
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+})();
+  
 </script>
 
   <style>
@@ -489,7 +508,7 @@
                               <h6 class="text-warning fw-bold m-0">La via più veloce</h6>
                           </div>
                           <p class="small text-light m-0 mb-3">Nessun vincolo, niente Open Day obbligatori. Proponi quello che vuoi e ottieni visibilità immediata.</p>
-                          <a href="${stripeLink}" target="_blank" onclick="sessionStorage.clear();" class="btn btn-warning w-100 rounded-pill fw-bold text-dark shadow-sm">
+                          <a href="${stripeLink}" target="_blank" class="btn btn-warning w-100 rounded-pill fw-bold text-dark shadow-sm">
                               👑 Sblocca VIP a ${prezzoVip}€ / mese
                           </a>
                       </div>
@@ -863,7 +882,7 @@ function openProfile() {
           if(boxAzione) boxAzione.innerHTML = `
           <div class="mt-4 p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
               <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
-              <a href="${stripeLink}" target="_blank" onclick="sessionStorage.clear();" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
+              <a href="${stripeLink}" target="_blank" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
                   👑 Diventa VIP a ${prezzoVip}€ / mese
               </a>
           </div>`;
