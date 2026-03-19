@@ -428,7 +428,7 @@
       input.value = hh + ':' + mm;
   }
 
-  // --- LOGICA MOSTRA/NASCONDI PREZZO E VERIFICA 1:1 ---
+// --- LOGICA MOSTRA/NASCONDI PREZZO E VERIFICA VIP ---
   function togglePrezzoField() {
       const tipo = document.getElementById('od_tipo_evento').value;
       const boxPrezzo = document.getElementById('box_prezzo');
@@ -438,13 +438,16 @@
       if (tipo === 'PAID') {
           boxPrezzo.style.display = 'block';
           
-          // Contiamo quanti Free e quanti Paid ha in storico (Cache)
           let countFree = 0;
           let countPaid = 0;
+          let isVip = false; // 🟢 Di base non sei VIP
+          
           const memoria = sessionStorage.getItem('wildu_cache_proposte');
           if (memoria) {
               try {
                   const data = JSON.parse(memoria);
+                  isVip = data.isVip || false; // 🟢 Peschiamo il dato VIP arrivato dal Master!
+                  
                   const allEvents = (data.pending || []).concat(data.accepted || []);
                   allEvents.forEach(e => {
                       if (!e.prezzo || e.prezzo == "0") countFree++;
@@ -453,15 +456,32 @@
               } catch(e) {}
           }
           
-          // Logica di Sblocco
-          if (countPaid >= countFree) {
-              msg.innerHTML = `⚠️ <b>Blocco Pay-Day:</b> Hai ${countFree} Open Day e ${countPaid} Pay-Day. Devi caricare almeno un nuovo evento gratuito prima di poter inserire un altro evento a pagamento.`;
-              msg.className = "text-danger small mt-1";
-              inputPrezzo.disabled = true;
-          } else {
-              msg.innerHTML = `✅ <b>Sbloccato:</b> Hai ${countFree} Open Day e ${countPaid} Pay-Day nello storico.`;
-              msg.className = "text-success small mt-1";
+          if (isVip) {
+              // 🏆 SBLOCCO VIP ASSOLUTO
+              msg.innerHTML = `👑 <b>Sei un Partner VIP!</b> Hai accesso illimitato ai Pay-Day. Nessun vincolo.`;
+              msg.className = "text-success small mt-2 d-block p-2 rounded border border-success bg-dark";
               inputPrezzo.disabled = false;
+          } else {
+              // 🔒 LOGICA STANDARD CON UPSELL
+              if (countPaid >= countFree) {
+                  const uid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : "";
+                  // 🟢 IL TUO LINK STRIPE (Con l'UID agganciato alla fine in modo invisibile!)
+                  const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + uid;
+                  
+                  msg.innerHTML = `
+                    <div class="mt-2 p-3 bg-dark border border-warning rounded-3 shadow-sm text-center">
+                       <h6 class="text-warning fw-bold mb-2">🚀 Sblocca i Pay-Day Illimitati!</h6>
+                       <p class="text-white small mb-3">Hai ${countFree} Open Day e ${countPaid} Pay-Day. Diventa Partner VIP: zero vincoli Open Day e disdici quando vuoi.</p>
+                       <a href="${stripeLink}" target="_blank" class="btn btn-warning fw-bold rounded-pill text-dark w-100 shadow">👑 Diventa VIP a 19€/mese</a>
+                    </div>
+                  `;
+                  msg.className = "small mt-1 d-block";
+                  inputPrezzo.disabled = true;
+              } else {
+                  msg.innerHTML = `✅ <b>Sbloccato:</b> Hai ${countFree} Open Day e ${countPaid} Pay-Day nello storico.`;
+                  msg.className = "text-success small mt-1";
+                  inputPrezzo.disabled = false;
+              }
           }
       } else {
           boxPrezzo.style.display = 'none';
@@ -724,7 +744,11 @@ function clearGallerySelection() {
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
 }
 
-function loginGoogle() { auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message)); }
+function loginGoogle() { 
+  // Forza Google a chiedere quale account usare
+  provider.setCustomParameters({ prompt: 'select_account' });
+  auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message)); 
+}
 
 auth.onAuthStateChanged(async (user) => {
   const initScreen = document.getElementById('init-screen'); 
@@ -775,7 +799,7 @@ async function saveFirstProfile() {
   } catch (e) { alert("Errore nel salvataggio: " + e.message); }
 }
 
-// 🟢 FIX PROFILO: Anti-Freeze Grafico
+// 🟢 FIX PROFILO: Anti-Freeze Grafico + STATUS VIP
 function openProfile() {
   try {
       const user = auth.currentUser;
@@ -786,10 +810,30 @@ function openProfile() {
       
       if (typeof refreshProfileLogoUI === "function") refreshProfileLogoUI(); 
 
+      // 🟢 COSTRUZIONE DINAMICA BANNER VIP
+      const banner = document.getElementById('profile-vip-banner');
+      if (banner) {
+          let isVip = false;
+          const memoria = sessionStorage.getItem('wildu_cache_proposte');
+          if (memoria) { try { isVip = JSON.parse(memoria).isVip || false; } catch(e){} }
+          
+          if (isVip) {
+              banner.innerHTML = `<div class="p-3 bg-success bg-opacity-10 border border-success border-2 rounded-3 text-center">
+                  <h5 class="text-success fw-bold m-0">👑 Partner VIP Attivo</h5>
+                  <p class="small text-light m-0 mt-1">Pay-Day illimitati sbloccati.</p>
+              </div>`;
+          } else {
+              const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + user.uid;
+              banner.innerHTML = `<div class="p-3 bg-dark border border-warning rounded-3 text-center shadow-sm">
+                  <h6 class="text-warning fw-bold mb-2">Status: Standard</h6>
+                  <p class="small text-muted mb-3">Con l'abbonamento VIP rimuovi l'obbligo degli Open Day.</p>
+                  <a href="${stripeLink}" target="_blank" class="btn btn-sm btn-warning fw-bold rounded-pill text-dark w-100 shadow">⭐ Diventa VIP</a>
+              </div>`;
+          }
+      }
+
       const modal = document.getElementById('edit-profile-overlay');
       modal.style.display = 'flex';
-      
-      // La "scossa" che obbliga il browser a disegnare il modale all'istante
       modal.offsetHeight; 
   } catch(e) {
       alert("Errore nell'apertura profilo. Ricarica la pagina.");
@@ -1952,6 +1996,7 @@ function scaricaLocandinaFile() {
   <div class="card bg-dark border-primary p-4 shadow-lg w-100 m-3" style="max-width: 450px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h3 class="text-white fw-bold m-0">Il tuo Profilo</h3>
+      <div id="profile-vip-banner" class="mb-4 mt-4 w-100"></div>
       <button type="button" class="btn-close btn-close-white" onclick="closeProfile()"></button>
     </div>
     <label class="text-primary small fw-bold mb-1">NOME E COGNOME</label>
