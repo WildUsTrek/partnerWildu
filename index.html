@@ -1350,15 +1350,31 @@ function renderProposals(data) {
         ? `<div class="badge bg-warning text-dark fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-cash-coin"></i> PAY-DAY: € ${item.prezzo} a persona</div>`
         : `<div class="badge bg-success text-white fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-star-fill"></i> OPEN DAY (Gratuito)</div>`;
 
-    // 🟢 LA NOVITÀ: Badge iscritti calcolato offline dalla cache
+    // 🟢 AGGIORNAMENTO: Badge iscritti + Logica Posti Max per il Partner
     let conteggioIscritti = 0;
     if (item.iscritti && Array.isArray(item.iscritti)) {
         conteggioIscritti = item.iscritti.length;
     }
-    // Mostra il badge iscritti solo se l'evento è accettato (non in attesa)
-    const badgeIscritti = !isPending 
-        ? `<span class="badge ${conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary'} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti}</span>` 
-        : '';
+    
+    let badgeIscritti = "";
+    if (!isPending) {
+        let max = parseInt(item.postiMax);
+        // Se il partner ha impostato un limite...
+        if (!isNaN(max) && max > 0) {
+            if (conteggioIscritti >= max) {
+                // SOLD OUT: Badge rosso
+                badgeIscritti = `<span class="badge bg-danger shadow-sm small ms-2"><i class="bi bi-x-octagon-fill"></i> SOLD OUT (${conteggioIscritti}/${max})</span>`;
+            } else {
+                // POSTI DISPONIBILI: Rapporto (es. 5 / 15)
+                let color = conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary';
+                badgeIscritti = `<span class="badge ${color} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti} / ${max}</span>`;
+            }
+        } else {
+            // NESSUN LIMITE: Solo totale
+            let color = conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary';
+            badgeIscritti = `<span class="badge ${color} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti}</span>`;
+        }
+    }
 
     const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
     let btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
