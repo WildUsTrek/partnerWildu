@@ -1001,7 +1001,18 @@ async function checkProposalLimitAtStartup(uid) {
 
   if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Verifica permessi in corso...</span>";
   try {
-    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: uid }) });
+    const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+    const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    const response = await fetch(MOTORE_API_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+            action: "getUserData", 
+            token: "WILDU_TOKEN_2026_XYZ", 
+            uid: uid, 
+            nome: nomeG, 
+            tel: telG 
+        }) 
+    });
     if (response.ok) {
       const data = await response.json();
       if (!data.error) {
@@ -1042,7 +1053,18 @@ async function openMyProposals() {
 
   document.getElementById('loader').style.display = 'flex';
   try {
-    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid }) });
+    const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+    const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    const response = await fetch(MOTORE_API_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+            action: "getUserData", 
+            token: "WILDU_TOKEN_2026_XYZ", 
+            uid: user.uid, 
+            nome: nomeG, 
+            tel: telG 
+        }) 
+    });
     if (!response.ok) throw new Error("Errore di rete");
     const data = await response.json();
 
