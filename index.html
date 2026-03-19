@@ -244,6 +244,21 @@
             <p class="text-muted small mt-1" id="payday_status_msg"></p>
         </div>
 
+
+        <div class="col-12 mt-3 mb-4">
+            <label class="form-label fw-bold small text-light"><i class="bi bi-person-plus-fill text-warning"></i> Posti Massimi Disponibili</label>
+            <div class="input-group mb-2">
+                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-people"></i></span>
+                <input type="number" class="form-control bg-dark text-white border-secondary" id="propPostiMax" min="1" placeholder="Es. 15 (Lascia vuoto se illimitato)">
+            </div>
+            <div class="p-2 rounded-3" style="background: rgba(13, 110, 253, 0.1); border: 1px dashed rgba(13, 110, 253, 0.4);">
+                <p class="m-0 small text-info" style="line-height: 1.3;">
+                    <i class="bi bi-info-circle-fill"></i> <b>Come funziona:</b> Il limite <u>non blocca</u> le prenotazioni. Chi si iscrive oltre questa soglia verrà avvisato dall'App che il suo posto <b>non è garantito</b> (Lista d'attesa).
+                </p>
+            </div>
+        </div>
+      
+        
         <div class="section-title">DETTAGLI TEMPORALI</div>
         <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
         <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
@@ -575,8 +590,9 @@ function renderEquipmentSteps() {
       dislivello: document.getElementById('od_dislivello').value,
       descrizione: document.getElementById('od_descrizione').value.trim(),
       regione: document.getElementById('od_regione').value, 
-      tipo: document.getElementById('od_tipo_evento').value, // <--- NUOVO
-      prezzo: document.getElementById('od_tipo_evento').value === 'PAID' ? document.getElementById('od_prezzo').value : "0", // <--- NUOVO
+      tipo: document.getElementById('od_tipo_evento').value,
+      prezzo: document.getElementById('od_tipo_evento').value === 'PAID' ? document.getElementById('od_prezzo').value : "0",
+      postiMax: document.getElementById('propPostiMax').value.trim(), // 🟢 NUOVO: Aggiungiamo i posti max
       fotoUrl: fotoUrl, 
       utente: currentUserKey, 
       tempId: "PEND_" + new Date().getTime()
@@ -1395,6 +1411,7 @@ function riproponiEvento(itemEncoded) {
   document.getElementById('od_regione').value = item.regione || "";
   document.getElementById('od_orario_inizio').value = item.oraIn || "";
   document.getElementById('od_orario_fine').value = item.oraOut || "";
+  document.getElementById('propPostiMax').value = item.postiMax || "";
   let testoPulito = (item.desc || "").replace(/^Guida:.*?\|\s*/i, "");
   document.getElementById('od_descrizione').value = testoPulito.trim();
 
