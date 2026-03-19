@@ -817,7 +817,7 @@ async function saveFirstProfile() {
   } catch (e) { alert("Errore nel salvataggio: " + e.message); }
 }
 
-// 🟢 FIX PROFILO: Anti-Freeze Grafico + STATUS VIP PREMIUM
+// 🟢 FIX PROFILO: Design pulito con Badge e Bottone in basso
 function openProfile() {
   try {
       const user = auth.currentUser;
@@ -828,50 +828,38 @@ function openProfile() {
       
       if (typeof refreshProfileLogoUI === "function") refreshProfileLogoUI(); 
 
-      const banner = document.getElementById('profile-vip-banner');
-      if (banner) {
-          let isVip = false;
-          let prezzoVip = "19"; // Default
+      let isVip = false;
+      let prezzoVip = "19"; // Fallback di sicurezza
+      
+      const memoria = sessionStorage.getItem('wildu_cache_proposte');
+      if (memoria) { 
+          try { 
+              const data = JSON.parse(memoria);
+              isVip = data.isVip || false; 
+              if (data.config && data.config.vipPrice) prezzoVip = data.config.vipPrice;
+          } catch(e){} 
+      }
+      
+      const badgeStatus = document.getElementById('badge-status-profilo');
+      const boxAzione = document.getElementById('box-azione-vip');
+      
+      if (isVip) {
+          // 👑 SE È VIP: Badge dorato/verde in alto, niente bottone in basso
+          if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.65rem; transform: translateY(-2px);"><i class="bi bi-star-fill"></i> VIP</span>`;
+          if(boxAzione) boxAzione.innerHTML = ``; 
+      } else {
+          // 👤 SE È STANDARD: Badge grigio in alto, Box sobrio in basso
+          const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + user.uid;
           
-          const memoria = sessionStorage.getItem('wildu_cache_proposte');
-          if (memoria) { 
-              try { 
-                  const data = JSON.parse(memoria);
-                  isVip = data.isVip || false; 
-                  if (data.config && data.config.vipPrice) prezzoVip = data.config.vipPrice;
-              } catch(e){} 
-          }
+          if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-secondary bg-opacity-25 text-light border border-secondary rounded-pill px-2 py-1" style="font-size: 0.65rem; transform: translateY(-2px);"><i class="bi bi-person"></i> Standard</span>`;
           
-          if (isVip) {
-              banner.innerHTML = `
-              <div class="p-4 rounded-4 position-relative overflow-hidden text-start mb-4" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%); border: 1px solid #75b798; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.2);">
-                  <i class="bi bi-shield-check position-absolute" style="font-size: 8rem; color: rgba(255, 255, 255, 0.1); top: -20px; right: -20px;"></i>
-                  <div class="position-relative z-1">
-                      <div class="d-flex align-items-center mb-1">
-                          <span class="badge bg-light text-success fw-bold me-2 small">ATTIVO</span>
-                      </div>
-                      <h4 class="text-white fw-bold mb-1">Partner VIP 👑</h4>
-                      <p class="text-white small opacity-75 m-0">Hai i superpoteri: Pay-Day illimitati sbloccati per sempre.</p>
-                  </div>
-              </div>`;
-          } else {
-              const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + user.uid;
-              banner.innerHTML = `
-              <div class="p-4 rounded-4 text-start position-relative overflow-hidden mb-4" style="background: linear-gradient(135deg, #2a2a2a 0%, #121212 100%); border: 1px solid #FFD700; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.1);">
-                  <i class="bi bi-star-fill position-absolute" style="font-size: 8rem; color: rgba(255, 215, 0, 0.03); top: -20px; right: -20px;"></i>
-                  <div class="position-relative z-1">
-                      <div class="d-flex align-items-center mb-2">
-                          <span class="badge bg-secondary text-light fw-bold me-2" style="font-size: 0.7rem; letter-spacing: 1px;">STATUS STANDARD</span>
-                      </div>
-                      <h5 class="text-warning fw-bold mb-1">Passa a Wildu VIP <i class="bi bi-lightning-charge-fill"></i></h5>
-                      <p class="small text-light opacity-75 mb-3">Sblocca i Pay-Day illimitati senza il vincolo degli Open Day. Proponi viaggi quando vuoi!</p>
-                      <div class="d-flex align-items-center justify-content-between">
-                          <span class="text-white fw-bold fs-3 m-0">${prezzoVip}€<span class="fs-6 text-muted fw-normal"> /mese</span></span>
-                          <a href="${stripeLink}" target="_blank" class="btn btn-warning fw-bold rounded-pill px-4 shadow">Attiva Ora</a>
-                      </div>
-                  </div>
-              </div>`;
-          }
+          if(boxAzione) boxAzione.innerHTML = `
+          <div class="mt-4 p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
+              <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
+              <a href="${stripeLink}" target="_blank" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
+                  👑 Diventa VIP a ${prezzoVip}€ / mese
+              </a>
+          </div>`;
       }
 
       const modal = document.getElementById('edit-profile-overlay');
@@ -2036,11 +2024,14 @@ function scaricaLocandinaFile() {
 
 <div id="edit-profile-overlay" class="loader-overlay" style="display: none; z-index: 10500 !important;">
   <div class="card bg-dark border-primary p-4 shadow-lg w-100 m-3" style="max-width: 450px;">
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="text-white fw-bold m-0">Il tuo Profilo</h3>
-      <div id="profile-vip-banner" class="mb-4 mt-4 w-100"></div>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="text-white fw-bold m-0">Il tuo Profilo</h3>
+        <div id="badge-status-profilo"></div> </div>
       <button type="button" class="btn-close btn-close-white" onclick="closeProfile()"></button>
     </div>
+
     <label class="text-primary small fw-bold mb-1">NOME E COGNOME</label>
     <input type="text" id="edit_p_nome" class="form-control mb-3">
     <label class="text-primary small fw-bold mb-1">TELEFONO (WHATSAPP)</label>
@@ -2064,6 +2055,8 @@ function scaricaLocandinaFile() {
     
     <button type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
     
+    <div id="box-azione-vip"></div>
+
     <div class="mt-4 pt-3 border-top border-secondary text-center">
       <button type="button" class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
