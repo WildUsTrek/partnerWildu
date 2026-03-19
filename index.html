@@ -30,25 +30,59 @@
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
 
-// 👑 SENSORE DI RITORNO DA STRIPE (Successo o Cancellazione)
+// 👑 SENSORE EVOLUTO: SINCRONIZZAZIONE STRIPE & MESSAGGI UTENTE
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const status = urlParams.get('payment');
-    
-    if (status === 'success') {
-        sessionStorage.clear();
-        alert("✨ PAGAMENTO COMPLETATO! ✨\n\nBenvenuto tra i Partner VIP di Wildu!");
-    } 
-    else if (status === 'canceled') {
-        sessionStorage.clear();
-        alert("ℹ️ ABBONAMENTO AGGIORNATO\n\nLe modifiche al tuo abbonamento sono state registrate. Se hai disdetto, resterai VIP fino alla fine del periodo già pagato.");
-    }
+    const paymentStatus = urlParams.get('payment');
+    const manageStatus = urlParams.get('manage');
 
-    if (status) {
+    // 1. RITORNO DA PAGAMENTO O PORTALE (Pulisce la cache per forzare il refresh dal Master)
+    if (paymentStatus || manageStatus === 'sync') {
+        sessionStorage.clear(); // Elimina i vecchi dati VIP/STANDARD
+        console.log("Cache resettata: sincronizzazione con il Master in corso...");
+        
+        // Mostra un alert immediato basato sull'azione appena compiuta
+        if (paymentStatus === 'success') {
+            alert("✨ PAGAMENTO COMPLETATO! ✨\n\nBenvenuto tra i Partner VIP di Wildu! Il tuo account si sta aggiornando...");
+        } 
+        else if (manageStatus === 'sync') {
+            alert("ℹ️ PORTALE STRIPE\n\nAbbiamo ricevuto i tuoi aggiornamenti. L'app caricherà ora lo stato attuale del tuo abbonamento.");
+        }
+        else if (paymentStatus === 'canceled') {
+            alert("⚠️ OPERAZIONE ANNULLATA\n\nIl pagamento non è stato completato o la sessione è scaduta.");
+        }
+
+        // Pulisce l'URL per estetica e sicurezza
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
 })();
+
+// 🎯 FUNZIONE DI VISUALIZZAZIONE ALERT VIP (Da chiamare dopo che il Master risponde)
+function checkVipMessages(userData) {
+    // Se l'utente ha appena aperto l'app e i dati dicono che ha disdetto
+    if (userData.isVip && userData.vipStatus === "VIP_CANCELED") {
+        Swal.fire({
+            title: 'Abbonamento in scadenza',
+            text: `Hai disattivato il rinnovo automatico. I tuoi vantaggi VIP rimarranno attivi fino al ${userData.scadenzaVip}. Dopo questa data tornerai Standard.`,
+            icon: 'info',
+            confirmButtonText: 'Capito'
+        });
+    }
+    // Se l'utente era VIP ma ora è Standard (perché il tempo è scaduto nel Master)
+    else if (!userData.isVip && sessionStorage.getItem('wasVip') === 'true') {
+        sessionStorage.removeItem('wasVip');
+        Swal.fire({
+            title: 'Abbonamento Scaduto',
+            text: 'Il tuo periodo VIP è terminato. Da oggi sei tornato un Partner Standard.',
+            icon: 'warning',
+            confirmButtonText: 'Ok'
+        });
+    }
+    
+    // Salva lo stato attuale per il prossimo controllo "scadenza"
+    if (userData.isVip) sessionStorage.setItem('wasVip', 'true');
+}
   
 </script>
 
