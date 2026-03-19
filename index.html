@@ -489,7 +489,7 @@
                               <h6 class="text-warning fw-bold m-0">La via più veloce</h6>
                           </div>
                           <p class="small text-light m-0 mb-3">Nessun vincolo, niente Open Day obbligatori. Proponi quello che vuoi e ottieni visibilità immediata.</p>
-                          <a href="${stripeLink}" target="_blank" class="btn btn-warning w-100 rounded-pill fw-bold text-dark shadow-sm">
+                          <a href="${stripeLink}" target="_blank" onclick="sessionStorage.clear();" class="btn btn-warning w-100 rounded-pill fw-bold text-dark shadow-sm">
                               👑 Sblocca VIP a ${prezzoVip}€ / mese
                           </a>
                       </div>
@@ -844,9 +844,16 @@ function openProfile() {
       const boxAzione = document.getElementById('box-azione-vip');
       
       if (isVip) {
-          // 👑 SE È VIP: Badge dorato/verde in alto, niente bottone in basso
+          // 👑 SE È VIP: Badge dorato/verde in alto, e bottone per Gestire Abbonamento in basso
           if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.65rem; transform: translateY(-2px);"><i class="bi bi-star-fill"></i> VIP</span>`;
-          if(boxAzione) boxAzione.innerHTML = ``; 
+          
+          if(boxAzione) boxAzione.innerHTML = `
+          <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
+              <p class="small text-light m-0 mb-2">Il tuo abbonamento Premium è attivo.</p>
+              <a href="https://billing.stripe.com/p/login/test_cNi00b50zboI5Fn3o1dMI00" target="_blank" class="btn btn-outline-light btn-sm rounded-pill fw-bold w-100 shadow-sm">
+                  ⚙️ Gestisci / Disdici Abbonamento
+              </a>
+          </div>`; 
       } else {
           // 👤 SE È STANDARD: Badge grigio in alto, Box sobrio in basso
           const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + user.uid;
@@ -856,7 +863,7 @@ function openProfile() {
           if(boxAzione) boxAzione.innerHTML = `
           <div class="mt-4 p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
               <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
-              <a href="${stripeLink}" target="_blank" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
+              <a href="${stripeLink}" target="_blank" onclick="sessionStorage.clear();" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
                   👑 Diventa VIP a ${prezzoVip}€ / mese
               </a>
           </div>`;
