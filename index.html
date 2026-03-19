@@ -521,7 +521,7 @@ function checkVipMessages(userData) {
           } else {
               if (countPaid >= countFree) {
                   const uid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : "";
-                  const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + uid;
+                  const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${uid}&metadata[client_reference_id]=${uid}`;
                   
                   // IL NUOVO BOX DEL BIVIO (UX Persuasiva)
                   msg.innerHTML = `
@@ -912,7 +912,7 @@ function openProfile() {
           </div>`; 
       } else {
           // 👤 SE È STANDARD: Badge grigio in alto, Box sobrio in basso
-          const stripeLink = "https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=" + user.uid;
+          const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${user.uid}&metadata[client_reference_id]=${user.uid}`;
           
           if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-secondary bg-opacity-25 text-light border border-secondary rounded-pill px-2 py-1" style="font-size: 0.65rem; transform: translateY(-2px);"><i class="bi bi-person"></i> Standard</span>`;
           
