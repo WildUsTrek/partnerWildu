@@ -1071,10 +1071,17 @@ async function checkProposalLimitAtStartup(uid) {
     if (response.ok) {
       const data = await response.json();
       if (!data.error) {
+          // Salva in cache per 30 minuti
           sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
           sessionStorage.setItem('wildu_cache_time', adesso.toString());
+          
           aggiornaLimiteDalServer(data); 
           gestisciLimiteProposte(data);  
+          
+          // 🚀 ATTIVAZIONE VIGILE: Controlla se mostrare alert scadenza/scaduto
+          if (typeof checkVipMessages === "function") {
+              checkVipMessages(data);
+          }
       }
     } else {
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
@@ -1084,61 +1091,61 @@ async function checkProposalLimitAtStartup(uid) {
     if (desc) desc.innerText = "Wizard guidato in pochi passi.";
     if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
   }
-}
   
 async function openMyProposals() {
   const user = auth.currentUser;
-  if (!user) return alert("Devi essere loggato!");
+  if (!user) return alert("⚠️ Devi essere loggato per vedere le tue proposte.");
+
+  const loader = document.getElementById('loader');
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
-  
+
+  // 1. 🚀 PERCORSO VELOCE (CACHE)
+  // Se la memoria esiste ed è più giovane di 30 minuti, usala subito.
   if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
     try {
-        const data = JSON.parse(memoria);
-        if (!data.error && data.success !== false) {
-            aggiornaLimiteDalServer(data);
-            showPage('proposals');
-            renderProposals(data); 
-            gestisciLimiteProposte(data);
-            return; 
-        }
-    } catch(e) {} 
+      const data = JSON.parse(memoria);
+      if (data && !data.error) {
+        console.log("Dati caricati dalla cache (Velocità ⚡)");
+        aggiornaLimiteDalServer(data);
+        showPage('proposals');
+        renderProposals(data);
+        gestisciLimiteProposte(data);
+        return; // Esci, il lavoro è finito.
+      }
+    } catch (e) {
+      console.warn("Cache corrotta, procedo al recupero forzato.");
+    }
   }
 
-  document.getElementById('loader').style.display = 'flex';
+  // 2. 🛡️ PERCORSO SICURO (SERVER)
+  // Se arriviamo qui, significa che la cache non c'è o è scaduta (es. ritorno da Stripe).
+  if (loader) loader.style.display = 'flex';
+
   try {
-    const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-    const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
-    const response = await fetch(MOTORE_API_URL, { 
-        method: 'POST', 
-        body: JSON.stringify({ 
-            action: "getUserData", 
-            token: "WILDU_TOKEN_2026_XYZ", 
-            uid: user.uid, 
-            nome: nomeG, 
-            tel: telG 
-        }) 
-    });
-    if (!response.ok) throw new Error("Errore di rete");
-    const data = await response.json();
+    console.log("Cache vuota o scaduta: interrogo il Master... (Sicurezza 🛡️)");
+    
+    // Usiamo la funzione che già possiede tutta la logica di fetch e salvataggio
+    await checkProposalLimitAtStartup(user.uid);
 
-    if (data.error || data.success === false) throw new Error(data.error || "Errore dati dal server");
-
-    sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-    sessionStorage.setItem('wildu_cache_time', adesso.toString());
-
-    aggiornaLimiteDalServer(data);
-    showPage('proposals'); 
-    renderProposals(data);
-    gestisciLimiteProposte(data);
-
-  } catch (e) {
-    console.error(e);
-    alert("Errore nel database. Aggiorna usando la scritta in basso.");
-    showPage('home'); 
+    // Dopo che checkProposalLimitAtStartup ha finito, i dati sono ORA in cache.
+    const nuovaMemoria = sessionStorage.getItem('wildu_cache_proposte');
+    if (nuovaMemoria) {
+      const data = JSON.parse(nuovaMemoria);
+      aggiornaLimiteDalServer(data);
+      showPage('proposals');
+      renderProposals(data);
+      gestisciLimiteProposte(data);
+    } else {
+      throw new Error("Dati non ricevuti dal server.");
+    }
+  } catch (err) {
+    console.error("Errore critico openMyProposals:", err);
+    alert("⚠️ Non siamo riusciti a recuperare i tuoi dati. Controlla la connessione e riprova.");
+    showPage('home');
   } finally {
-    document.getElementById('loader').style.display = 'none';
+    if (loader) loader.style.display = 'none';
   }
 }
 
