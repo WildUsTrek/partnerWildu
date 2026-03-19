@@ -520,8 +520,11 @@ function checkVipMessages(userData) {
               inputPrezzo.disabled = false;
           } else {
               if (countPaid >= countFree) {
-                  const uid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : "";
-                  const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${uid}&metadata[client_reference_id]=${uid}`;
+                  const userObj = firebase.auth().currentUser;
+    if (!userObj) { alert("⚠️ Attendi il caricamento del profilo..."); return; }
+    const uid = userObj.uid;
+    // Passiamo l'UID sia come riferimento che come metadato forzato
+    const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${uid}&metadata[client_reference_id]=${uid}`;
                   
                   // IL NUOVO BOX DEL BIVIO (UX Persuasiva)
                   msg.innerHTML = `
