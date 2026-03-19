@@ -30,19 +30,21 @@
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
 
-// 🎯 SENSORE DI RITORNO DA STRIPE (Success URL)
+// 👑 SENSORE DI RITORNO DA STRIPE (Successo o Cancellazione)
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('payment') === 'success') {
-        // 1. Svuotiamo la cache per forzare il refresh dei dati VIP
+    const status = urlParams.get('payment');
+    
+    if (status === 'success') {
         sessionStorage.clear();
-        
-        // 2. 🟢 AGGIUNGIAMO IL MESSAGGIO DI SUCCESSO (Così l'utente esulta!)
-        alert("✨ PAGAMENTO COMPLETATO! ✨\n\nBenvenuto tra i Partner VIP di Wildu. Da ora puoi pubblicare i tuoi viaggi senza limiti e il tuo logo apparirà sulle locandine!");
+        alert("✨ PAGAMENTO COMPLETATO! ✨\n\nBenvenuto tra i Partner VIP di Wildu!");
+    } 
+    else if (status === 'canceled') {
+        sessionStorage.clear();
+        alert("ℹ️ ABBONAMENTO AGGIORNATO\n\nLe modifiche al tuo abbonamento sono state registrate. Se hai disdetto, resterai VIP fino alla fine del periodo già pagato.");
+    }
 
-        console.log("✅ Ritorno da Stripe confermato: Cache svuotata e messaggio mostrato.");
-        
-        // 3. Puliamo l'URL per estetica
+    if (status) {
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
