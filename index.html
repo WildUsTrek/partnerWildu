@@ -42,7 +42,7 @@
         sessionStorage.clear();
         localStorage.removeItem('wildu_cache_proposte'); 
 
-        // 2. LOGICA VISIVA DEL BRIDGE
+        // 2. LOGICA VISIVA DEL BRIDGE CON RITARDO TATTICO
         document.addEventListener("DOMContentLoaded", function() {
             const overlay = document.getElementById('stripe-bridge-overlay');
             const icon = document.getElementById('bridge-icon');
@@ -50,30 +50,55 @@
             const text = document.getElementById('bridge-text');
             const instruction = document.getElementById('bridge-instruction');
 
+            // 🛑 BLOCCA L'UTENTE IMMEDIATAMENTE CON L'OVERLAY NERO
+            if (overlay) overlay.style.display = 'flex';
+
             if (payment === 'success') {
-                icon.innerText = "✨";
-                title.innerText = "Pagamento Riuscito!";
-                text.innerText = "Il tuo account è ora in fase di aggiornamento allo stato VIP.";
-                instruction.style.display = "block";
+                // ⏳ FASE 1: ATTESA BLOCCANTE (Il Postino lavora...)
+                icon.innerHTML = '<span class="spinner-border text-success" style="width: 3.5rem; height: 3.5rem;" role="status"></span>';
+                title.innerText = "Sincronizzazione in corso...";
+                text.innerText = "Stiamo confermando l'operazione con il server. Non chiudere questa pagina.";
+                instruction.style.display = "none"; // Nascondiamo le istruzioni per ora
+
+                // 🚀 FASE 2: SBLOCCO DOPO 7 SECONDI
+                setTimeout(() => {
+                    icon.innerText = "✨";
+                    title.innerText = "Pagamento Riuscito!";
+                    text.innerText = "Il tuo account è ora in fase di aggiornamento allo stato VIP.";
+                    
+                    // IL TUO HINT DEI 31 MINUTI
+                    instruction.innerHTML = `
+                        <p class="small text-info m-0 fw-bold mb-2">
+                            <i class="bi bi-iphone"></i> ORA CHIUDI IL BROWSER E RIENTRA NELL'APP
+                        </p>
+                        <p class="m-0 text-start text-muted" style="font-size: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 10px; line-height: 1.2;">
+                            ⚠️ <b>Nota di sistema:</b> se riaprendo l'app non vedi il profilo aggiornato a VIP, non eseguire altre operazioni e non cliccare "Paga" di nuovo. Riapri semplicemente l'app tra 31 minuti per forzare il refresh profondo.
+                        </p>
+                    `;
+                    instruction.style.display = "block";
+                    if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
+                }, 7000); // 7 secondi di blocco totale
             } 
             else if (manage === 'sync') {
+                // RITORNO DAL PORTALE: Nessun ritardo necessario
                 icon.innerText = "ℹ️";
                 title.innerText = "Profilo Aggiornato";
                 text.innerText = "Abbiamo ricevuto le modifiche dal portale Stripe.";
                 instruction.style.display = "block";
+                if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
             } 
             else if (payment === 'canceled') {
+                // PAGAMENTO ANNULLATO: Nessun ritardo necessario
                 icon.innerText = "⚠️";
                 title.innerText = "Operazione Annullata";
                 text.innerText = "Il pagamento non è andato a buon fine. Nessun addebito effettuato.";
                 instruction.innerHTML = `<p class="small text-warning m-0">Puoi riprovare quando vuoi dal tuo profilo.</p>`;
+                instruction.style.display = "block";
+                if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
             }
-
-            if(overlay) overlay.style.display = 'flex';
-            if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
         });
 
-        // 3. PULIZIA URL (Pulizia estetica)
+        // 3. PULIZIA URL (Pulizia estetica e di sicurezza)
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
