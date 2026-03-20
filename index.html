@@ -374,7 +374,7 @@ function goToStripe(tipo) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v3.8 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v3.9 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -541,9 +541,17 @@ function goToStripe(tipo) {
     document.getElementById('home-view').style.display = 'none';
     document.getElementById('form-view').style.display = 'none';
     document.getElementById('my-proposals-view').style.display = 'none';
-    if (page === 'home') document.getElementById('home-view').style.display = 'block';
-    else if (page === 'form') document.getElementById('form-view').style.display = 'block';
-    else if (page === 'proposals') document.getElementById('my-proposals-view').style.display = 'block';
+    
+    if (page === 'home') {
+        document.getElementById('home-view').style.display = 'block';
+    }
+    else if (page === 'form') { 
+        document.getElementById('form-view').style.display = 'block';
+        controllaSicurezzaNinja(); // 🥷 INNESTO GUARDIANO ALLA PORTA
+    }
+    else if (page === 'proposals') {
+        document.getElementById('my-proposals-view').style.display = 'block';
+    }
     window.scrollTo(0,0);
   }
 
@@ -1007,6 +1015,8 @@ async function saveFirstProfile() {
 
 // 🟢 FIX PROFILO: Design pulito, sincronizzazione dati e gestione Stripe intelligente
 function openProfile() {
+  controllaSicurezzaNinja(); // 🥷 INNESTO GUARDIANO ALLA PORTA
+  
   try {
       const user = firebase.auth().currentUser;
       if (!user) return alert("⚠️ Attendi il caricamento dell'utente...");
@@ -2383,10 +2393,8 @@ document.addEventListener("visibilitychange", function() {
                             title: '✨ Operazione Riuscita!',
                             text: messaggio,
                             icon: 'success',
-                            showConfirmButton: false,
-                            allowOutsideClick: false,
-                            timer: 2500,
-                            timerProgressBar: true
+                            confirmButtonText: 'Ottimo, entra!',
+                            allowOutsideClick: false
                         }).then(() => {
                             window.location.reload(); // Refresh violento
                         });
@@ -2404,6 +2412,55 @@ document.addEventListener("visibilitychange", function() {
     }, 500); // Fine del setTimeout salva-Firebase
   }
 });
+
+
+// =========================================================
+// 🥷 NINJA GUARDIANO (Protegge le porte Profilo e Modulo)
+// =========================================================
+function controllaSicurezzaNinja() {
+    // 1. Lo Scudo: Manteniamo i 60 secondi in comune con l'altro Ninja!
+    const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
+    if (Date.now() - ultimoControllo < 60000) return; 
+    
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
+    console.log("🥷 Ninja Guardiano: Controllo i permessi di nascosto...");
+    
+    const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+    const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    
+    fetch(MOTORE_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data && !data.error) {
+            const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
+            let isCambiato = false;
+            if (memVecchia) {
+                const cacheObj = JSON.parse(memVecchia);
+                if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus) isCambiato = true;
+            }
+
+            sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+            sessionStorage.setItem('wildu_cache_time', Date.now().toString());
+            aggiornaLimiteDalServer(data);
+            gestisciLimiteProposte(data);
+            
+            // 🚨 ANTIFURTO: Se i dati sono cambiati a sua insaputa...
+            if (isCambiato) {
+                console.log("⚠️ Il Guardiano ha rilevato un declassamento (o promozione)!");
+                // Se ha il modulo aperto, gli seghiamo le opzioni VIP in diretta!
+                if (document.getElementById('form-view').style.display === 'block') togglePrezzoField();
+                // Se ha il profilo aperto, aggiorniamo i testi all'istante!
+                if (document.getElementById('edit-profile-overlay').style.display === 'flex') openProfile();
+            }
+        }
+    }).catch(e => console.log("Errore Guardiano:", e));
+}
   
 </script>
 
