@@ -30,6 +30,7 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
+  
 
 // 👑 SENSORE EVOLUTO: SINCRONIZZAZIONE STRIPE & MESSAGGI UTENTE
 (function() {
@@ -60,13 +61,13 @@
                 text.innerText = "Stiamo confermando l'operazione con il server. Non chiudere questa pagina.";
                 instruction.style.display = "none"; // Nascondiamo le istruzioni per ora
 
-                // 🚀 FASE 2: SBLOCCO DOPO 7 SECONDI
+                // 🚀 FASE 2: SBLOCCO DOPO 7 SECONDI (Con le tue istruzioni vitali per la PWA)
                 setTimeout(() => {
                     icon.innerText = "✨";
                     title.innerText = "Aggiornamento Riuscito!";
                     text.innerText = "Il tuo account è ora in fase di aggiornamento (max 31 min, non ripetere operazioni già fatte).";
                     
-                    // IL TUO HINT DEI 31 MINUTI
+                    // IL TUO HINT (Fondamentale per farli uscire da Safari/Chrome)
                     instruction.innerHTML = `
                         <p class="small text-info m-0 fw-bold mb-2">
                             <i class="bi bi-iphone"></i> ORA CHIUDI IL BROWSER E RIENTRA NELL'APP
@@ -77,10 +78,10 @@
                     `;
                     instruction.style.display = "block";
                     if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
-                }, 7000); // 7 secondi di blocco totale
+                }, 7000); 
             } 
             else if (manage === 'sync') {
-                // RITORNO DAL PORTALE: Nessun ritardo necessario
+                // RITORNO DAL PORTALE
                 icon.innerText = "ℹ️";
                 title.innerText = "Profilo Aggiornato";
                 text.innerText = "Abbiamo ricevuto le modifiche dal portale Stripe.";
@@ -88,7 +89,7 @@
                 if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
             } 
             else if (payment === 'canceled') {
-                // PAGAMENTO ANNULLATO: Nessun ritardo necessario
+                // PAGAMENTO ANNULLATO
                 icon.innerText = "⚠️";
                 title.innerText = "Operazione Annullata";
                 text.innerText = "Il pagamento non è andato a buon fine. Nessun addebito effettuato.";
@@ -98,12 +99,13 @@
             }
         });
 
-        // 3. PULIZIA URL (Pulizia estetica e di sicurezza)
+        // 3. PULIZIA URL
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
 })();
 
+  
 // 🎯 FUNZIONE DI VISUALIZZAZIONE ALERT VIP (Da chiamare dopo che il Master risponde)
 function checkVipMessages(userData) {
     // Se l'utente ha appena aperto l'app e i dati dicono che ha disdetto
@@ -276,7 +278,7 @@ function goToStripe(tipo) {
     const user = firebase.auth().currentUser;
     if (!user) return alert("⚠️ Attendi il caricamento dell'utente...");
 
-    // 📝 IL BIGLIETTINO DELL'ASPETTATIVA: L'utente sta armeggiando coi pagamenti
+    // 📝 IL BIGLIETTINO: Diciamo all'App che stiamo per aprire Stripe
     localStorage.setItem('attesa_novita_stripe', Date.now().toString());
 
     if (tipo === 'CHECKOUT') {
@@ -372,7 +374,7 @@ function goToStripe(tipo) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v3.4 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v3.6 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -1019,14 +1021,14 @@ function openProfile() {
       // 3. Recupero stato VIP e Prezzo dalla cache
       let isVip = false;
       let vipStatus = "STANDARD"; // 🟢 Nuova variabile per lo status esatto
-      let prezzoVip = "19"; // Fallback se la cache è vuota
+      let prezzoVip = "19"; // Fallback
       
       const memoria = sessionStorage.getItem('wildu_cache_proposte');
       if (memoria) { 
           try { 
               const data = JSON.parse(memoria);
               isVip = data.isVip || false; 
-              vipStatus = data.vipStatus || "STANDARD"; // Estraiamo lo status
+              vipStatus = data.vipStatus || "STANDARD"; // 🟢 Estraiamo lo status
               if (data.config && data.config.vipPrice) prezzoVip = data.config.vipPrice;
           } catch(e) { console.error("Errore parsing cache profilo:", e); } 
       }
@@ -1053,13 +1055,14 @@ function openProfile() {
                 </span>`;
           }
           
-          // 🟢 ETICHETTA DISDETTA: Se ha disdetto, aggiungiamo il testo rosso sotto la data
+          // 🟢 FIX TESTO E DISDETTA
+          let fraseStato = (vipStatus === "VIP_CANCELED") ? "Premium ancora fino al:" : "Il tuo abbonamento Premium è attivo.";
           let stringaDisdetta = (vipStatus === "VIP_CANCELED") ? '<br><small style="color: #ff4444; font-weight: bold;">(Rinnovo automatico disattivato)</small>' : '';
 
           if(boxAzione) {
               boxAzione.innerHTML = `
               <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
-                  <p class="small text-light m-0 mb-1">Il tuo abbonamento Premium è attivo.</p>
+                  <p class="small text-light m-0 mb-1">${fraseStato}</p>
                   <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}${stringaDisdetta}</p>
                   <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light btn-sm rounded-pill fw-bold w-100 shadow-sm">
                       ⚙️ Gestisci / Disdici Abbonamento
@@ -2307,18 +2310,17 @@ function scaricaLocandinaFile() {
 
 
 // =========================================================
-// 🕵️ SENTINELLA PROFILO (Sincronizzazione Silenziosa in Background)
+// 🕵️ SENTINELLA COL MEGAFONO (Check Silenzioso + Refresh Violento)
 // =========================================================
 document.addEventListener("visibilitychange", function() {
   if (document.visibilityState === 'visible') {
     
-    // 1. Controllo base: L'utente stava armeggiando con Stripe?
+    // 1. Il bigliettino: L'utente è appena tornato da Stripe?
     const timestampStripe = localStorage.getItem('attesa_novita_stripe');
-    if (!timestampStripe) return; // Zero attesa, zero chiamate. L'App dorme felice.
+    if (!timestampStripe) return; // L'App dorme felicemente. Nessuno spreco.
 
-    // 2. Scadenza Bigliettino (30 minuti di validità)
+    // 2. Scadenza Bigliettino (30 minuti max per bruciarlo)
     if (Date.now() - parseInt(timestampStripe) > 1800000) {
-        console.log("Bigliettino scaduto. Rimuovo attesa.");
         localStorage.removeItem('attesa_novita_stripe');
         return;
     }
@@ -2326,22 +2328,22 @@ document.addEventListener("visibilitychange", function() {
     // 3. Controllo Posizione: Siamo sul Profilo?
     const profileOverlay = document.getElementById('edit-profile-overlay');
     const siamoSulProfilo = (profileOverlay && profileOverlay.style.display === 'flex');
-    if (!siamoSulProfilo) return; // Se è fuori dal profilo, non lo disturbiamo.
+    if (!siamoSulProfilo) return; // Se guarda gli eventi, non disturbiamo.
 
-    // 4. Scudo Anti-Ansia (Cooldown 60 secondi)
+    // 4. Scudo Anti-Ansia (Cooldown 60 sec per i multi-clicker)
     const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
-    if (Date.now() - ultimoControllo < 60000) return; // Evita spam di chiamate se cambia scheda 11 volte.
+    if (Date.now() - ultimoControllo < 60000) return;
 
-    console.log("🕵️ Sentinella attiva: Eseguo check silenzioso in background...");
+    console.log("🕵️ Sentinella in azione: interrogo il server in background...");
     sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
 
-    // 5. La Chiamata Silenziosa (Senza rotelline bloccanti!)
     const user = auth.currentUser;
     if (!user) return;
 
     const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
     const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
+    // 5. La Chiamata Invisibile
     fetch(MOTORE_API_URL, {
         method: 'POST',
         body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: nomeG, tel: telG })
@@ -2350,36 +2352,49 @@ document.addEventListener("visibilitychange", function() {
     .then(data => {
         if (data && !data.error) {
             const memoriaVecchia = sessionStorage.getItem('wildu_cache_proposte');
-            let datiCambiati = false;
+            let isCambiato = false;
 
+            // Confrontiamo le mele con le mele
             if (memoriaVecchia) {
                 const cacheObj = JSON.parse(memoriaVecchia);
-                // Confrontiamo i dati chiave: Se è cambiato lo stato VIP, la data, o l'etichetta Canceled
                 if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus || cacheObj.scadenzaVip !== data.scadenzaVip) {
-                    datiCambiati = true;
+                    isCambiato = true;
                 }
             } else {
-                datiCambiati = true;
+                isCambiato = true;
             }
 
-            if (datiCambiati) {
-                console.log("✨ Novità rilevate dal server! Aggiorno l'interfaccia magicamente.");
-                sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-                sessionStorage.setItem('wildu_cache_time', Date.now().toString());
-                aggiornaLimiteDalServer(data);
-                gestisciLimiteProposte(data);
+            // 📣 IL BIVIO DEL MEGAFONO
+            if (isCambiato) {
+                console.log("📣 MEGAFONO: Soldi mossi! Partono i fuochi d'artificio.");
+                localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino
                 
-                // 🪄 Magia visiva: Ricarica i dati a schermo istantaneamente
-                openProfile(); 
+                // Messaggio festoso prima del refresh violento
+                let messaggio = data.isVip ? "Tutto confermato! Stiamo aggiornando la tua area VIP..." : "Modifica registrata! Aggiornamento in corso...";
                 
-                // L'obiettivo è stato raggiunto, bruciamo il bigliettino
-                localStorage.removeItem('attesa_novita_stripe');
+                Swal.fire({
+                    title: '✨ Operazione Riuscita!',
+                    text: messaggio,
+                    icon: 'success',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    timer: 2500,
+                    timerProgressBar: true
+                }).then(() => {
+                    // 🔥 IL REFRESH VIOLENTO (Simula un Avvio a Freddo)
+                    sessionStorage.removeItem('wildu_cache_proposte');
+                    sessionStorage.removeItem('wildu_cache_time');
+                    window.location.reload();
+                });
+
             } else {
-                console.log("💤 Nessuna novità su Stripe. Dati invariati.");
+                // 💤 CASO SILENZIOSO: L'utente ha solo guardato Stripe senza pagare.
+                console.log("💤 Nessuna novità. Brucio il bigliettino e torno a dormire.");
+                localStorage.removeItem('attesa_novita_stripe'); // Non interrogherà più finché non clicca di nuovo
             }
         }
     })
-    .catch(e => console.error("Errore Sentinella Silenziosa:", e));
+    .catch(e => console.error("Errore Sentinella:", e));
   }
 });
   
