@@ -1178,7 +1178,7 @@ async function checkProposalLimitAtStartup(uid) {
   // Nessuno può vedere "Standard" o cliccare "Paga" finché non abbiamo finito.
   if (loader) {
     loader.style.display = 'flex';
-    loader.querySelector('h5').innerText = "Verifica abbonamento...";
+    loader.querySelector('h5').innerText = "sincronizzazione...";
   }
 
   if (btnNuova) { 
