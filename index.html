@@ -300,10 +300,11 @@ function checkVipMessages(userData) {
   
 <div id="home-view" class="container" style="max-width: 500px;">
   <div class="mb-5 mt-4">
-    <h1 class="fw-bold text-white">Area Partner 👋</h1>
+    <h1 class="fw-bold text-white">Area Partner 👋 <span id="ui-home-corona"></span></h1>
     <p class="text-muted">Inizia la configurazione del tuo prossimo evento.</p>
     <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">⏳ Caricamento slot...</span>
   </div>
+</div>
 
   <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form')">
     <span class="menu-icon">🗓️</span>
@@ -991,43 +992,47 @@ function openProfile() {
       const boxAzione = document.getElementById('box-azione-vip');
       
       // 4. BIVIO LOGICO: VIP vs STANDARD
-      if (isVip) {
-          // --- 👑 UTENTE VIP ---
-          if(badgeStatus) {
-              badgeStatus.innerHTML = `
-                <span class="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.65rem; transform: translateY(-2px);">
-                  <i class="bi bi-star-fill"></i> VIP
-                </span>`;
-          }
-          
-          if(boxAzione) {
-              boxAzione.innerHTML = `
-              <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
-                  <p class="small text-light m-0 mb-2">Il tuo abbonamento Premium è attivo.</p>
-                  <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light btn-sm rounded-pill fw-bold w-100 shadow-sm">
-                      ⚙️ Gestisci / Disdici Abbonamento
-                  </button>
-              </div>`; 
-          }
-      } else {
-          // --- 👤 UTENTE STANDARD ---
-          if(badgeStatus) {
-              badgeStatus.innerHTML = `
-                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary rounded-pill px-2 py-1" style="font-size: 0.65rem; transform: translateY(-2px);">
-                  <i class="bi bi-person"></i> Standard
-                </span>`;
-          }
-          
-          if(boxAzione) {
-              boxAzione.innerHTML = `
-              <div class="mt-4 p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
-                  <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
-                  <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
-                      👑 Diventa VIP a ${prezzoVip}€ / mese
-                  </button>
-              </div>`;
-          }
-      }
+if (isVip) {
+    // --- 👑 UTENTE VIP ---
+    if(badgeStatus) {
+        badgeStatus.innerHTML = `
+          <span class="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.65rem; transform: translateY(-2px);">
+            <i class="bi bi-star-fill"></i> VIP
+          </span>`;
+    }
+    
+    if(boxAzione) {
+        // Ho aggiunto qui il paragrafo con la variabile ${scadenzaVip}
+        boxAzione.innerHTML = `
+        <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
+            <p class="small text-light m-0 mb-1">Il tuo abbonamento Premium è attivo.</p>
+            <p class="mb-3" style="font-size: 0.9rem; color: #ccc;">
+                Scadenza/Rinnovo: <span class="fw-bold text-warning">${scadenzaVip}</span>
+            </p>
+            <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light btn-sm rounded-pill fw-bold w-100 shadow-sm">
+                ⚙️ Gestisci / Disdici Abbonamento
+            </button>
+        </div>`; 
+    }
+} else {
+    // --- 👤 UTENTE STANDARD ---
+    if(badgeStatus) {
+        badgeStatus.innerHTML = `
+          <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary rounded-pill px-2 py-1" style="font-size: 0.65rem; transform: translateY(-2px);">
+            <i class="bi bi-person"></i> Standard
+          </span>`;
+    }
+    
+    if(boxAzione) {
+        boxAzione.innerHTML = `
+        <div class="mt-4 p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
+            <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
+            <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
+                👑 Diventa VIP a ${prezzoVip}€ / mese
+            </button>
+        </div>`;
+    }
+}
 
       // 5. Apertura fisica del modale
       const modal = document.getElementById('edit-profile-overlay');
