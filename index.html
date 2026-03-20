@@ -201,6 +201,9 @@ function checkVipMessages(userData) {
 
     .od-eq { flex-shrink: 0 !important; margin-top: 0.2rem; }
     .form-check-label { word-wrap: break-word; white-space: normal; }
+    /* Nasconde la barra di scorrimento su tutta l'app */
+  body::-webkit-scrollbar { display: none; }
+  body { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body>
@@ -358,7 +361,7 @@ function checkVipMessages(userData) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    SISTEMA PARTNER HUB v2.6
+    SISTEMA PARTNER HUB v2.7
   </p>
 </div>
 
