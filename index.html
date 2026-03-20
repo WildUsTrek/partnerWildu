@@ -374,7 +374,7 @@ function goToStripe(tipo) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v3.6 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v3.7 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2368,6 +2368,9 @@ document.addEventListener("visibilitychange", function() {
             if (isCambiato) {
                 console.log("📣 MEGAFONO: Soldi mossi! Partono i fuochi d'artificio.");
                 localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino
+                
+                // 🟢 FIX Z-INDEX: Chiudiamo forzatamente il Profilo per svelare i fuochi d'artificio!
+                if (typeof closeProfile === "function") closeProfile();
                 
                 // Messaggio festoso prima del refresh violento
                 let messaggio = data.isVip ? "Tutto confermato! Stiamo aggiornando la tua area VIP..." : "Modifica registrata! Aggiornamento in corso...";
