@@ -55,6 +55,9 @@
             if (overlay) overlay.style.display = 'flex';
 
             if (payment === 'success') {
+                // 🎯 TRUCCO LATERALE: Inneschiamo il Ninja Rumoroso per quando l'utente riapre la PWA!
+                localStorage.setItem('rientro_da_stripe_success', 'true');
+                
                 // ⏳ FASE 1: ATTESA BLOCCANTE (Il Postino lavora...)
                 icon.innerHTML = '<span class="spinner-border text-success" style="width: 3.5rem; height: 3.5rem;" role="status"></span>';
                 title.innerText = "Sincronizzazione in corso...";
@@ -281,6 +284,7 @@ function goToStripe(tipo) {
     // 📝 IL BIGLIETTINO: Diciamo all'App che stiamo per aprire Stripe
     localStorage.setItem('attesa_novita_stripe', Date.now().toString());
 
+
     if (tipo === 'CHECKOUT') {
         const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${user.uid}&metadata[client_reference_id]=${user.uid}`;
         window.open(stripeLink, '_blank');
@@ -374,7 +378,7 @@ function goToStripe(tipo) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v3.9 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v4 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2320,50 +2324,58 @@ function scaricaLocandinaFile() {
 
 
 // =========================================================
-// 🥷 IL NINJA: Fallback Silenzioso + Megafono per Pagamenti
+// 🥷 ON-FOCUS: Segugio a Tempo (19 min) + Ronda Silenziosa (60s)
 // =========================================================
 document.addEventListener("visibilitychange", function() {
   if (document.visibilityState === 'visible') {
     
-    // 1. Gestione del Bigliettino (Scadenza 19 minuti = 1140000 ms)
-    const timestampStripe = localStorage.getItem('attesa_novita_stripe');
-    if (timestampStripe && (Date.now() - parseInt(timestampStripe) > 1140000)) {
-        console.log("🗑️ Bigliettino Stripe scaduto (19 min). Lo incenerisco.");
-        localStorage.removeItem('attesa_novita_stripe');
-    }
-
-    // 2. Condizione di Esistenza del Ninja: Lavora SOLO se sei nel Profilo
+    // 1. Lavora SOLO se sei nel Profilo
     const profileOverlay = document.getElementById('edit-profile-overlay');
     const siamoSulProfilo = (profileOverlay && profileOverlay.style.display === 'flex');
-    if (!siamoSulProfilo) return; // Se stai guardando gli eventi, il Ninja dorme.
+    if (!siamoSulProfilo) return;
 
-    // 3. Scudo Anti-Ansia (Cooldown 60 secondi tra un check e l'altro)
+    const now = Date.now();
+
+    // 2. Controllo e Pulizia del Bigliettino (19 minuti di validità)
+    let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
+    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 620000)) {
+        console.log("🗑️ Tempo scaduto (19 min). Disarmo l'Allarme Rosso.");
+        localStorage.removeItem('attesa_novita_stripe');
+        bigliettinoStripe = null;
+    }
+
+    // 3. SCUDO DINAMICO: 3s se stiamo aspettando un pagamento, 60s altrimenti
+    const isRumoroso = (bigliettinoStripe !== null);
+    const cooldownLimit = isRumoroso ? 3000 : 60000;
+
     const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
-    if (Date.now() - ultimoControllo < 60000) return; // Blocca gli spam di cambi scheda
+    if (now - ultimoControllo < cooldownLimit) return; 
 
-    console.log("🥷 Ninja in perlustrazione: interrogo il server...");
-    sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
+    sessionStorage.setItem('wildu_ultimo_check_silenzioso', now.toString());
 
-    // 4. Ritardo di 500ms per sconfiggere l'Amnesia da Risveglio di Firebase
+    if (isRumoroso) console.log("🧨 Allarme Rosso attivo. Controllo immediato.");
+    else console.log("🥷 Ronda Silenziosa (60s). Controllo passivo.");
+
+    // 4. Esecuzione (Ritardo anti-amnesia Firebase)
     setTimeout(() => {
         const user = auth.currentUser;
-        if (!user) return; // Se Firebase sta ancora dormendo, abortiamo
+        if (!user) return; 
 
-        const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-        const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+        const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+        const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
         fetch(MOTORE_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: nomeG, tel: telG })
+            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
         })
         .then(r => r.json())
         .then(data => {
             if (data && !data.error) {
-                const memoriaVecchia = sessionStorage.getItem('wildu_cache_proposte');
+                const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
                 let isCambiato = false;
 
-                if (memoriaVecchia) {
-                    const cacheObj = JSON.parse(memoriaVecchia);
+                if (memVecchia) {
+                    const cacheObj = JSON.parse(memVecchia);
                     if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus || cacheObj.scadenzaVip !== data.scadenzaVip) {
                         isCambiato = true;
                     }
@@ -2371,23 +2383,19 @@ document.addEventListener("visibilitychange", function() {
                     isCambiato = true;
                 }
 
+                // 5. LA REAZIONE
                 if (isCambiato) {
-                    console.log("✨ Il Ninja ha trovato un aggiornamento!");
                     sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
                     sessionStorage.setItem('wildu_cache_time', Date.now().toString());
                     aggiornaLimiteDalServer(data);
                     gestisciLimiteProposte(data);
 
-                    // Controlliamo se c'è un'operazione manuale in sospeso
-                    const bigliettinoAttivo = localStorage.getItem('attesa_novita_stripe');
-
-                    if (bigliettinoAttivo) {
-                        // 📣 AZIONE A: MEGAFONO (L'utente ha pagato/disdetto ora)
-                        console.log("📣 MEGAFONO: Soldi mossi volontariamente. Partono i fuochi!");
-                        localStorage.removeItem('attesa_novita_stripe'); // Bruciamo l'innesco
-                        if (typeof closeProfile === "function") closeProfile(); // Chiude il profilo per svelare l'alert
+                    if (isRumoroso) { 
+                        // VITTORIA! È cambiato qualcosa mentre eravamo in Allarme Rosso
+                        localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
+                        if (typeof closeProfile === "function") closeProfile(); 
                         
-                        let messaggio = data.isVip ? "Tutto confermato! Stiamo aggiornando la tua area VIP..." : "Modifica registrata! Aggiornamento in corso...";
+                        let messaggio = data.isVip ? "Il pagamento è confermato! Stiamo sbloccando i tuoi vantaggi..." : "Modifica registrata con successo!";
                         
                         Swal.fire({
                             title: '✨ Operazione Riuscita!',
@@ -2396,20 +2404,18 @@ document.addEventListener("visibilitychange", function() {
                             confirmButtonText: 'Ottimo, entra!',
                             allowOutsideClick: false
                         }).then(() => {
-                            window.location.reload(); // Refresh violento
+                            window.location.reload(); 
                         });
                     } else {
-                        // 🥷 AZIONE B: SILENZIOSO (Rinnovo notturno o correzione offline)
-                        console.log("🥷 Aggiornamento passivo. Cambio le scritte senza farti saltare in aria.");
-                        if (typeof openProfile === "function") openProfile(); // Ricostruisce l'HTML del profilo al volo
+                        // 🥷 SILENZIO: Era solo un aggiornamento passivo
+                        if (typeof openProfile === "function") openProfile(); 
                     }
-                } else {
-                    console.log("💤 Nessuna novità dal server. Torno nell'ombra.");
-                }
+                } 
+                // Se non è cambiato nulla, il bigliettino RESTA IN TASCA e proverà al prossimo focus.
             }
         })
-        .catch(e => console.error("Errore Ninja:", e));
-    }, 500); // Fine del setTimeout salva-Firebase
+        .catch(e => console.error("Errore On-Focus:", e));
+    }, 500); 
   }
 });
 
