@@ -294,6 +294,7 @@ function checkVipMessages(userData) {
      } else {
          MAX_PROPOSTE_ATTIVE = 3; 
      }
+     
      if (data && data.config && data.config.logoUrl) {
          const logoImg = document.getElementById('app-logo');
          if (logoImg) {
@@ -305,6 +306,16 @@ function checkVipMessages(userData) {
              }
              logoImg.src = finalUrl;
              logoImg.style.display = 'block'; 
+         }
+     }
+
+     // 👑 FIX CORONA: Accendiamo la filigrana in Home
+     const coronaEl = document.getElementById('ui-home-corona');
+     if (coronaEl) {
+         if (data && data.isVip) {
+             coronaEl.innerHTML = '👑 VIP';
+         } else {
+             coronaEl.innerHTML = '';
          }
      }
   }
@@ -1021,10 +1032,11 @@ function openProfile() {
       const boxAzione = document.getElementById('box-azione-vip');
       
 
-      // 🛠️ LETTURA SICURA DELLA DATA VIP (Senza crash!)
+      // 🛠️ LETTURA SICURA DELLA DATA VIP (Il cassetto giusto!)
       let testoScadenza = "Attivo";
       try {
-          let mem = JSON.parse(localStorage.getItem('wildu_cache_proposte'));
+          // ECCO IL FIX: Leggiamo dalla sessionStorage, non localStorage!
+          let mem = JSON.parse(sessionStorage.getItem('wildu_cache_proposte'));
           if (mem && mem.scadenzaVip) {
               testoScadenza = mem.scadenzaVip;
           }
