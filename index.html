@@ -372,7 +372,7 @@ function checkVipMessages(userData) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    SISTEMA PARTNER HUB v2.8
+    SISTEMA PARTNER HUB v2.9
   </p>
 </div>
 
@@ -1287,6 +1287,15 @@ async function checkProposalLimitAtStartup(uid) {
           
           // 👑 CONTROLLO ALERT (Qui l'app capisce se sei VIP o CANCELED)
           if (typeof checkVipMessages === "function") checkVipMessages(data);
+
+          // =========================================================
+          // 🔄 AUTO-REFRESH PROFILO IN DIRETTA
+          // Se l'utente è tornato da Stripe col Profilo ancora aperto, lo ridisegniamo al volo!
+          // =========================================================
+          const profileOverlay = document.getElementById('edit-profile-overlay');
+          if (profileOverlay && profileOverlay.style.display === 'flex') {
+              openProfile(); // Ricarica la grafica usando la cache appena salvata!
+          }
       }
     } else {
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
