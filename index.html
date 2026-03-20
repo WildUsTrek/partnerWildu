@@ -323,15 +323,14 @@ function checkVipMessages(userData) {
   <h5 class="fw-bold text-white">Elaborazione in corso...</h5>
 </div>
   
-<div id="home-view" class="container position-relative" style="max-width: 500px; overflow-x: hidden;">
-  <span id="ui-home-corona" style="position: absolute; top: -10px; right: 10px; font-size: 5rem; opacity: 0.08; z-index: 0; pointer-events: none; transform: rotate(15deg);"></span>
+<div id="home-view" class="container position-relative px-3" style="max-width: 500px;">
+  <span id="ui-home-corona" style="position: absolute; top: -10px; right: 20px; font-size: 5rem; opacity: 0.08; z-index: -1; pointer-events: none; transform: rotate(15deg);"></span>
 
-  <div class="mb-5 mt-4 position-relative" style="z-index: 1;">
+  <div class="mb-5 mt-4">
     <h1 class="fw-bold text-white">Area Partner 👋</h1>
     <p class="text-muted">Inizia la configurazione del tuo prossimo evento.</p>
     <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">⏳ Caricamento slot...</span>
   </div>
-</div>
 
   <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form')">
     <span class="menu-icon">🗓️</span>
@@ -352,14 +351,14 @@ function checkVipMessages(userData) {
     </div>
   </div>
   
-  <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm">
+  <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm" style="text-decoration: none;">
     <span class="menu-icon">💬</span>
-    <div class="menu-title">Assistenza Wildu</div>
-    <div class="menu-desc">Hai dubbi o vuoi modificare un evento inviato? Scrivici su WhatsApp.</div>
+    <div class="menu-title text-white">Assistenza Wildu</div>
+    <div class="menu-desc text-muted">Hai dubbi o vuoi modificare un evento inviato? Scrivici su WhatsApp.</div>
   </a>
 
-  <p class="text-muted small mt-5" style="user-select: none; -webkit-user-select: none;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    Sistema Partner Hub v2.5
+  <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
+    SISTEMA PARTNER HUB v2.6
   </p>
 </div>
 
@@ -1018,9 +1017,15 @@ function openProfile() {
       const badgeStatus = document.getElementById('badge-status-profilo');
       const boxAzione = document.getElementById('box-azione-vip');
       
-      // 🛠️ RISOLUZIONE ERRORE: Dichiariamo la variabile prima di usarla!
-      // Cambia "data" con il nome dell'oggetto da cui leggi i dati in questa funzione
-      let scadenzaVip = data.scadenzaVip || "Attivo"; 
+
+      // 🛠️ LETTURA SICURA DELLA DATA VIP (Senza crash!)
+      let testoScadenza = "Attivo";
+      try {
+          let mem = JSON.parse(localStorage.getItem('wildu_cache_proposte'));
+          if (mem && mem.scadenzaVip) {
+              testoScadenza = mem.scadenzaVip;
+          }
+      } catch(e) { console.warn("Lettura data saltata", e); }
 
       // 4. BIVIO LOGICO: VIP vs STANDARD
       if (isVip) {
@@ -1036,7 +1041,7 @@ function openProfile() {
               boxAzione.innerHTML = `
               <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
                   <p class="small text-light m-0 mb-1">Il tuo abbonamento Premium è attivo.</p>
-                  <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${scadenzaVip}</p>
+                  <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}</p>
                   <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light btn-sm rounded-pill fw-bold w-100 shadow-sm">
                       ⚙️ Gestisci / Disdici Abbonamento
                   </button>
