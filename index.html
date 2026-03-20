@@ -276,8 +276,8 @@ function checkVipMessages(userData) {
     const user = firebase.auth().currentUser;
     if (!user) return alert("⚠️ Attendi il caricamento dell'utente...");
 
-    // 🚩 BANDIERINA: Dice all'app di aggiornarsi quando torni
-    localStorage.setItem('wildu_waiting_stripe', 'true');
+    // ⏱️ TIMBRO TEMPORALE: Inneschiamo la bandierina con l'ora esatta del click
+localStorage.setItem('wildu_stripe_timer', Date.now().toString());
 
     if (tipo === 'CHECKOUT') {
         const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${user.uid}&metadata[client_reference_id]=${user.uid}`;
@@ -2303,31 +2303,47 @@ function scaricaLocandinaFile() {
 
 
 
-// ⚡ REATTIVITÀ SMART: Si "sveglia" solo se c'è la bandierina
+// ⚡ SENSORE SMART CON TIMER DI SICUREZZA (15 MINUTI)
 document.addEventListener("visibilitychange", function() {
   if (document.visibilityState === 'visible') {
-    if (localStorage.getItem('wildu_waiting_stripe') === 'true') {
-      console.log("🎯 Rilevato ritorno da Stripe. Eseguo refresh VIP mirato...");
+    
+    // Leggiamo il timbro temporale (se esiste)
+    const timestampStripe = localStorage.getItem('wildu_stripe_timer');
+    
+    if (timestampStripe) {
+      // Calcoliamo quanti minuti sono passati
+      const tempoTrascorso = Date.now() - parseInt(timestampStripe);
+      const limiteMassimo = 15 * 60 * 1000; // 15 minuti in millisecondi
       
-      // 🔒 LUCCHETTO ISTANTANEO: Nasconde i bottoni per evitare doppi click!
-      const boxAzione = document.getElementById('box-azione-vip');
-      if (boxAzione) {
-          boxAzione.innerHTML = '<div class="text-center mt-4 p-3"><div class="spinner-border text-warning" role="status"></div><p class="small text-muted mt-2">Verifica stato abbonamento...</p></div>';
+      if (tempoTrascorso > limiteMassimo) {
+        // ❌ CASO 1: TEMPO SCADUTO. L'utente ha abbandonato. Bruciamo la bandierina.
+        console.log("⏳ Timer Stripe (15 min) scaduto. Bandierina bruciata.");
+        localStorage.removeItem('wildu_stripe_timer');
+      } 
+      else {
+        // ✅ CASO 2: DENTRO I 15 MINUTI. L'utente sta armeggiando tra le schede.
+        console.log("🎯 Rientro nell'App rilevato. Controllo lo stato col Server...");
+        
+        // 🔒 LUCCHETTO ISTANTANEO: Mettiamo la rotellina per sicurezza
+        const boxAzione = document.getElementById('box-azione-vip');
+        if (boxAzione) {
+            boxAzione.innerHTML = '<div class="text-center mt-4 p-3"><div class="spinner-border text-warning" role="status"></div><p class="small text-muted mt-2">Verifica stato abbonamento in corso...</p></div>';
+        }
+        
+        // 🔨 MARTELLATA ALLA CACHE: Costringiamo l'App a rileggere i dati freschi
+        sessionStorage.removeItem('wildu_cache_proposte');
+        sessionStorage.removeItem('wildu_cache_time');
+        
+        // Lanciamo l'aggiornamento
+        if (auth && auth.currentUser) {
+            checkProposalLimitAtStartup(auth.currentUser.uid);
+        }
+        
+        // 🔴 LA GENIALATA: NON BRUCIAMO LA BANDIERINA QUI!
+        // Se l'utente era solo andato su WhatsApp e non ha ancora pagato, l'App si aggiornerà 
+        // e gli rimetterà il bottone "Abbonati". Se poi va su Stripe e torna di nuovo, 
+        // il sensore (essendo ancora dentro i 15 min) scatterà di nuovo! Infallibile.
       }
-      
-      // 🔨 LA MARTELLATA PREVENTIVA: Bruciamo la memoria
-      sessionStorage.removeItem('wildu_cache_proposte');
-      sessionStorage.removeItem('wildu_cache_time');
-      
-      // Chiamiamo l'aggiornamento
-      if (auth && auth.currentUser) {
-          checkProposalLimitAtStartup(auth.currentUser.uid);
-      }
-      
-      // Togliamo la bandierina
-      localStorage.removeItem('wildu_waiting_stripe');
-    } else {
-      console.log("ℹ️ Rientro normale: nessuna chiamata al server.");
     }
   }
 });
