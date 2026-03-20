@@ -376,9 +376,18 @@ function goToStripe(tipo) {
     <div class="menu-title text-white">Assistenza Wildu</div>
     <div class="menu-desc text-muted">Hai dubbi o vuoi modificare un evento inviato? Scrivici su WhatsApp.</div>
   </a>
-
+  
+<div class="home-secondary-buttons" style="margin-top: 25px; display: flex; flex-direction: column; gap: 10px;">
+    <button class="btn btn-outline-dark w-100" onclick="showPage('istruzioni')" style="border-radius: 12px; padding: 12px; font-weight: bold; background: transparent; border: 2px solid #333; color: #333;">
+        <i class="fas fa-book-open"></i> Cosa posso fare qui?
+    </button>
+    <button class="btn btn-outline-dark w-100" onclick="showPage('chisiamo')" style="border-radius: 12px; padding: 12px; font-weight: bold; background: transparent; border: 2px solid #333; color: #333;">
+        <i class="fas fa-users"></i> Chi Siamo
+    </button>
+</div>
+  
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v4.1 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v4.2 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -530,6 +539,42 @@ function goToStripe(tipo) {
   <div class="section-title text-success" style="border-bottom-color: #198754;">✅ Accettate</div>
   <div id="list-accepted"></div>
 </div>
+
+
+  
+<div id="istruzioni-view" class="container mt-3" style="display: none; padding-bottom: 80px;">
+    <button class="btn btn-light mb-3 shadow-sm" onclick="showPage('home')" style="border-radius: 50px;">
+        <i class="fas fa-arrow-left"></i> Indietro
+    </button>
+    
+    <div class="card shadow-sm" style="border-radius: 15px; border: none;">
+        <div class="card-body">
+            <h4 class="card-title fw-bold mb-4" style="color: #2c3e50;">Cosa posso fare qui?</h4>
+            <div id="istruzioni-content" style="white-space: pre-wrap; line-height: 1.6; color: #4a5568;">
+                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="chisiamo-view" class="container mt-3" style="display: none; padding-bottom: 80px;">
+    <button class="btn btn-light mb-3 shadow-sm" onclick="showPage('home')" style="border-radius: 50px;">
+        <i class="fas fa-arrow-left"></i> Indietro
+    </button>
+    
+    <div class="card shadow-sm mb-4" style="border-radius: 15px; border: none;">
+        <div class="card-body">
+            <h4 class="card-title fw-bold mb-3" style="color: #2c3e50;">Chi Siamo</h4>
+            <div id="chisiamo-testo" style="white-space: pre-wrap; line-height: 1.6; color: #4a5568;">
+                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chisiamo-gallery" style="display: flex; flex-direction: column; gap: 15px;">
+        </div>
+</div>
+
   
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -542,23 +587,109 @@ function goToStripe(tipo) {
   ];
 
   function showPage(page) {
+    // Nascondi tutto
     document.getElementById('home-view').style.display = 'none';
     document.getElementById('form-view').style.display = 'none';
     document.getElementById('my-proposals-view').style.display = 'none';
+    document.getElementById('istruzioni-view').style.display = 'none';
+    document.getElementById('chisiamo-view').style.display = 'none';
     
+    // Mostra solo la pagina richiesta
     if (page === 'home') {
         document.getElementById('home-view').style.display = 'block';
-    }
-    else if (page === 'form') { 
+    } else if (page === 'form') { 
         document.getElementById('form-view').style.display = 'block';
-        controllaSicurezzaNinja(); // 🥷 INNESTO GUARDIANO ALLA PORTA
-    }
-    else if (page === 'proposals') {
+        if(typeof controllaSicurezzaNinja === 'function') controllaSicurezzaNinja();
+    } else if (page === 'proposals') {
         document.getElementById('my-proposals-view').style.display = 'block';
+    } else if (page === 'istruzioni') {
+        document.getElementById('istruzioni-view').style.display = 'block';
+    } else if (page === 'chisiamo') {
+        document.getElementById('chisiamo-view').style.display = 'block';
     }
     window.scrollTo(0,0);
-  }
+}
 
+
+// =========================================================
+// 🎨 RENDER PAGINE STATICHE DA CACHE (Zero chiamate)
+// =========================================================
+function renderizzaPagineStatiche(configData) {
+    if (!configData) return;
+
+    // 1. Istruzioni
+    const boxIstruzioni = document.getElementById('istruzioni-content');
+    if (boxIstruzioni && configData.testoIstruzioni) {
+        // white-space: pre-wrap nell'HTML manterrà gli a capo del Google Sheet!
+        boxIstruzioni.innerText = configData.testoIstruzioni; 
+    }
+
+    // 2. Chi Siamo (Testo)
+    const boxTestoChiSiamo = document.getElementById('chisiamo-testo');
+    if (boxTestoChiSiamo && configData.testoChiSiamo) {
+        boxTestoChiSiamo.innerText = configData.testoChiSiamo;
+    }
+
+    // 3. Chi Siamo (Galleria Cloudinary) -> CAROSELLO RANDOM + OTTIMIZZAZIONE (42MB -> 1MB)
+    const boxGallery = document.getElementById('chisiamo-gallery');
+    if (boxGallery && configData.immaginiChiSiamo) {
+        
+        // 1. Array di base pulito
+        let urls = configData.immaginiChiSiamo.split(',').map(url => url.trim()).filter(url => url !== "");
+        
+        if (urls.length > 0) {
+            // 2. MAGIA CLOUDINARY: Riduciamo il peso e tagliamo 4/3 modificando l'URL al volo!
+            urls = urls.map(url => {
+                if(url.includes('/upload/')) {
+                    // Inseriamo i comandi di Cloudinary subito dopo "/upload/"
+                    return url.replace('/upload/', '/upload/c_fill,w_800,h_600,q_auto,f_auto/');
+                }
+                return url;
+            });
+
+            // 3. SHUFFLE RANDOM: Mescoliamo l'array a caso
+            for (let i = urls.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [urls[i], urls[j]] = [urls[j], urls[i]]; // Scambia le posizioni
+            }
+
+            // 4. COSTRUZIONE CAROSELLO BOOTSTRAP
+            let htmlCarosello = `
+            <div id="caroselloChiSiamo" class="carousel slide carousel-fade shadow-sm" data-bs-ride="carousel" data-bs-interval="5000" style="border-radius: 15px; overflow: hidden; border: 1px solid #333;">
+                <div class="carousel-inner">
+            `;
+            
+            // Creiamo i "fogli" del carosello
+            urls.forEach((url, index) => {
+                let activeClass = index === 0 ? 'active' : ''; 
+                htmlCarosello += `
+                    <div class="carousel-item ${activeClass}">
+                        <img src="${url}" class="d-block w-100" style="aspect-ratio: 4/3; object-fit: cover;" alt="Foto Chi Siamo Wildu">
+                    </div>
+                `;
+            });
+            
+            // Chiusura carosello e freccine
+            htmlCarosello += `
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#caroselloChiSiamo" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true" style="filter: drop-shadow(0 0 5px rgba(0,0,0,0.9));"></span>
+                    <span class="visually-hidden">Precedente</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#caroselloChiSiamo" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true" style="filter: drop-shadow(0 0 5px rgba(0,0,0,0.9));"></span>
+                    <span class="visually-hidden">Successivo</span>
+                </button>
+            </div>
+            `;
+            
+            boxGallery.innerHTML = htmlCarosello;
+        } else {
+            boxGallery.innerHTML = '';
+        }
+    }
+  
+  
  function goToStep(step) {
     let current = parseInt(document.querySelector('.step-content.active').id.split('-')[1]);
     if (step > current && current === 1) if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
@@ -1270,6 +1401,7 @@ async function checkProposalLimitAtStartup(uid) {
       const datiCache = JSON.parse(memoria); 
       aggiornaLimiteDalServer(datiCache);     
       gestisciLimiteProposte(datiCache);      
+      renderizzaPagineStatiche(datiCache.config); // 🎨 INNESTO: Stampa i testi e le foto
       
       // Fine operazione da cache
       if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; } 
@@ -1305,6 +1437,7 @@ async function checkProposalLimitAtStartup(uid) {
           
           aggiornaLimiteDalServer(data); 
           gestisciLimiteProposte(data);  
+          renderizzaPagineStatiche(data.config); // 🎨 INNESTO: Stampa i testi e le foto dal server
           
           // 👑 CONTROLLO ALERT (Qui l'app capisce se sei VIP o CANCELED)
           if (typeof checkVipMessages === "function") checkVipMessages(data);
@@ -2389,8 +2522,9 @@ document.addEventListener("visibilitychange", function() {
                     sessionStorage.setItem('wildu_cache_time', Date.now().toString());
                     aggiornaLimiteDalServer(data);
                     gestisciLimiteProposte(data);
+                    renderizzaPagineStatiche(data.config); // 🎨 INNESTO: Il Ninja aggiorna l'estetica
 
-                    if (isRumoroso) { 
+                    if (isRumoroso) {
                         // VITTORIA! È cambiato qualcosa mentre eravamo in Allarme Rosso
                         localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
                         if (typeof closeProfile === "function") closeProfile(); 
