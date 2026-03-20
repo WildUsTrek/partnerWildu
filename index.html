@@ -378,7 +378,7 @@ function goToStripe(tipo) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v4 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v4.1 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2395,7 +2395,16 @@ document.addEventListener("visibilitychange", function() {
                         localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
                         if (typeof closeProfile === "function") closeProfile(); 
                         
-                        let messaggio = data.isVip ? "Il pagamento è confermato! Stiamo sbloccando i tuoi vantaggi..." : "Modifica registrata con successo!";
+                        // 🎯 LOGICA MESSAGGI DINAMICI
+                        let messaggio = "Modifica registrata con successo!";
+                        
+                        if (data.vipStatus === 'VIP') {
+                            messaggio = "Il pagamento è confermato! Stiamo sbloccando i tuoi vantaggi...";
+                        } else if (data.vipStatus === 'VIP_CANCELED') {
+                            messaggio = "Abbonamento disdetto, usufruirai comunque dei servizi VIP fino alla data di termine.";
+                        } else if (data.vipStatus === 'STANDARD') {
+                            messaggio = "Il tuo account è tornato in versione Standard.";
+                        }
                         
                         Swal.fire({
                             title: '✨ Operazione Riuscita!',
