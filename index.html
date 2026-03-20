@@ -372,7 +372,7 @@ function checkVipMessages(userData) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    SISTEMA PARTNER HUB v2.9
+    SISTEMA PARTNER HUB v3.0
   </p>
 </div>
 
@@ -2308,19 +2308,25 @@ document.addEventListener("visibilitychange", function() {
     if (localStorage.getItem('wildu_waiting_stripe') === 'true') {
       console.log("🎯 Rilevato ritorno da Stripe. Eseguo refresh VIP mirato...");
       
-      // 🔨 LA MARTELLATA PREVENTIVA: Bruciamo la memoria prima di fare qualsiasi cosa!
+      // 🔒 LUCCHETTO ISTANTANEO: Nasconde i bottoni per evitare doppi click!
+      const boxAzione = document.getElementById('box-azione-vip');
+      if (boxAzione) {
+          boxAzione.innerHTML = '<div class="text-center mt-4 p-3"><div class="spinner-border text-warning" role="status"></div><p class="small text-muted mt-2">Verifica stato abbonamento...</p></div>';
+      }
+      
+      // 🔨 LA MARTELLATA PREVENTIVA: Bruciamo la memoria
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
       
-      // Ora chiamiamo l'aggiornamento. Trovando la memoria vuota, sarà costretta a leggere dal Server!
+      // Chiamiamo l'aggiornamento
       if (auth && auth.currentUser) {
           checkProposalLimitAtStartup(auth.currentUser.uid);
       }
       
-      // Togliamo la bandierina: missione compiuta
+      // Togliamo la bandierina
       localStorage.removeItem('wildu_waiting_stripe');
     } else {
-      console.log("ℹ️ Rientro normale (WhatsApp o altro): nessuna chiamata al server.");
+      console.log("ℹ️ Rientro normale: nessuna chiamata al server.");
     }
   }
 });
