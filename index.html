@@ -372,7 +372,7 @@ function checkVipMessages(userData) {
   </a>
 
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    SISTEMA PARTNER HUB v2.7
+    SISTEMA PARTNER HUB v2.8
   </p>
 </div>
 
@@ -2299,8 +2299,14 @@ document.addEventListener("visibilitychange", function() {
     if (localStorage.getItem('wildu_waiting_stripe') === 'true') {
       console.log("🎯 Rilevato ritorno da Stripe. Eseguo refresh VIP mirato...");
       
-      // Chiamiamo la funzione che già conosciamo per aggiornare tutto
-      checkProposalLimitAtStartup(auth.currentUser.uid);
+      // 🔨 LA MARTELLATA PREVENTIVA: Bruciamo la memoria prima di fare qualsiasi cosa!
+      sessionStorage.removeItem('wildu_cache_proposte');
+      sessionStorage.removeItem('wildu_cache_time');
+      
+      // Ora chiamiamo l'aggiornamento. Trovando la memoria vuota, sarà costretta a leggere dal Server!
+      if (auth && auth.currentUser) {
+          checkProposalLimitAtStartup(auth.currentUser.uid);
+      }
       
       // Togliamo la bandierina: missione compiuta
       localStorage.removeItem('wildu_waiting_stripe');
@@ -2308,7 +2314,7 @@ document.addEventListener("visibilitychange", function() {
       console.log("ℹ️ Rientro normale (WhatsApp o altro): nessuna chiamata al server.");
     }
   }
-});  
+});
   
 </script>
 
