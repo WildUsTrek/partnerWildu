@@ -34,26 +34,46 @@
 // 👑 SENSORE EVOLUTO: SINCRONIZZAZIONE STRIPE & MESSAGGI UTENTE
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment');
-    const manageStatus = urlParams.get('manage');
+    const payment = urlParams.get('payment');
+    const manage = urlParams.get('manage');
 
-    // 1. RITORNO DA PAGAMENTO O PORTALE (Pulisce la cache per forzare il refresh dal Master)
-    if (paymentStatus || manageStatus === 'sync') {
-        sessionStorage.clear(); // Elimina i vecchi dati VIP/STANDARD
-        console.log("Cache resettata: sincronizzazione con il Master in corso...");
-        
-        // Mostra un alert immediato basato sull'azione appena compiuta
-        if (paymentStatus === 'success') {
-            alert("✨ PAGAMENTO COMPLETATO! ✨\n\nBenvenuto tra i Partner VIP di Wildu! Il tuo account si sta aggiornando...");
-        } 
-        else if (manageStatus === 'sync') {
-            alert("ℹ️ PORTALE STRIPE\n\nAbbiamo ricevuto i tuoi aggiornamenti. L'app caricherà ora lo stato attuale del tuo abbonamento.");
-        }
-        else if (paymentStatus === 'canceled') {
-            alert("⚠️ OPERAZIONE ANNULLATA\n\nIl pagamento non è stato completato o la sessione è scaduta.");
-        }
+    if (payment || manage === 'sync') {
+        // 1. PULIZIA TOTALE MEMORIA (Come volevi tu)
+        sessionStorage.clear();
+        localStorage.removeItem('wildu_cache_proposte'); 
 
-        // Pulisce l'URL per estetica e sicurezza
+        // 2. LOGICA VISIVA DEL BRIDGE
+        document.addEventListener("DOMContentLoaded", function() {
+            const overlay = document.getElementById('stripe-bridge-overlay');
+            const icon = document.getElementById('bridge-icon');
+            const title = document.getElementById('bridge-title');
+            const text = document.getElementById('bridge-text');
+            const instruction = document.getElementById('bridge-instruction');
+
+            if (payment === 'success') {
+                icon.innerText = "✨";
+                title.innerText = "Pagamento Riuscito!";
+                text.innerText = "Il tuo account è ora in fase di aggiornamento allo stato VIP.";
+                instruction.style.display = "block";
+            } 
+            else if (manage === 'sync') {
+                icon.innerText = "ℹ️";
+                title.innerText = "Profilo Aggiornato";
+                text.innerText = "Abbiamo ricevuto le modifiche dal portale Stripe.";
+                instruction.style.display = "block";
+            } 
+            else if (payment === 'canceled') {
+                icon.innerText = "⚠️";
+                title.innerText = "Operazione Annullata";
+                text.innerText = "Il pagamento non è andato a buon fine. Nessun addebito effettuato.";
+                instruction.innerHTML = `<p class="small text-warning m-0">Puoi riprovare quando vuoi dal tuo profilo.</p>`;
+            }
+
+            if(overlay) overlay.style.display = 'flex';
+            if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
+        });
+
+        // 3. PULIZIA URL (Pulizia estetica)
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
     }
@@ -88,6 +108,18 @@ function checkVipMessages(userData) {
 </script>
 
   <style>
+#stripe-bridge-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #121212; z-index: 99999;
+    display: none; align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+}
+.bridge-card {
+    background: #1e1e1e; border: 2px solid #333;
+    border-radius: 28px; padding: 40px 25px; width: 100%; max-width: 420px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.bridge-icon { font-size: 4rem; margin-bottom: 20px; display: block; }
     #init-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; display: flex; align-items: center; justify-content: center; z-index: 20000; transition: opacity 0.5s ease; }
     body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
     .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
@@ -148,6 +180,23 @@ function checkVipMessages(userData) {
 </head>
 <body>
 
+<div id="stripe-bridge-overlay">
+  <div class="bridge-card">
+    <span id="bridge-icon" class="bridge-icon">✅</span>
+    <h2 id="bridge-title" class="fw-bold text-white mb-3">Sincronizzazione...</h2>
+    <p id="bridge-text" class="text-muted mb-4"></p>
+    
+    <div id="bridge-instruction" class="p-3 rounded-4 mb-4" style="background: rgba(13,110,253,0.1); border: 1px dashed #0d6efd;">
+       <p class="small text-info m-0 fw-bold">
+          <i class="bi bi-iphone"></i> ORA CHIUDI IL BROWSER<br>
+          <span class="text-white opacity-75 fw-normal">e rientra nell'App Wildu dalla tua Home.</span>
+       </p>
+    </div>
+    
+    <button onclick="location.href='index.html'" class="btn btn-outline-secondary rounded-pill btn-sm opacity-50">Rimani nel browser (sconsigliato)</button>
+  </div>
+</div>
+  
 <div id="init-screen">
   <div class="text-center px-4">
     <img src="https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png" alt="Wildu" style="height: 90px; margin-bottom: 20px; animation: fadeIn 0.5s ease;">
@@ -160,6 +209,8 @@ function checkVipMessages(userData) {
     </button>
   </div>
 </div>
+
+  
 <style>
     @keyframes showParachute { to { opacity: 1; } }
 </style>
