@@ -1121,8 +1121,15 @@ function gestisciLimiteProposte(data) {
 async function checkProposalLimitAtStartup(uid) {
   const btnNuova = document.getElementById('btn-nuova-proposta');
   const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
+  const loader = document.getElementById('loader');
 
-  // 1. FEEDBACK VISIVO: Disabilita il tasto all'istante
+  // 🛡️ 1. LOCK IMMEDIATO: Schermo nero e rotellina. 
+  // Nessuno può vedere "Standard" o cliccare "Paga" finché non abbiamo finito.
+  if (loader) {
+    loader.style.display = 'flex';
+    loader.querySelector('h5').innerText = "Verifica abbonamento...";
+  }
+
   if (btnNuova) { 
     btnNuova.style.pointerEvents = "none"; 
     btnNuova.style.opacity = "0.7"; 
@@ -1138,21 +1145,21 @@ async function checkProposalLimitAtStartup(uid) {
       const datiCache = JSON.parse(memoria); 
       aggiornaLimiteDalServer(datiCache);     
       gestisciLimiteProposte(datiCache);      
-      // Se la cache è valida, riabilita e chiudi
+      
+      // Fine operazione da cache
       if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; } 
+      if (loader) loader.style.display = 'none'; // Sblocca lo schermo
       return;
     } catch(e) { console.warn("Cache corrotta, procedo con fetch..."); }
   }
 
-  // 3. STATO DI CARICAMENTO: Mostra lo spinner
-  if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Verifica permessi in corso...</span>";
+  // 3. SE NON C'È CACHE, CHIEDIAMO AL MASTER
+  if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Sincronizzazione Master...</span>";
   
   try {
-    // Recuperiamo i dati dai campi (che abbiamo appena popolato via Firebase nel onAuthStateChanged)
     const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
     const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-    // 🚀 CHIAMATA UNICA (Ricca di dati)
     const response = await fetch(MOTORE_API_URL, { 
         method: 'POST', 
         body: JSON.stringify({ 
@@ -1167,10 +1174,14 @@ async function checkProposalLimitAtStartup(uid) {
     if (response.ok) {
       const data = await response.json();
       if (!data.error) {
+          // SALVATAGGIO DATI E STATO VIP
           sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
           sessionStorage.setItem('wildu_cache_time', adesso.toString());
+          
           aggiornaLimiteDalServer(data); 
           gestisciLimiteProposte(data);  
+          
+          // 👑 CONTROLLO ALERT (Qui l'app capisce se sei VIP o CANCELED)
           if (typeof checkVipMessages === "function") checkVipMessages(data);
       }
     } else {
@@ -1178,13 +1189,14 @@ async function checkProposalLimitAtStartup(uid) {
     }
   } catch (e) {
     console.error("Errore Startup:", e);
-    if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+    if (desc) desc.innerText = "Errore di connessione. Riprova.";
   } finally {
-    // 🛡️ RIPRISTINO FINALE: Riabilita sempre il tasto, succeda quel che succeda
+    // 🔓 4. SBLOCCO FINALE: Solo quando tutto è stato disegnato correttamente
     if (btnNuova) { 
       btnNuova.style.pointerEvents = "auto"; 
       btnNuova.style.opacity = "1"; 
     }
+    if (loader) loader.style.display = 'none';
   }
 }
 
