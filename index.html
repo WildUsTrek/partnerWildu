@@ -2391,9 +2391,9 @@ document.addEventListener("visibilitychange", function() {
                 });
 
             } else {
-                // 💤 CASO SILENZIOSO: L'utente ha solo guardato Stripe senza pagare.
-                console.log("💤 Nessuna novità. Brucio il bigliettino e torno a dormire.");
-                localStorage.removeItem('attesa_novita_stripe'); // Non interrogherà più finché non clicca di nuovo
+                // 💤 CASO SILENZIOSO: L'utente sta ancora decidendo, o il server è in ritardo.
+                console.log("💤 Nessuna novità per ora. Lascio il bigliettino attivo.");
+                // IL BIGLIETTINO NON SI BRUCIA QUI! Morirà da solo dopo 30 minuti.
             }
         }
     })
