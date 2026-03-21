@@ -393,20 +393,20 @@ function goToStripe(tipo) {
   <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm" style="text-decoration: none;">
     <span class="menu-icon">💬</span>
     <div class="menu-title text-white">Assistenza Wildu</div>
-    <div class="menu-desc text-muted">Hai dubbi o vuoi modificare un evento inviato? Scrivici su WhatsApp.</div>
+    <div class="menu-desc text-muted">Hai dubbi? Scrivici su WhatsApp.</div>
   </a>
   
 <div class="home-secondary-buttons" style="margin-top: 25px; display: flex; flex-direction: column; gap: 10px;">
-    <button class="btn btn-outline-dark w-100" onclick="showPage('istruzioni')" style="border-radius: 12px; padding: 12px; font-weight: bold; background: transparent; border: 2px solid #333; color: #333;">
-        <i class="fas fa-book-open"></i> Cosa posso fare qui?
+    <button class="btn w-100 shadow-sm" onclick="showPage('istruzioni')" style="border-radius: 12px; padding: 12px; font-weight: bold; background: rgba(255,255,255,0.08); border: 1px solid #666; color: #f8f9fa;">
+        <i class="fas fa-book-open text-primary"></i> Cosa posso fare qui?
     </button>
-    <button class="btn btn-outline-dark w-100" onclick="showPage('chisiamo')" style="border-radius: 12px; padding: 12px; font-weight: bold; background: transparent; border: 2px solid #333; color: #333;">
-        <i class="fas fa-users"></i> Chi Siamo
+    <button class="btn w-100 shadow-sm" onclick="showPage('chisiamo')" style="border-radius: 12px; padding: 12px; font-weight: bold; background: rgba(255,255,255,0.08); border: 1px solid #666; color: #f8f9fa;">
+        <i class="fas fa-users text-info"></i> Chi Siamo
     </button>
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v4.5 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v4.6 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2370,9 +2370,19 @@ let pressTimer;
 function startSyncTimer() { pressTimer = setTimeout(() => { forceSync(); }, 3000); }
 function cancelSyncTimer() { clearTimeout(pressTimer); }
 function forceSync() {
-  if(confirm("🛠️ MODALITÀ TECNICA 🛠️\n\nVuoi forzare il download scavalcando la memoria?")) {
-    sessionStorage.removeItem('wildu_cache_proposte'); sessionStorage.removeItem('wildu_cache_time'); location.reload(); 
-  }
+    // 🔒 Chiede la password invece della semplice conferma
+    let pin = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza a 3 cifre per forzare il ripristino di sistema:");
+    
+    // Controlla se il PIN è esatto
+    if (pin === "371") {
+        sessionStorage.removeItem('wildu_cache_proposte'); 
+        sessionStorage.removeItem('wildu_cache_time'); 
+        alert("✅ PIN corretto. Pulizia cache e ripristino in corso...");
+        location.reload(); 
+    } else if (pin !== null) {
+        // Se ha inserito un pin sbagliato (e non ha premuto "Annulla")
+        alert("❌ PIN errato. Operazione annullata.");
+    }
 }
 
 
@@ -2849,10 +2859,10 @@ function controllaSicurezzaNinja() {
                 <div id="tut-1" class="tut-step active text-center">
                     <i class="bi bi-rocket-takeoff text-primary display-3 mb-3 d-block"></i>
                     <h4 class="fw-bold text-white mb-2">🌿 Benvenuto nel Futuro di Wildu</h4>
-                    <p class="small text-muted mb-4">La tua plancia digitale per organizzare e pubblicizzare eventi outdoor.</p>
+                    <p class="small text-muted mb-4">La tua plancia gratis per organizzare e pubblicizzare eventi outdoor.</p>
                     <div class="p-3 rounded-4 mb-3" style="background: rgba(40, 167, 69, 0.1); border: 1px solid #28a745;">
                         <h5 class="text-success fw-bold m-0"><i class="bi bi-piggy-bank"></i> 0% Fee</h5>
-                        <p class="small text-light mt-2 m-0">Non tratteniamo commissioni sulle prenotazioni degli Open Day. Quello che guadagni è tuo al 100%.</p>
+                        <p class="small text-light mt-2 m-0">Non tratteniamo commissioni sulle prenotazioni. Quello che guadagni è tuo al 100%.</p>
                     </div>
                 </div>
 
@@ -2872,14 +2882,14 @@ function controllaSicurezzaNinja() {
                     </div>
                     
                     <div class="callout-box">
-                        <p class="m-0 small text-light">• <b>Grafica pre-compilata:</b> Sfondo e testi (date, orari, km, fee) già pronti.</p>
-                        <p class="m-0 small text-light mt-1">• <b>Testo condivisibile:</b> Tutto formattato per WhatsApp con 1 click.</p>
+                        <p class="m-0 small text-light">• <b>Pre-compilato:</b> Sfondo e info (date, orari, km...) già pronti.</p>
+                        <p class="m-0 small text-light mt-1">• <b>Condivisibile:</b> Tutto pronto per WhatsApp con 1 click.</p>
                     </div>
                 </div>
 
                 <div id="tut-3" class="tut-step">
                     <h5 class="fw-bold text-success mb-3"><i class="bi bi-share"></i> Condivisione su WhatsApp</h5>
-                    <p class="small text-muted mb-3">Ecco l'esatto testo formattato e pronto da incollare che l'app pre-compila:</p>
+                    <p class="small text-muted mb-3">Ecco il testo formattato e pronto da incollare che l'app pre-compila:</p>
                     
                     <div class="p-3 rounded-4 mb-3 shadow-sm border border-secondary" style="background: rgba(0,0,0,0.5); font-family: 'Inter', monospace; font-size: 0.8rem; line-height: 1.3;">
                         <p class="m-0"><b>GRATIS TREK/EVENTO 🎁</b><br><br><b>🥾 IL MONTE FORATO</b><br><br>📅 Data: 22/03/2026<br>🕒 Orari: 09:30 ➡️ 18:00<br><br>📍 Luogo: Fornovolasco ([googlemaps.link])<br><br>⛰️ Dati Tecnici: 14 km | 660 m D+<br><br>🎒 Attrezzatura necessaria:<br>Acqua (1,5 lt), Pranzo al sacco, Scarpe da trekking, Vestiti a strati, Giacca impermeabile, Torcia frontale<br><br>📝 Info Evento:<br>Un’escursione tra boschi, silenzi e panorami immensi fino alla famosa roccia naturale che incornicia il cielo. [testo ridotto per brevità tutorial]</p>
@@ -2898,14 +2908,14 @@ function controllaSicurezzaNinja() {
                     
                     <div class="callout-box mb-3" style="border-left: 4px solid #6c757d !important;">
                         <span class="badge bg-secondary mb-1">STANDARD</span>
-                        <p class="m-0 small text-light">Mantenere rapporto **1:1**. Per pubblicare un Pay-Day (evento a pagamento), devi averne pubblicato uno gratuito (Open Day).</p>
+                        <p class="m-0 small text-light">Mantenere rapporto di 1:1. Per pubblicare un Pay-Day (evento a pagamento), devi averne pubblicato uno gratuito (Open Day).</p>
                     </div>
                     
                     <div class="callout-box mb-3" style="border-left: 4px solid #FFD700 !important;">
                         <span class="badge bg-warning text-dark mb-1">VIP</span>
                         <p class="m-0 small text-light">Libero dai vincoli! Puoi pubblicare **solo Pay-Day** se lo desideri, senza l'obbligo di fare eventi gratuiti.</p>
                     </div>
-                    <p class="small text-info text-center m-0"><i>💡 Nota: I limiti massimi di slot rimangono uguali per tutti. Puoi abbonarti al VIP dal tuo Profilo!</i></p>
+                    <p class="small text-info text-center m-0"><i>💡 Nota: Limiti massimi di slot uguali per tutti. Puoi abbonarti (facoltativo) al VIP dal tuo Profilo!</i></p>
                 </div>
 
             </div>
