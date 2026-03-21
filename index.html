@@ -2371,7 +2371,7 @@ function startSyncTimer() { pressTimer = setTimeout(() => { forceSync(); }, 3000
 function cancelSyncTimer() { clearTimeout(pressTimer); }
 function forceSync() {
     // 🔒 Chiede la password invece della semplice conferma
-    let pin = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza a 3 cifre per forzare il ripristino di sistema:");
+    let pin = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza 3 per forzare il ripristino di sistema:");
     
     // Controlla se il PIN è esatto
     if (pin === "371") {
