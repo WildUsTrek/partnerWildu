@@ -109,29 +109,33 @@
 })();
 
   
-// 🎯 FUNZIONE DI VISUALIZZAZIONE ALERT VIP (Da chiamare dopo che il Master risponde)
+// 🎯 FUNZIONE DI VISUALIZZAZIONE ALERT VIP (Silenziosa e intelligente)
 function checkVipMessages(userData) {
-    // Se l'utente ha appena aperto l'app e i dati dicono che ha disdetto
-    if (userData.isVip && userData.vipStatus === "VIP_CANCELED") {
+    // 1. Controllo Disdetta (Lo dice UNA SOLA VOLTA per quella specifica data)
+    const avvisoGiaMostrato = localStorage.getItem('wildu_avviso_scadenza_' + userData.scadenzaVip);
+
+    if (userData.isVip && userData.vipStatus === "VIP_CANCELED" && !avvisoGiaMostrato) {
         Swal.fire({
             title: 'Abbonamento in scadenza',
             text: `Hai disattivato il rinnovo automatico. I tuoi vantaggi VIP rimarranno attivi fino al ${userData.scadenzaVip}. Dopo questa data tornerai Standard.`,
             icon: 'info',
             confirmButtonText: 'Capito'
+        }).then(() => {
+            // 🛑 Sigilla il ricordo! Non lo infastidirà MAI PIÙ per questa scadenza.
+            localStorage.setItem('wildu_avviso_scadenza_' + userData.scadenzaVip, 'true');
         });
     }
-    // Se l'utente era VIP ma ora è Standard (perché il tempo è scaduto nel Master)
+    // 2. Controllo Scadenza Definitiva (Era VIP, ora è Standard)
     else if (!userData.isVip && sessionStorage.getItem('wasVip') === 'true') {
         sessionStorage.removeItem('wasVip');
         Swal.fire({
             title: 'Abbonamento Scaduto',
-            text: 'Il tuo periodo VIP con i suoi vantaggi è terminato, rientri nella community dei partner.',
+            text: 'Il tuo periodo VIP con i suoi vantaggi è terminato. Bentornato nella versione Standard!',
             icon: 'warning',
             confirmButtonText: 'Ok'
         });
     }
     
-    // Salva lo stato attuale per il prossimo controllo "scadenza"
     if (userData.isVip) sessionStorage.setItem('wasVip', 'true');
 }
   
@@ -209,6 +213,22 @@ function checkVipMessages(userData) {
     /* Nasconde la barra di scorrimento su tutta l'app */
   body::-webkit-scrollbar { display: none; }
   body { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 🌿 EDERA BACKGROUND HOME */
+    #home-view::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        /* Sostituisci questo link con il tuo PNG dell'edera caricato su Cloudinary */
+        background-image: url('https://res.cloudinary.com/daiyrgmbb/image/upload/v1774052257/edera_NG1_av6tgs.jpg'); 
+        background-position: top right;
+        background-repeat: no-repeat;
+        background-size: 220px; /* Regola la grandezza */
+        opacity: 0.2; /* Molto tenue per non disturbare la lettura */
+        z-index: -2; /* Sotto le card e sotto la corona VIP (-1) */
+        pointer-events: none; /* Non blocca i click */
+    }
+    
   </style>
 </head>
 <body>
@@ -387,7 +407,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v4.2 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v4.3 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -617,11 +637,22 @@ function goToStripe(tipo) {
 function renderizzaPagineStatiche(configData) {
     if (!configData) return;
 
-    // 1. Istruzioni
+    // 1. Istruzioni o Fallback Tutorial
     const boxIstruzioni = document.getElementById('istruzioni-content');
-    if (boxIstruzioni && configData.testoIstruzioni) {
-        // white-space: pre-wrap nell'HTML manterrà gli a capo del Google Sheet!
-        boxIstruzioni.innerText = configData.testoIstruzioni; 
+    
+    if (configData.testoIstruzioni && configData.testoIstruzioni.trim() !== "") {
+        // Modalità Normale (Testo dal Google Sheet)
+        if (boxIstruzioni) boxIstruzioni.innerText = configData.testoIstruzioni; 
+    } else {
+        // 🚨 FALLBACK: Cella vuota! Dirottiamo il bottone "Cosa posso fare qui?"
+        if (boxIstruzioni) boxIstruzioni.innerText = "Guarda il tutorial interattivo per scoprire le funzioni!";
+        
+        // Trova il bottone nella Home e cambialo per fargli aprire il Pop-Up!
+        const bottoniIstruzioni = document.querySelectorAll('button[onclick="showPage(\'istruzioni\')"]');
+        bottoniIstruzioni.forEach(btn => {
+            btn.setAttribute('onclick', 'avviaTutorialWildu()');
+            btn.innerHTML = '<i class="fas fa-play-circle text-primary"></i> Guarda il Tutorial App';
+        });
     }
 
     // 2. Chi Siamo (Testo)
@@ -653,9 +684,13 @@ function renderizzaPagineStatiche(configData) {
                 [urls[i], urls[j]] = [urls[j], urls[i]]; // Scambia le posizioni
             }
 
-            // 4. COSTRUZIONE CAROSELLO BOOTSTRAP
+            // 4. COSTRUZIONE CAROSELLO BOOTSTRAP (Veloce e Anti-Blocco PC)
             let htmlCarosello = `
-            <div id="caroselloChiSiamo" class="carousel slide carousel-fade shadow-sm" data-bs-ride="carousel" data-bs-interval="5000" style="border-radius: 15px; overflow: hidden; border: 1px solid #333;">
+            <style>
+                /* Mette il turbo all'effetto dissolvenza */
+                .carousel-fade .carousel-item { transition: opacity 0.3s ease-in-out !important; }
+            </style>
+            <div id="caroselloChiSiamo" class="carousel slide carousel-fade shadow-sm" data-bs-ride="carousel" data-bs-interval="2500" data-bs-pause="false" style="border-radius: 15px; overflow: hidden; border: 1px solid #333;">
                 <div class="carousel-inner">
             `;
             
@@ -2782,6 +2817,98 @@ function controllaSicurezzaNinja() {
     </div>
 </div> 
 
+
+<style>
+    .tut-step { display: none; animation: fadeInRight 0.4s ease; }
+    .tut-step.active { display: block; }
+    @keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .cursor-anim { position: absolute; font-size: 2rem; animation: clickAnim 2s infinite; z-index: 10; }
+    @keyframes clickAnim { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(-10px, -15px) scale(0.8); } 100% { transform: translate(0,0) scale(1); } }
+    .fake-card { border: 1px solid #444; border-radius: 12px; background: #161616; padding: 15px; position: relative; overflow: hidden; }
+</style>
+
+<div class="modal fade" id="modalTutorialWildu" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-white border-primary border-2 rounded-4 shadow-lg">
+            
+            <div class="modal-body p-4">
+                <div id="tut-1" class="tut-step active text-center">
+                    <i class="bi bi-rocket-takeoff text-primary display-1 mb-3 d-block"></i>
+                    <h3 class="fw-bold text-white mb-3">Benvenuto in Wildu!</h3>
+                    <p class="text-muted mb-4">Questa App è il tuo coltellino svizzero per organizzare e pubblicizzare eventi outdoor.</p>
+                    <div class="p-3 rounded-4 mb-4" style="background: rgba(40, 167, 69, 0.1); border: 1px solid #28a745;">
+                        <h5 class="text-success fw-bold m-0"><i class="bi bi-piggy-bank"></i> ZERO COMMISSIONI</h5>
+                        <p class="small text-light mt-2 m-0">Wildu <b>non trattiene un centesimo</b> dalle tue prenotazioni. Né sugli eventi gratuiti (Open Day), né su quelli a pagamento (Pay-Day). Quello che guadagni è tuo al 100%.</p>
+                    </div>
+                </div>
+
+                <div id="tut-2" class="tut-step">
+                    <h5 class="fw-bold text-info mb-3"><i class="bi bi-magic"></i> Il Tuo Lavoro, Automatizzato</h5>
+                    <p class="small text-muted mb-3">Tu compili un modulo, noi creiamo la magia. Ecco cosa ottieni appena pubblichi:</p>
+                    
+                    <div class="fake-card mb-4">
+                        <span class="badge bg-success mb-2">⭐ OPEN DAY</span>
+                        <h6 class="fw-bold">Tramonto in Vetta</h6>
+                        <p class="small text-muted mb-2">📅 15/08/2026 | 📍 Abruzzo</p>
+                        
+                        <div class="d-flex gap-2 position-relative mt-3">
+                            <button class="btn btn-sm btn-outline-success rounded-pill flex-grow-1" style="background: rgba(25,135,84,0.2);"><i class="bi bi-image"></i> Locandina</button>
+                            <button class="btn btn-sm btn-info text-white rounded-pill flex-grow-1"><i class="bi bi-share"></i> Condividi</button>
+                            <i class="bi bi-hand-index-fill text-white cursor-anim" style="bottom: -15px; right: 20px;"></i>
+                        </div>
+                    </div>
+                    
+                    <p class="small text-light">Con 1 click avrai <b>Locandine Grafiche</b> mozzafiato già compilate e <b>Testi per WhatsApp/Telegram</b> pronti da incollare. E pubblicheremo l'evento sui nostri canali per farti trovare clienti!</p>
+                </div>
+
+                <div id="tut-3" class="tut-step">
+                    <h5 class="fw-bold text-warning mb-3"><i class="bi bi-star-fill"></i> Regole & Partner VIP</h5>
+                    <p class="small text-light mb-3">Il nostro ecosistema si basa sulla community. Ecco come funziona la pubblicazione:</p>
+                    
+                    <ul class="list-group list-group-flush mb-4 rounded-3 border border-secondary">
+                        <li class="list-group-item bg-dark text-white border-secondary p-3">
+                            <span class="badge bg-secondary mb-1">UTENTI STANDARD</span>
+                            <p class="m-0 small text-muted">Devi mantenere un <b>rapporto 1:1</b>. Per poter pubblicare un evento a pagamento (Pay-Day), devi aver pubblicato almeno un evento gratuito (Open Day) nel tuo storico.</p>
+                        </li>
+                        <li class="list-group-item bg-dark text-white border-secondary p-3">
+                            <span class="badge bg-warning text-dark mb-1">UTENTI VIP</span>
+                            <p class="m-0 small text-muted">Sei libero dai vincoli! Puoi pubblicare <b>solo Pay-Day</b> se lo desideri, senza l'obbligo di fare eventi gratuiti.</p>
+                        </li>
+                    </ul>
+                    <p class="small text-info text-center m-0"><i>💡 Nota: I limiti massimi di "Slot Proposte" rimangono uguali per tutti. Puoi abbonarti al VIP dal tuo Profilo!</i></p>
+                </div>
+
+            </div>
+            <div class="modal-footer border-secondary justify-content-between">
+                <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-dismiss="modal">Salta</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" id="btnTutNext" onclick="nextTutorialStep()">Avanti <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTutStep = 1;
+    function avviaTutorialWildu() {
+        currentTutStep = 1;
+        document.querySelectorAll('.tut-step').forEach(el => el.classList.remove('active'));
+        document.getElementById('tut-1').classList.add('active');
+        document.getElementById('btnTutNext').innerHTML = 'Avanti <i class="bi bi-arrow-right"></i>';
+        new bootstrap.Modal(document.getElementById('modalTutorialWildu')).show();
+    }
+
+    function nextTutorialStep() {
+        if (currentTutStep < 3) {
+            document.getElementById('tut-' + currentTutStep).classList.remove('active');
+            currentTutStep++;
+            document.getElementById('tut-' + currentTutStep).classList.add('active');
+            if (currentTutStep === 3) document.getElementById('btnTutNext').innerHTML = '<i class="bi bi-check2-circle"></i> Inizia Ora';
+        } else {
+            bootstrap.Modal.getInstance(document.getElementById('modalTutorialWildu')).hide();
+        }
+    }
+</script>
+  
   
 </body>
 </html>
