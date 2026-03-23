@@ -419,7 +419,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.3 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.4 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2278,8 +2278,10 @@ async function generaLocandinaFinale() {
       ctx.fillStyle = "white"; ctx.fillText(badgeTxt, W/2, cursorY + 40);
       cursorY += 100;
 
-      const dIn = item.dataInizio ? new Date(item.dataInizio).toLocaleDateString('it-IT') : "";
-      const dFine = item.dataFine ? " - " + new Date(item.dataFine).toLocaleDateString('it-IT') : "";
+      // 🛠️ FIX DATA: Invertiamo il formato europeo per farlo digerire a JavaScript!
+      const formattaPerCanvas = (dStr) => dStr ? new Date(dStr.split('/').reverse().join('-')).toLocaleDateString('it-IT') : "";
+      const dIn = formattaPerCanvas(item.dataInizio);
+      const dFine = item.dataFine ? " - " + formattaPerCanvas(item.dataFine) : "";
       const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
       let dateTxt = "📅 " + dIn + dFine + orari; let dateFontSize = 35;
       ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
