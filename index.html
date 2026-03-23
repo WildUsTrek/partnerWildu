@@ -277,13 +277,21 @@ body {
 </style>
   
 <div id="auth-overlay" class="loader-overlay" style="display: none;">
-  <div class="text-center p-4 card bg-dark border-primary shadow-lg" style="max-width: 400px;">
+  <div class="text-center p-4 card bg-dark border-primary shadow-lg m-3" style="max-width: 400px; width: 100%;">
     <h2 class="fw-bold text-white mb-3">Wildu Partner</h2>
     <p class="text-muted mb-4">Accedi con il tuo account Google per iniziare a configurare i tuoi eventi.</p>
-    <button class="btn btn-light rounded-pill w-100 fw-bold p-3" type="button" onclick="loginGoogle()">
+    
+    <button class="btn btn-light rounded-pill w-100 fw-bold p-3 mb-4 shadow-sm" type="button" onclick="loginGoogle()">
       <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2">
       Accedi con Google
     </button>
+
+    <div class="border-top border-secondary pt-3 mt-2">
+        <a href="https://wa.me/3931326733" target="_blank" class="text-decoration-none text-muted small d-flex align-items-center justify-content-center gap-2 transition" style="transition: 0.3s;">
+            <i class="bi bi-whatsapp text-success fs-5"></i> Problemi all'accesso? Contattaci!
+        </a>
+    </div>
+
   </div>
 </div>
 
@@ -419,7 +427,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.8 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.9 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
