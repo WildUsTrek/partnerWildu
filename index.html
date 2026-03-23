@@ -419,7 +419,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.7 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.8 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2988,7 +2988,7 @@ function controllaSicurezzaNinja() {
 
             </div>
             <div class="modal-footer border-secondary justify-content-between pt-2 pb-2">
-                <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Salta</button>
+                <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="chiudiTutorial()">Salta</button>
                 <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold" id="btnTutNext" onclick="nextTutorialStep()">Avanti <i class="bi bi-arrow-right"></i></button>
             </div>
         </div>
@@ -3005,6 +3005,21 @@ function controllaSicurezzaNinja() {
         new bootstrap.Modal(document.getElementById('modalTutorialWildu')).show();
     }
 
+    // 🟢 1. LA NUOVA PORTA D'USCITA (Vale sia per "Salta" che per "Inizia Ora")
+    function chiudiTutorial() {
+        // Chiudiamo il modale
+        bootstrap.Modal.getInstance(document.getElementById('modalTutorialWildu')).hide();
+        
+        // BIVIO ONBOARDING: Ha il bigliettino del nuovo utente?
+        if (sessionStorage.getItem('wildu_nuovo_partner_tour') === 'true') {
+            setTimeout(() => { 
+                showPage('chisiamo'); 
+                avviaTrappolaChiSiamo(); 
+            }, 400); 
+        }
+    }
+
+    // 🟢 2. LA FUNZIONE CHE FA ANDARE AVANTI LE SLIDE
     function nextTutorialStep() {
         if (currentTutStep < 4) {
             document.getElementById('tut-' + currentTutStep).classList.remove('active');
@@ -3012,17 +3027,8 @@ function controllaSicurezzaNinja() {
             document.getElementById('tut-' + currentTutStep).classList.add('active');
             if (currentTutStep === 4) document.getElementById('btnTutNext').innerHTML = '<i class="bi bi-check2-circle"></i> Inizia Ora';
         } else {
-            // È l'ultimo step! Chiudiamo il modale...
-            bootstrap.Modal.getInstance(document.getElementById('modalTutorialWildu')).hide();
-            
-            // 🟢 BIVIO ONBOARDING: Ha il bigliettino del nuovo utente?
-            if (sessionStorage.getItem('wildu_nuovo_partner_tour') === 'true') {
-                // Sì! Lo portiamo alla pagina Chi Siamo
-                setTimeout(() => { 
-                    showPage('chisiamo'); 
-                    avviaTrappolaChiSiamo(); // Inneschiamo il click "usa e getta"
-                }, 400); // Aspettiamo che il modale finisca l'animazione di chiusura
-            }
+            // È l'ultimo step! Usiamo la nuova porta d'uscita
+            chiudiTutorial();
         }
     }
 
