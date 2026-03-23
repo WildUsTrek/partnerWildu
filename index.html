@@ -363,8 +363,8 @@ function goToStripe(tipo) {
   </div>
   
   <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" type="button" onclick="copyAppLink()"><i class="bi bi-share"></i>🔗 Condividi App</button>
-    <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" type="button" onclick="showInstallInfo()"><i class="bi bi-download"></i>📱 Salva App</button>
+    <button class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" type="button" onclick="copyAppLink()"><i class="bi bi-share"></i> Condividi App</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" type="button" onclick="showInstallInfo()"><i class="bi bi-download"></i> Salva App</button>
   </div>
 </div>  
 
@@ -1270,7 +1270,7 @@ function openProfile() {
 
           if(boxAzione) {
               boxAzione.innerHTML = `
-              <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
+              <div class="p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
                   <p class="small text-light m-0 mb-1">${fraseStato}</p>
                   <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}${stringaDisdetta}</p>
                   <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light p-3 rounded-pill fw-bold w-100 shadow-sm">
@@ -1289,7 +1289,7 @@ function openProfile() {
           
           if(boxAzione) {
               boxAzione.innerHTML = `
-              <div class="mt-4 p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
+              <div class="p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
                   <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
                   <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
                       👑 Diventa VIP a ${prezzoVip}€ / mese
@@ -2726,14 +2726,17 @@ function controllaSicurezzaNinja() {
 </div>
 
 <div id="edit-profile-overlay" class="loader-overlay" style="display: none; z-index: 10500 !important;">
-  <div class="card bg-dark border-primary p-4 shadow-lg w-100 m-3" style="max-width: 450px;">
+  <div class="card bg-dark border-primary p-4 shadow-lg w-100 m-3" style="max-width: 450px; max-height: 90vh; overflow-y: auto;">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div class="d-flex align-items-center gap-2">
         <h3 class="text-white fw-bold m-0">Il tuo Profilo</h3>
-        <div id="badge-status-profilo"></div> </div>
+        <div id="badge-status-profilo"></div> 
+      </div>
       <button type="button" class="btn-close btn-close-white" onclick="closeProfile()"></button>
     </div>
+
+    <div id="box-azione-vip" class="mb-4"></div>
 
     <label class="text-primary small fw-bold mb-1">NOME E COGNOME</label>
     <input type="text" id="edit_p_nome" class="form-control mb-3">
@@ -2758,8 +2761,6 @@ function controllaSicurezzaNinja() {
     
     <button type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
     
-    <div id="box-azione-vip"></div>
-
     <div class="mt-4 pt-3 border-top border-secondary text-center">
       <button type="button" class="btn btn-outline-danger w-100 p-3 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
