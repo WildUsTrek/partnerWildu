@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v6.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v6.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.wildu-version-text').forEach(el => {
@@ -149,6 +149,8 @@ function checkVipMessages(userData) {
 </script>
 
   <style>
+
+  
 #stripe-bridge-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: #121212; z-index: 99999;
@@ -1063,9 +1065,168 @@ function renderEquipmentSteps() {
     .catch(() => { loader.style.display = 'none'; alert("❌ Errore di rete."); });
   }
 
-function copyAppLink() { navigator.clipboard.writeText(window.location.href); alert("🔗 Link copiato!"); }
-function showInstallInfo() { new bootstrap.Modal(document.getElementById('installModal')).show(); }
+// 🟢 CONDIVISIONE APP: Scelta intelligente (Nativa vs Copia Link)
+function copyAppLink() {
+    // Puliamo l'URL da eventuali parametri sporchi (?reset=... ecc)
+    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+    
+    // Dati da passare alla condivisione del telefono
+    const shareData = {
+        title: 'Wildu Partner Hub',
+        text: 'Unisciti a Wildu e inizia a proporre i tuoi eventi outdoor!',
+        url: cleanUrl
+    };
 
+    // Controlliamo se il dispositivo supporta la condivisione nativa (Smartphone)
+    if (navigator.share) {
+        Swal.fire({
+            title: 'Condividi l\'App',
+            text: 'Come preferisci invitare i tuoi colleghi?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-share-fill"></i> Condividi Ora',
+            cancelButtonText: '<i class="bi bi-link-45deg"></i> Copia Link',
+            confirmButtonColor: '#0d6efd',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true // Inverte i tasti per mettere l'azione principale a destra
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // L'utente ha scelto "Condividi Ora" -> Apre la tendina di iOS/Android
+                navigator.share(shareData).catch((err) => {
+                    console.log("Condivisione annullata o fallita", err);
+                });
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                // L'utente ha scelto "Copia Link" -> Copia silenziosa
+                navigator.clipboard.writeText(cleanUrl);
+                Swal.fire({
+                    title: 'Copiato!',
+                    text: 'Il link è stato copiato negli appunti.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        });
+    } else {
+        // Fallback per PC o browser vecchi che non hanno la tendina di condivisione
+        navigator.clipboard.writeText(cleanUrl);
+        Swal.fire({
+            title: 'Copiato!',
+            text: 'Il link è stato copiato negli appunti.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+}
+  
+// =========================================================
+// 📱 MOTORE TUTORIAL "SALVA APP" (PWA INSTALL)
+// =========================================================
+
+// Sequenze simulate per OS
+const installTutData = {
+    "iOS": [
+        { title: 'Passo 1: Condividi', img: 'https://placehold.co/300x400/e0e0e0/0d6efd?text=Tocca+Condividi', text: 'Tocca l\'icona **"Condividi"** (il quadrato con la freccia ⬆️) situata nella barra in basso di Safari.' },
+        { title: 'Passo 2: Scorri Menu', img: 'https://placehold.co/300x400/e0e0e0/0d6efd?text=Scorri+in+Basso', text: 'Nel menu che appare, scorri verso il basso per rivelare altre opzioni nascoste.' },
+        { title: 'Passo 3: Aggiungi', img: 'https://placehold.co/300x400/e0e0e0/0d6efd?text=Aggiungi+a+Home', text: 'Tocca la voce **"Aggiungi alla schermata Home"** (ha un\'icona con il segno +).' },
+        { title: 'Passo 4: Conferma', img: 'https://placehold.co/300x400/e0e0e0/0d6efd?text=Conferma', text: 'Tocca **"Aggiungi"** in alto a destra. L\'app apparirà come per magia tra le tue icone!' }
+    ],
+    "Android": [
+        { title: 'Passo 1: Menu Chrome', img: 'https://placehold.co/300x400/e0e0e0/198754?text=Menu+3+Puntini', text: 'Tocca l\'icona del menu di Chrome (i **tre puntini verticali** ⠇) in alto a destra.' },
+        { title: 'Passo 2: Installa App', img: 'https://placehold.co/300x400/e0e0e0/198754?text=Tocca+Installa', text: 'Cerca e tocca la voce **"Installa app"** (oppure "Aggiungi a schermata Home").' },
+        { title: 'Passo 3: Conferma', img: 'https://placehold.co/300x400/e0e0e0/198754?text=Conferma+Installazione', text: 'Tocca **"Installa"** o "Aggiungi" nel riquadro che compare al centro dello schermo.' },
+        { title: 'Passo 4: Fatto!', img: 'https://placehold.co/300x400/e0e0e0/198754?text=Icona+su+Home', text: 'Fatto! Ora troverai il logo di Wildu direttamente tra le app del tuo telefono.' }
+    ]
+};
+
+let currentInstallPath = [];
+let currentInstallStep = 0;
+
+// 1. Identifica il sistema operativo
+function getDeviceOS() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return "iOS";
+    if (/android/i.test(ua)) return "Android";
+    return "Android"; // Fallback generico
+}
+
+// 2. IL BIVIO: Sostituisce la vecchia funzione showInstallInfo()
+function showInstallInfo() {
+    Swal.fire({
+        title: 'Installa Wildu',
+        text: 'Vuoi vedere la guida rapida o il tutorial illustrato passo-passo?',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-play-circle-fill"></i> Tutorial Animato',
+        cancelButtonText: '<i class="bi bi-file-text"></i> Solo Testo',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#2c3e50',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Lancia il cinema!
+            startInstallTutorial();
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            // Fallback: apre il tuo vecchio modale testuale (installModal)
+            new bootstrap.Modal(document.getElementById('installModal')).show();
+        }
+    });
+}
+
+// 3. Avvia il Tutorial
+function startInstallTutorial() {
+    currentInstallPath = installTutData[getDeviceOS()];
+    currentInstallStep = 0;
+    
+    document.getElementById('install-tut-overlay').style.display = 'flex';
+    renderInstallStep();
+}
+
+// 4. Disegna il passo
+function renderInstallStep() {
+    const step = currentInstallPath[currentInstallStep];
+    
+    // Supporto per il grassetto con Regex semplice (**testo**)
+    const formattedText = step.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+    document.getElementById('install-tut-title').innerText = step.title;
+    document.getElementById('install-tut-img').src = step.img;
+    document.getElementById('install-tut-text').innerHTML = formattedText;
+
+    const btnPrev = document.getElementById('install-tut-prev');
+    const btnNext = document.getElementById('install-tut-next');
+    const btnFinish = document.getElementById('install-tut-finish');
+
+    btnPrev.disabled = (currentInstallStep === 0);
+
+    if (currentInstallStep === currentInstallPath.length - 1) {
+        btnNext.classList.add('d-none');
+        btnFinish.classList.remove('d-none');
+    } else {
+        btnNext.classList.remove('d-none');
+        btnFinish.classList.add('d-none');
+    }
+}
+
+// 5. Navigazione
+function nextInstallStep() {
+    if (currentInstallStep < currentInstallPath.length - 1) {
+        currentInstallStep++;
+        renderInstallStep();
+    }
+}
+
+function prevInstallStep() {
+    if (currentInstallStep > 0) {
+        currentInstallStep--;
+        renderInstallStep();
+    }
+}
+
+function closeInstallTutorial() {
+    document.getElementById('install-tut-overlay').style.display = 'none';
+}
 function handleImageSelection(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -3133,7 +3294,29 @@ function controllaSicurezzaNinja() {
     }
 </script>
 
-  
+<div id="install-tut-overlay" class="loader-overlay" style="display: none; z-index: 10600 !important;">
+    <div class="card bg-white p-4 shadow-lg text-center mx-3 position-relative" style="max-width: 400px; width: 100%; border-radius: 24px;">
+        
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 id="install-tut-title" class="fw-bold mb-0 text-primary">Salva l'App</h5>
+            <button type="button" class="btn-close" onclick="closeInstallTutorial()"></button>
+        </div>
+
+        <div class="p-2 mb-3 rounded-3" style="background: #f8f9fa; border: 1px solid #dee2e6; height: 260px; display: flex; align-items: center; justify-content: center;">
+            <img id="install-tut-img" src="" alt="Tutorial Step" class="img-fluid rounded" style="max-height: 240px; object-fit: contain;">
+        </div>
+
+        <p id="install-tut-text" class="text-dark mb-4 text-start" style="font-size: 0.95rem; line-height: 1.4; min-height: 3em;">
+            Attendere...
+        </p>
+
+        <div class="d-flex justify-content-between gap-2">
+            <button id="install-tut-prev" type="button" class="btn btn-outline-secondary rounded-pill w-50" onclick="prevInstallStep()">Indietro</button>
+            <button id="install-tut-next" type="button" class="btn btn-primary rounded-pill w-50 fw-bold" onclick="nextInstallStep()">Avanti <i class="bi bi-arrow-right"></i></button>
+            <button id="install-tut-finish" type="button" class="btn btn-success rounded-pill w-50 fw-bold d-none" onclick="closeInstallTutorial()"><i class="bi bi-check-lg"></i> Fatto</button>
+        </div>
+    </div>
+</div>
   
 </body>
 </html>
