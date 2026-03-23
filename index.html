@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v7.0"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1150,7 +1150,18 @@ function copyAppLink() {
   // =========================================================
 // START CHAT GPT
 // =========================================================
+let deferredPrompt = null;
 
+window.addEventListener('beforeinstallprompt', (e) => {
+    console.log("🔥 beforeinstallprompt intercettato");
+
+    e.preventDefault(); // blocca popup automatico
+    deferredPrompt = e;
+
+    // Mostra bottone
+    const btn = document.getElementById('btn-install-app');
+    if (btn) btn.style.display = 'block';
+});
 // =========================================================
 // 📱 PWA INSTALL MANAGER (Wildu)
 // =========================================================
@@ -1225,6 +1236,25 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 });
 
+function installaApp() {
+    if (!deferredPrompt) {
+        alert("⚠️ Installazione non disponibile su questo dispositivo");
+        return;
+    }
+
+    deferredPrompt.prompt();
+
+    deferredPrompt.userChoice.then(choice => {
+        if (choice.outcome === 'accepted') {
+            console.log("✅ App installata");
+        } else {
+            console.log("❌ Installazione rifiutata");
+        }
+        deferredPrompt = null;
+    });
+}
+
+  
 // 2. IL BIVIO PRINCIPALE (Intelligente e a prova di bomba)
 function showInstallInfo() {
     if (deferredPrompt) {
@@ -3428,6 +3458,58 @@ function controllaSicurezzaNinja() {
 
 <script>
     let currentTutStep = 1;
+
+// ===== GUIDA INSTALLAZIONE (TESTO DINAMICO) =====
+function renderInstallInstructions() {
+    const box = document.getElementById('install-choice-container');
+    if (!box) return;
+
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    if (isIOS) {
+        box.innerHTML = `
+        📱 iPhone:<br>
+        1. Tocca il tasto <b>Condividi</b><br>
+        2. Premi <b>"Aggiungi alla Home"</b>`;
+        
+    } else if (isAndroid) {
+        box.innerHTML = `
+        📱 Android:<br>
+        1. Tocca ⋮ (in alto a destra)<br>
+        2. Premi <b>"Installa App"</b>`;
+        
+    } else {
+        box.innerHTML = `
+        💻 Computer:<br>
+        1. Guarda vicino alla barra URL<br>
+        2. Clicca <b>"Installa"</b>`;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById('installModal');
+    if (!modal) return;
+
+    modal.addEventListener('show.bs.modal', function () {
+        renderInstallInstructions();
+    });
+});
+
+// ===== INSTALLAZIONE PWA =====
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    console.log("🔥 beforeinstallprompt attivo");
+
+    e.preventDefault();
+    deferredPrompt = e;
+
+    const btn = document.getElementById('btn-install-app');
+    if (btn) btn.style.display = 'block';
+});
+
+  
     function avviaTutorialWildu() {
         currentTutStep = 1;
         document.querySelectorAll('.tut-step').forEach(el => el.classList.remove('active'));
