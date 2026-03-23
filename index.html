@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v7.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1147,21 +1147,7 @@ function copyAppLink() {
 }
 
 
-  // =========================================================
-// START CHAT GPT
-// =========================================================
-let deferredPrompt = null;
 
-window.addEventListener('beforeinstallprompt', (e) => {
-    console.log("🔥 beforeinstallprompt intercettato");
-
-    e.preventDefault(); // blocca popup automatico
-    deferredPrompt = e;
-
-    // Mostra bottone
-    const btn = document.getElementById('btn-install-app');
-    if (btn) btn.style.display = 'block';
-});
 // =========================================================
 // 📱 PWA INSTALL MANAGER (Wildu)
 // =========================================================
@@ -3494,19 +3480,6 @@ document.addEventListener("DOMContentLoaded", function () {
     modal.addEventListener('show.bs.modal', function () {
         renderInstallInstructions();
     });
-});
-
-// ===== INSTALLAZIONE PWA =====
-let deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    console.log("🔥 beforeinstallprompt attivo");
-
-    e.preventDefault();
-    deferredPrompt = e;
-
-    const btn = document.getElementById('btn-install-app');
-    if (btn) btn.style.display = 'block';
 });
 
   
