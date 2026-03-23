@@ -155,8 +155,17 @@ function checkVipMessages(userData) {
 }
 .bridge-icon { font-size: 4rem; margin-bottom: 20px; display: block; }
     #init-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; display: flex; align-items: center; justify-content: center; z-index: 20000; transition: opacity 0.5s ease; }
-    body { background: #121212; font-family: 'Inter', sans-serif; color: #eee; padding-bottom: 40px; }
-    .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+body { 
+        background: #121212; 
+        font-family: 'Inter', sans-serif; 
+        color: #eee; 
+        padding-bottom: 40px; 
+        overscroll-behavior-y: none; /* BLOCCA lo spazio vuoto in alto/basso */
+        -webkit-overflow-scrolling: touch; /* Scrolling fluido nativo */
+        -ms-overflow-style: none; /* Nasconde barra IE/Edge */
+        scrollbar-width: none; /* Nasconde barra Firefox */
+    }
+    body::-webkit-scrollbar { display: none; } /* Nasconde barra Chrome/Safari */    .util-nav { background: #1e1e1e; border-bottom: 1px solid #333; padding: 30px 20px 12px 20px; position: sticky; top: 0; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     #home-view { padding: 40px 20px; text-align: center; }
     .menu-card { background: #1e1e1e; border: 1px solid #333; border-radius: 24px; padding: 30px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; text-decoration: none; display: block; }
     .menu-card:hover { transform: translateY(-5px); border-color: #0d6efd; background: #252525; }
@@ -346,16 +355,18 @@ function goToStripe(tipo) {
   }
 </script>
 
+
 <div class="util-nav d-flex justify-content-between align-items-center">
   <div class="d-flex align-items-center">
      <img id="app-logo" src="https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png" alt="Wildu" style="height: 32px; width: auto; margin-right: 12px; border-radius: 6px;">
      <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
   </div>
-  <div>
-    <button class="btn btn-sm btn-outline-light rounded-pill px-3 me-2" type="button" onclick="copyAppLink()">🔗 Condividi App</button>
-    <button class="btn btn-sm btn-primary rounded-pill px-3" type="button" onclick="showInstallInfo()">📱 Salva App</button>
+  
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" type="button" onclick="copyAppLink()"><i class="bi bi-share"></i>🔗 Condividi App</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" type="button" onclick="showInstallInfo()"><i class="bi bi-download"></i>📱 Salva App</button>
   </div>
-</div>
+</div>  
 
 <div id="loader" class="loader-overlay">
   <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
@@ -390,10 +401,12 @@ function goToStripe(tipo) {
     </div>
   </div>
   
-  <a href="https://wa.me/3931326733" target="_blank" class="menu-card shadow-sm" style="text-decoration: none;">
-    <span class="menu-icon">💬</span>
-    <div class="menu-title text-white">Assistenza Wildu</div>
-    <div class="menu-desc text-muted">Hai dubbi? Scrivici su WhatsApp.</div>
+  <a href="https://wa.me/3931326733" target="_blank" class="d-flex align-items-center p-3 mb-4 text-decoration-none shadow-sm" style="background: #1e1e1e; border: 1px solid #333; border-radius: 16px;">
+    <i class="bi bi-whatsapp text-success fs-2 me-3"></i>
+    <div>
+        <div class="text-white fw-bold" style="font-size: 1.05rem; line-height: 1;">Assistenza Wildu</div>
+        <div class="text-muted small mt-1" style="font-size: 0.8rem;">Hai dubbi? Scrivici su WhatsApp.</div>
+    </div>
   </a>
   
 <div class="home-secondary-buttons" style="margin-top: 25px; display: flex; flex-direction: column; gap: 10px;">
@@ -406,7 +419,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.2 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.3 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -841,9 +854,9 @@ function renderizzaPagineStatiche(configData) {
                     <div class="p-3 rounded-3" style="background: rgba(255, 215, 0, 0.05); border: 1px solid #FFD700;">
                         <h6 class="text-warning fw-bold m-0 small">Opzione 2: Sblocca VIP</h6>
                         <p class="tiny text-light mb-2">Pubblica quello che vuoi, senza vincoli, ora.</p>
-                        <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning w-100 rounded-pill fw-bold btn-sm shadow-sm">
-                            👑 Diventa VIP a ${prezzoVip}€ / mese
-                        </button>
+                        <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning p-3 rounded-pill fw-bold text-dark w-100 shadow-sm">
+                        👑 Diventa VIP a ${prezzoVip}€ / mese
+                    </button>
                     </div>
                 </div>`;
                 msg.className = "small mt-1 d-block";
@@ -1260,9 +1273,9 @@ function openProfile() {
               <div class="mt-4 p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
                   <p class="small text-light m-0 mb-1">${fraseStato}</p>
                   <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}${stringaDisdetta}</p>
-                  <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light btn-sm rounded-pill fw-bold w-100 shadow-sm">
-                      ⚙️ Gestisci / Disdici Abbonamento
-                  </button>
+                  <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light p-3 rounded-pill fw-bold w-100 shadow-sm">
+                  ⚙️ Gestisci / Disdici Abbonamento
+              </button>
               </div>`; 
           }
       } else {
@@ -2096,50 +2109,73 @@ function handleLogoUpload(event) {
 }
 
 function handleLocandinaSelect(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const loader = document.getElementById('loader');
-  if (loader) { loader.style.display = 'flex'; const loaderText = loader.querySelector('h5'); if(loaderText) loaderText.innerText = "Caricamento foto..."; }
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const loader = document.getElementById('loader');
+    if (loader) { 
+        loader.style.display = 'flex'; 
+        const loaderText = loader.querySelector('h5'); 
+        if(loaderText) loaderText.innerText = "Caricamento foto..."; 
+    }
 
-  const pBox = document.getElementById('loc-preview-price');
-  const prezzo = window.currentLocandinaItem.prezzo;
-  if (!prezzo || prezzo == "0" || prezzo == 0) {
-    if(pBox) { pBox.innerText = "PARTECIPAZIONE GRATUITA"; pBox.style.borderColor = "#fff"; pBox.style.background = "rgba(255,255,255,0.2)"; pBox.style.color = "#fff"; }
-  } else {
-    if(pBox) { pBox.innerText = "€ " + prezzo; pBox.style.borderColor = "#FFD700"; pBox.style.background = "rgba(255,215,0,0.2)"; pBox.style.color = "#FFD700"; }
-  }
+    const pBox = document.getElementById('loc-preview-price');
+    const prezzo = window.currentLocandinaItem.prezzo;
+    if (!prezzo || prezzo == "0" || prezzo == 0) {
+        if(pBox) { pBox.innerText = "PARTECIPAZIONE GRATUITA"; pBox.style.borderColor = "#fff"; pBox.style.background = "rgba(255,255,255,0.2)"; pBox.style.color = "#fff"; }
+    } else {
+        if(pBox) { pBox.innerText = "€ " + prezzo; pBox.style.borderColor = "#FFD700"; pBox.style.background = "rgba(255,215,0,0.2)"; pBox.style.color = "#FFD700"; }
+    }
 
-  const pTitle = document.getElementById('loc-preview-title');
-  if (pTitle) pTitle.innerText = window.currentLocandinaItem.titolo.toUpperCase();
-  
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = document.getElementById('loc-crop-img');
-    img.onload = function() {
-      window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
-      const slider = document.getElementById('loc-zoom-slider');
-      if(slider) slider.value = 1;
-      
-      const stageW = 270; const stageH = 480;
-      const ratioStage = stageW / stageH;
-      const ratioImg = img.naturalWidth / img.naturalHeight;
-      let baseW, baseH;
-      
-      if(ratioImg > ratioStage) { baseH = stageH; baseW = stageH * ratioImg; } 
-      else { baseW = stageW; baseH = stageW / ratioImg; }
-      
-      window.locCropState.baseW = baseW; window.locCropState.baseH = baseH;
-      img.style.width = baseW + "px"; img.style.height = baseH + "px";
-      window.locCropState.currentX = (stageW - baseW) / 2; window.locCropState.currentY = (stageH - baseH) / 2;
-      img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(1)`;
-      
-      if (loader) { loader.style.display = 'none'; const loaderText = loader.querySelector('h5'); if(loaderText) loaderText.innerText = "Elaborazione in corso..."; }
-      new bootstrap.Modal(document.getElementById('modalCropLocandina')).show();
-      document.getElementById('locandina-upload').value = ""; 
+    const pTitle = document.getElementById('loc-preview-title');
+    if (pTitle) pTitle.innerText = window.currentLocandinaItem.titolo.toUpperCase();
+    
+    const reader = new FileReader();
+    
+    // 🛟 FALLBACK: Timer di emergenza (8 secondi)
+    let fallbackTimer = setTimeout(() => {
+        if (loader) loader.style.display = 'none';
+        document.getElementById('locandina-upload').value = ""; 
+        alert("⚠️ L'immagine è troppo pesante o in un formato non supportato dal telefono. Prova a ritagliarla prima o usa un'altra foto.");
+    }, 8000);
+
+    reader.onload = function(e) {
+        const img = document.getElementById('loc-crop-img');
+        
+        img.onload = function() {
+            clearTimeout(fallbackTimer); // Annulla il timer se ce la fa!
+            
+            window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
+            const slider = document.getElementById('loc-zoom-slider');
+            if(slider) slider.value = 1;
+            
+            const stageW = 270; const stageH = 480;
+            const ratioStage = stageW / stageH;
+            const ratioImg = img.naturalWidth / img.naturalHeight;
+            let baseW, baseH;
+            
+            if(ratioImg > ratioStage) { baseH = stageH; baseW = stageH * ratioImg; } 
+            else { baseW = stageW; baseH = stageW / ratioImg; }
+            
+            window.locCropState.baseW = baseW; window.locCropState.baseH = baseH;
+            img.style.width = baseW + "px"; img.style.height = baseH + "px";
+            window.locCropState.currentX = (stageW - baseW) / 2; window.locCropState.currentY = (stageH - baseH) / 2;
+            img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(1)`;
+            
+            if (loader) loader.style.display = 'none';
+            new bootstrap.Modal(document.getElementById('modalCropLocandina')).show();
+            document.getElementById('locandina-upload').value = ""; 
+        };
+        
+        img.onerror = function() {
+            clearTimeout(fallbackTimer);
+            if (loader) loader.style.display = 'none';
+            alert("⚠️ Errore di lettura immagine. Riprova.");
+        };
+
+        img.src = e.target.result;
     };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
 }
 
 function updateLocZoom() {
@@ -2725,7 +2761,7 @@ function controllaSicurezzaNinja() {
     <div id="box-azione-vip"></div>
 
     <div class="mt-4 pt-3 border-top border-secondary text-center">
-      <button type="button" class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
+      <button type="button" class="btn btn-outline-danger w-100 p-3 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
     </div>
   </div>
