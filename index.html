@@ -419,7 +419,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.5 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.6 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -1199,12 +1199,19 @@ async function saveFirstProfile() {
     document.getElementById('g_tel').value = tel;
 
     // 🚀 3. SINCRONIZZAZIONE IMMEDIATA: Forza il Master a creare la riga STANDARD
-    // Usiamo la funzione esistente che invia Nome e Tel al Master
     await checkProposalLimitAtStartup(user.uid);
 
     document.getElementById('profile-overlay').style.display = 'none';
-    alert("✅ Profilo creato! Benvenuto in Wildu.");
+    
+    // 🟢 NUOVO FLUSSO ONBOARDING
+    // Mettiamo in tasca il bigliettino per fargli fare il tour
+    sessionStorage.setItem('wildu_nuovo_partner_tour', 'true');
+    
+    alert("✅ Profilo creato! Benvenuto nella famiglia Wildu.");
+    
+    // Lo facciamo atterrare sulla Home (nascosta dal modale) e lanciamo subito il tutorial
     showPage('home');
+    setTimeout(() => { avviaTutorialWildu(); }, 800); // Piccolo ritardo elegante
     
   } catch (e) { 
     console.error(e);
@@ -2989,8 +2996,41 @@ function controllaSicurezzaNinja() {
             document.getElementById('tut-' + currentTutStep).classList.add('active');
             if (currentTutStep === 4) document.getElementById('btnTutNext').innerHTML = '<i class="bi bi-check2-circle"></i> Inizia Ora';
         } else {
+            // È l'ultimo step! Chiudiamo il modale...
             bootstrap.Modal.getInstance(document.getElementById('modalTutorialWildu')).hide();
+            
+            // 🟢 BIVIO ONBOARDING: Ha il bigliettino del nuovo utente?
+            if (sessionStorage.getItem('wildu_nuovo_partner_tour') === 'true') {
+                // Sì! Lo portiamo alla pagina Chi Siamo
+                setTimeout(() => { 
+                    showPage('chisiamo'); 
+                    avviaTrappolaChiSiamo(); // Inneschiamo il click "usa e getta"
+                }, 400); // Aspettiamo che il modale finisca l'animazione di chiusura
+            }
         }
+    }
+
+  // 🟢 TRAPPOLA USA E GETTA PER IL PRIMO ACCESSO (CHI SIAMO -> HOME)
+    function avviaTrappolaChiSiamo() {
+        const paginaChiSiamo = document.getElementById('chisiamo-view');
+        
+        // Creiamo la funzione che scatterà al tocco
+        const chiudiTour = function() {
+            // 1. Strappiamo il bigliettino, così non succede mai più
+            sessionStorage.removeItem('wildu_nuovo_partner_tour');
+            
+            // 2. Lo mandiamo alla Home operativa
+            showPage('home');
+            
+            // 3. Rimuoviamo questo stesso "ascoltatore" di click per non rompere la pagina in futuro
+            paginaChiSiamo.removeEventListener('click', chiudiTour);
+        };
+        
+        // Appiccichiamo l'ascoltatore alla pagina
+        // Aggiungiamo un piccolissimo ritardo per evitare che il tocco accidentale del tutorial chiuda subito anche questa pagina
+        setTimeout(() => {
+            paginaChiSiamo.addEventListener('click', chiudiTour);
+        }, 500);
     }
 </script>
 
