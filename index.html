@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v6.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v6.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.wildu-version-text').forEach(el => {
@@ -1387,6 +1387,13 @@ async function updateProfile() {
   
   if (!nuovoNome || !nuovoTel) return alert("⚠️ Inserisci tutti i campi!");
 
+  // 🛡️ SCUDO ANTI-PANICO: Blocchiamo il bottone e mostriamo il caricamento
+  const btn = document.getElementById('btn-update-profile');
+  if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
+  }
+
   try {
     // 1. Aggiorna Firebase (Il database "veloce")
     await db.collection("users_partners").doc(user.uid).update({ 
@@ -1395,7 +1402,6 @@ async function updateProfile() {
     });
 
     // ✅ 2. AGGIORNA CAMPI LAVORO: Fondamentale per i futuri moduli proposta!
-    // Questi sono i campi (spesso readonly) che il modulo legge quando fai "Invia"
     document.getElementById('g_nome').value = nuovoNome;
     document.getElementById('g_tel').value = nuovoTel;
 
@@ -1404,7 +1410,6 @@ async function updateProfile() {
     sessionStorage.removeItem('wildu_cache_time');
 
     // 🚀 4. AGGIORNAMENTO MASTER SCRIPT (Google Sheets)
-    // Chiama il Master e gli passa i NUOVI dati. Il Master sovrascriverà la riga nello sheet DB_PARTNERS
     await checkProposalLimitAtStartup(user.uid);
 
     alert("✅ Profilo e Database aggiornati con successo!");
@@ -1413,8 +1418,15 @@ async function updateProfile() {
   } catch (e) { 
     console.error("Errore aggiornamento profilo:", e);
     alert("Errore nell'aggiornamento: " + e.message); 
+  } finally {
+    // 🔓 SBLOCCO FINALE: Qualunque cosa succeda (successo o errore), rimettiamo il bottone a posto
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = 'AGGIORNA DATI';
+    }
   }
 }
+  
 function refreshProfileLogoUI() {
   const logo = localStorage.getItem('wildu_partner_logo');
   const img = document.getElementById('profile-logo-img');
@@ -2843,7 +2855,7 @@ function controllaSicurezzaNinja() {
     </div>
     <input type="file" id="profile-logo-upload" accept="image/png, image/jpeg" style="display:none;" onchange="saveProfileLogo(event)">
     
-    <button type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
+    <button id="btn-update-profile" type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
     
     <div class="mt-4 pt-3 border-top border-secondary text-center">
       <button type="button" class="btn btn-outline-danger w-100 p-3 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
