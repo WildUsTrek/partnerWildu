@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v7.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1149,24 +1149,17 @@ function copyAppLink() {
 
 
 // =========================================================
-// 📱 PWA INSTALL MANAGER (Wildu)
+// 🪄 BIVIO INTELLIGENTE (1-Click + Cinema + Testo)
 // =========================================================
-window.deferredInstallPrompt = null;
-window.isInstallAvailable = false;
+let deferredPrompt = null;
 
+// Salva l'evento di installazione 1-click se Google lo permette
 window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  window.deferredInstallPrompt = e;
-  window.isInstallAvailable = true;
-
-  console.log("📱 Installazione PWA disponibile");
+    e.preventDefault();
+    deferredPrompt = e;
 });
-  
-// =========================================================
-// 🎬 CINEMA 3.0 - MOTORE TUTORIAL "SALVA APP"
-// =========================================================
 
-// 1. ISPETTORE DI SISTEMA (Rilevamento preciso PC/Mobile e Browser)
+// 1. ISPETTORE DI SISTEMA
 function detectUserEnvironment() {
     const ua = navigator.userAgent;
     let deviceType = "Desktop";
@@ -1176,173 +1169,169 @@ function detectUserEnvironment() {
     if (/Android/i.test(ua)) os = "Android";
     if (/iPhone|iPad|iPod/i.test(ua)) os = "iOS";
 
-    let browser = "Chrome/Edge"; // Chromium based default
+    let browser = "Chrome/Edge";
     if (/Firefox|FxiOS/i.test(ua)) browser = "Firefox";
     else if (/Safari/i.test(ua) && !/Chrome|CriOS|Edg/i.test(ua)) browser = "Safari";
 
     return { deviceType, os, browser };
 }
 
-async function avviaInstallGuidata() {
-  if (!window.deferredInstallPrompt) {
-    alert("👉 Premi ⋮ in alto a destra e poi 'Aggiungi alla schermata Home'");
-    return;
-  }
-
-  window.deferredInstallPrompt.prompt();
-
-  const { outcome } = await window.deferredInstallPrompt.userChoice;
-
-  if (outcome === 'accepted') {
-    console.log("✅ App installata");
-  } else {
-    console.log("❌ Installazione rifiutata");
-  }
-
-  window.deferredInstallPrompt = null;
-  window.isInstallAvailable = false;
-}
- // ========= end CHAT GPT
-
-  
-  
-// 2. IL BIVIO PRINCIPALE (Intelligente e a prova di bomba)
+// 2. IL BIVIO A 3 OPZIONI
 function showInstallInfo() {
     if (deferredPrompt) {
+        // CASO A: Tasto Magico Disponibile (3 Bottoni)
         Swal.fire({
-            title: 'Installazione Rapida',
-            text: 'Il tuo dispositivo supporta l\'installazione automatica! Se preferisci, o se l\'automatico fallisce, puoi guardare il tutorial visivo.',
-            icon: 'success',
+            title: 'Salva l\'App',
+            text: 'Come preferisci procedere?',
+            icon: 'question',
+            showDenyButton: true,
             showCancelButton: true,
             confirmButtonText: '<i class="bi bi-magic"></i> Installa in 1-Click',
-            cancelButtonText: '<i class="bi bi-play-circle"></i> Guarda Tutorial',
-            confirmButtonColor: '#198754',
-            cancelButtonColor: '#0d6efd',
-            reverseButtons: true
+            denyButtonText: '<i class="bi bi-play-circle"></i> Tutorial Animato',
+            cancelButtonText: '<i class="bi bi-file-text"></i> Solo Testo',
+            confirmButtonColor: '#198754', // Verde (Azione principale)
+            denyButtonColor: '#0d6efd',    // Blu (Cinema)
+            cancelButtonColor: '#6c757d',  // Grigio (Testo)
+            reverseButtons: false,
+            customClass: { actions: 'flex-column gap-2', confirmButton: 'w-100 m-0', denyButton: 'w-100 m-0', cancelButton: 'w-100 m-0' }
         }).then(async (result) => {
             if (result.isConfirmed) {
+                // Spara il missile 1-click
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                
-                if (outcome === 'accepted') {
-                    console.log('App installata nativamente!');
-                    deferredPrompt = null; 
-                } else {
-                    apriBivioManuale();
-                }
+                if (outcome === 'accepted') deferredPrompt = null;
+                else apriCinema(); // Fallback automatico al Cinema se rifiuta/fallisce
+            } else if (result.isDenied) {
+                apriCinema();
             } else if (result.dismiss === Swal.DismissReason.cancel) {
-                apriBivioManuale();
+                new bootstrap.Modal(document.getElementById('installModal')).show();
             }
         });
-    } 
-    else {
-        apriBivioManuale();
+    } else {
+        // CASO B: iPhone o Firefox (2 Bottoni)
+        Swal.fire({
+            title: 'Salva l\'App',
+            text: 'Vuoi la guida rapida testuale o il tutorial visivo passo-passo?',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-play-circle-fill"></i> Tutorial Animato',
+            cancelButtonText: '<i class="bi bi-file-text"></i> Solo Testo',
+            confirmButtonColor: '#0d6efd',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) apriCinema();
+            else if (result.dismiss === Swal.DismissReason.cancel) new bootstrap.Modal(document.getElementById('installModal')).show();
+        });
     }
 }
 
-// 2.5 IL VECCHIO BIVIO (Il Cinema 3.0 di emergenza e per iPhone)
-function apriBivioManuale() {
+// 2.5 AVVIO DEL CINEMA (Con conferma)
+function apriCinema() {
+    const env = detectUserEnvironment();
     Swal.fire({
-        title: 'Installa Wildu',
-        text: 'Vuoi la guida rapida testuale o il tutorial visivo passo-passo?',
-        icon: 'info',
+        title: 'Verifica Dispositivo',
+        html: `Mi risulta che tu stia usando <b>${env.browser}</b> su <b>${env.deviceType} (${env.os})</b>.<br><br>È corretto?`,
+        icon: 'question',
         showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-play-circle-fill"></i> Tutorial Visivo',
-        cancelButtonText: '<i class="bi bi-file-text"></i> Solo Testo',
-        confirmButtonColor: '#0d6efd',
-        cancelButtonColor: '#2c3e50',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const env = detectUserEnvironment();
+        confirmButtonText: 'Sì, procedi',
+        cancelButtonText: 'No, cambia manuale',
+        confirmButtonColor: '#198754'
+    }).then((conf) => {
+        if (conf.isConfirmed) {
+            startTheater(env.deviceType, env.os, env.browser);
+        } else if (conf.dismiss === Swal.DismissReason.cancel) {
             Swal.fire({
-                title: 'Verifica Dispositivo',
-                html: `Mi risulta che tu stia usando <b>${env.browser}</b> su <b>${env.deviceType} (${env.os})</b>.<br><br>È corretto?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sì, è corretto',
-                cancelButtonText: 'No, cambia manuale',
-                confirmButtonColor: '#198754'
-            }).then((conf) => {
-                if (conf.isConfirmed) {
-                    startTheater(env.deviceType, env.os, env.browser);
-                } else if (conf.dismiss === Swal.DismissReason.cancel) {
-                    Swal.fire({
-                        title: 'Scegli il tuo ambiente',
-                        input: 'select',
-                        inputOptions: { 'Mobile_iOS_Safari': 'iPhone/iPad (Safari)', 'Mobile_Android_Chrome': 'Android (Chrome)', 'Mobile_Any_Firefox': 'Smartphone (Firefox)', 'Desktop_Any_Chrome': 'Computer PC/Mac (Chrome/Edge)', 'Desktop_Any_Firefox': 'Computer PC/Mac (Firefox)' },
-                        inputPlaceholder: 'Seleziona...',
-                        showCancelButton: true
-                    }).then((sel) => {
-                        if (sel.isConfirmed && sel.value) {
-                            const parts = sel.value.split('_');
-                            startTheater(parts[0], parts[1], parts[2]);
-                        }
-                    });
+                title: 'Scegli il tuo ambiente',
+                input: 'select',
+                inputOptions: { 'Mobile_iOS_Safari': 'iPhone/iPad (Safari)', 'Mobile_Android_Chrome': 'Android (Chrome)', 'Mobile_Any_Firefox': 'Smartphone (Firefox)', 'Desktop_Any_Chrome': 'PC (Chrome/Edge)', 'Desktop_Any_Firefox': 'PC (Firefox)' },
+                inputPlaceholder: 'Seleziona...',
+                showCancelButton: true
+            }).then((sel) => {
+                if (sel.isConfirmed && sel.value) {
+                    const parts = sel.value.split('_');
+                    startTheater(parts[0], parts[1], parts[2]);
                 }
             });
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            preparaInstallModal();
-new bootstrap.Modal(document.getElementById('installModal')).show();
         }
     });
 }
 
-// 3. I COPIONI DEL TEATRINO (Ricostruzioni fedeli)
+// 3. I COPIONI DEL TEATRINO (Ricostruzioni fedeli con Scorrimento)
 const theaterScripts = {
-    // 🍎 iOS SAFARI
+    // 🍎 iOS SAFARI (Condividi -> Scorrimento Pannello -> Aggiungi a Home)
     "Mobile_iOS_Safari": [
-        {
-            title: "Passo 1: Tocca Condividi", text: "Cerca l'icona **Condividi** nella barra in basso di Safari.",
-            html: `<div class="mock-browser"><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div><div class="mock-bar mock-bar-bottom px-4"><i class="bi bi-chevron-left text-muted"></i><i class="bi bi-chevron-right text-muted"></i><div class="blink-target p-2 position-relative"><i class="bi bi-box-arrow-up text-primary fs-4"></i><div class="mock-hand" style="right:-10px; bottom:-20px;">👆</div></div><i class="bi bi-book text-muted"></i><i class="bi bi-copy text-muted"></i></div></div>`
+        { 
+            title: "Passo 1: Tocca Condividi", 
+            text: "Cerca l'icona **Condividi** (il quadrato con la freccia) nella barra in basso.", 
+            html: `<div class="mock-browser"><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div><div class="mock-bar mock-bar-bottom px-4"><i class="bi bi-chevron-left text-muted"></i><i class="bi bi-chevron-right text-muted"></i><div class="blink-target p-2 position-relative"><i class="bi bi-box-arrow-up text-primary fs-4"></i><div class="mock-hand" style="right:-10px; bottom:-20px;">👆</div></div><i class="bi bi-book text-muted"></i><i class="bi bi-copy text-muted"></i></div></div>` 
         },
-        {
-            title: "Passo 2: Espandi il Menu", text: "Scorri e tocca la **'V' (Visualizza altro)** o l'icona **Opzioni**.",
-            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: -10px; left: 5%; width: 90%; height: 120px;"><div class="mock-menu-item text-muted"><i class="bi bi-link"></i> Copia Link</div><div class="mock-menu-item blink-target position-relative d-flex justify-content-between"><span><b>Opzioni azioni...</b></span><i class="bi bi-chevron-down text-primary fs-5"></i><div class="mock-hand" style="right: 5%; top: 5px;">👆</div></div></div></div>`
+        { 
+            title: "Passo 2: Scorri le Opzioni", 
+            text: "Si aprirà un pannello. **Scorri verso l'alto** per superare i tuoi contatti e le prime voci.", 
+            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: 0; left: 2%; width: 96%; height: 180px; border-radius: 16px 16px 0 0; animation: slideUpiOS 3s infinite;"><div class="p-3 text-center border-bottom"><div style="width:40px; height:5px; background:#bbb; border-radius:3px; margin:0 auto;"></div></div><div class="mock-menu-item text-primary"><i class="bi bi-link"></i> Copia link</div><div class="mock-menu-item text-muted"><i class="bi bi-eyeglasses"></i> Aggiungi a Elenco lettura</div><div class="mock-menu-item text-muted"><i class="bi bi-bookmark"></i> Aggiungi ai Segnalibri</div><div class="mock-menu-item text-muted"><i class="bi bi-star"></i> Aggiungi ai Preferiti</div><div class="mock-hand" style="right: 20px; bottom: 20px; animation: swipeUp 3s infinite;">👆</div></div></div><style>@keyframes slideUpiOS { 0% { transform: translateY(0); } 50% { transform: translateY(-80px); } 100% { transform: translateY(0); } }</style>` 
         },
-        {
-            title: "Passo 3: Aggiungi a Home", text: "Tocca **Aggiungi alla schermata Home** (quadrato col segno +).",
-            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: 10px; left: 5%; width: 90%; height: 160px;"><div class="mock-menu-item text-muted"><i class="bi bi-bookmark"></i> Aggiungi ai Segnalibri</div><div class="mock-menu-item blink-target position-relative"><i class="bi bi-plus-square text-dark fs-5"></i> <b>Aggiungi a schermata Home</b><div class="mock-hand" style="right: 5%; top: 10px;">👆</div></div><div class="mock-menu-item text-muted"><i class="bi bi-printer"></i> Stampa</div></div></div>`
+        { 
+            title: "Passo 3: Aggiungi a Home", 
+            text: "Verso il fondo, tocca **Aggiungi alla schermata Home** (il quadrato col segno +).", 
+            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: 0; left: 2%; width: 96%; height: 180px; border-radius: 16px 16px 0 0;"><div class="mock-menu-item text-muted" style="margin-top:-60px;"><i class="bi bi-star"></i> Aggiungi ai Preferiti</div><div class="mock-menu-item text-muted"><i class="bi bi-search"></i> Trova nella pagina</div><div class="mock-menu-item blink-target position-relative py-3"><i class="bi bi-plus-square text-dark fs-5"></i> <b>Aggiungi a schermata Home</b><div class="mock-hand" style="right: 5%; top: 15px;">👆</div></div><div class="mock-menu-item text-muted"><i class="bi bi-printer"></i> Stampa</div></div></div>` 
         }
     ],
-    // 🤖 ANDROID CHROME
+    // 🤖 ANDROID CHROME (3 Puntini -> Scorrimento -> Installa/Aggiungi)
     "Mobile_Android_Chrome": [
-        {
-            title: "Passo 1: Menu di Chrome", text: "Tocca i **Tre Puntini Verticali** in alto a destra.",
-            html: `<div class="mock-browser"><div class="mock-bar"><div class="bg-light rounded-pill px-3 py-1 w-75 text-start small text-muted"><i class="bi bi-lock-fill text-dark me-1"></i> wildu.it</div><div class="blink-target p-1 position-relative"><i class="bi bi-three-dots-vertical fs-4 text-dark"></i><div class="mock-hand" style="right: -5px; top: 15px;">👆</div></div></div><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div></div>`
+        { 
+            title: "Passo 1: Menu di Chrome", 
+            text: "Tocca i **Tre Puntini Verticali** in alto a destra.", 
+            html: `<div class="mock-browser"><div class="mock-bar"><div class="bg-light rounded-pill px-3 py-1 w-75 text-start small text-muted"><i class="bi bi-lock-fill text-dark me-1"></i> wildu.it</div><div class="blink-target p-1 position-relative"><i class="bi bi-three-dots-vertical fs-4 text-dark"></i><div class="mock-hand" style="right: -5px; top: 15px;">👆</div></div></div><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div></div>` 
         },
-        {
-            title: "Passo 2: Scorri il menu", text: "Scorri il menu verso il basso, tocca **Installa app** o **Aggiungi a Home**.",
-            html: `<div class="mock-browser"><div class="mock-bar border-0"><div class="bg-light rounded-pill w-75 p-2"></div><i class="bi bi-three-dots-vertical fs-4 text-dark"></i></div><div class="mock-content" style="align-items:flex-start; justify-content:flex-end;"><div class="mock-menu-panel shadow-lg" style="top: 0; right: 10px; width: 220px;"><div class="mock-menu-item text-muted"><i class="bi bi-google"></i> Traduci...</div><div class="mock-menu-item text-muted"><i class="bi bi-play-circle"></i> Ascolta questa pagina</div><div class="mock-menu-item blink-target position-relative py-3" style="background: rgba(13,110,253,0.05);"><div class="d-flex align-items-center gap-2"><b><i class="bi bi-phone"></i> Installa / <i class="bi bi-plus-square"></i> Home</b></div><div class="mock-hand" style="right: 15px; top: 15px;">👆</div></div><div class="mock-menu-item text-muted"><i class="bi bi-square"></i> Sito desktop</div></div></div></div>`
+        { 
+            title: "Passo 2: Scorri il menu", 
+            text: "Il menu si aprirà. **Scorri verso il basso** per trovare le voci nascoste in fondo.", 
+            html: `<div class="mock-browser"><div class="mock-bar border-0"><div class="bg-light rounded-pill w-75 p-2"></div><i class="bi bi-three-dots-vertical fs-4 text-dark"></i></div><div class="mock-content" style="align-items:flex-start; justify-content:flex-end;"><div class="mock-menu-panel shadow-lg" style="top: 0; right: 10px; width: 220px; animation: slideUpMenu 3s infinite;"><div class="mock-menu-item text-muted"><i class="bi bi-clock-history"></i> Cronologia</div><div class="mock-menu-item text-muted"><i class="bi bi-download"></i> Download</div><div class="mock-menu-item text-muted"><i class="bi bi-star"></i> Preferiti</div><div class="mock-menu-item text-muted"><i class="bi bi-share"></i> Condividi...</div><div class="mock-hand" style="right: 50px; bottom: -20px; animation: swipeUp 3s infinite;">👆</div></div></div></div><style>@keyframes slideUpMenu { 0% { transform: translateY(0); } 50% { transform: translateY(-80px); } 100% { transform: translateY(0); } } @keyframes swipeUp { 0% { transform: translateY(50px); opacity:0;} 20% { opacity:1;} 50% { transform: translateY(-30px); opacity:1;} 80% { opacity:0;} 100% {opacity:0;} }</style>` 
+        },
+        { 
+            title: "Passo 3: Installa App", 
+            text: "Cerca e tocca **Installa app** o **Aggiungi a schermata Home**.", 
+            html: `<div class="mock-browser"><div class="mock-bar border-0"><div class="bg-light rounded-pill w-75 p-2"></div><i class="bi bi-three-dots-vertical fs-4 text-dark"></i></div><div class="mock-content" style="align-items:flex-start; justify-content:flex-end;"><div class="mock-menu-panel shadow-lg" style="top: -80px; right: 10px; width: 220px;"><div class="mock-menu-item text-muted"><i class="bi bi-google"></i> Traduci...</div><div class="mock-menu-item text-muted"><i class="bi bi-play-circle"></i> Ascolta pagina</div><div class="mock-menu-item blink-target position-relative py-3" style="background: rgba(13,110,253,0.05);"><div class="d-flex align-items-center gap-2"><b><i class="bi bi-phone"></i> Installa / <br><i class="bi bi-plus-square"></i> Home</b></div><div class="mock-hand" style="right: 15px; top: 15px;">👆</div></div><div class="mock-menu-item text-muted"><i class="bi bi-square"></i> Sito desktop</div></div></div></div>` 
         }
     ],
-    // 🦊 FIREFOX MOBILE
+    // 🦊 FIREFOX MOBILE (Il Labirinto: Menu -> Condividi/Altro -> Scorrimento -> Aggiungi)
     "Mobile_Any_Firefox": [
-        {
-            title: "Passo 1: Menu Firefox", text: "Tocca il menu principale (i **Tre Puntini verticali** in basso o in alto).",
-            html: `<div class="mock-browser"><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div><div class="mock-bar mock-bar-bottom"><div class="bg-light rounded-pill px-3 py-1 w-75 text-start small text-muted">wildu.it</div><div class="blink-target p-1 position-relative"><i class="bi bi-three-dots-vertical fs-4 text-dark"></i><div class="mock-hand" style="right: -5px; bottom: 15px;">👆</div></div></div></div>`
+        { 
+            title: "Passo 1: Menu Firefox", 
+            text: "Tocca il menu principale (i **Tre Puntini verticali** in basso o in alto).", 
+            html: `<div class="mock-browser"><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div><div class="mock-bar mock-bar-bottom"><div class="bg-light rounded-pill px-3 py-1 w-75 text-start small text-muted">wildu.it</div><div class="blink-target p-1 position-relative"><i class="bi bi-three-dots-vertical fs-4 text-dark"></i><div class="mock-hand" style="right: -5px; bottom: 15px;">👆</div></div></div></div>` 
         },
-        {
-            title: "Passo 2: Condividi / Altro", text: "Tocca l'icona di **Condivisione** o i **Tre puntini Orizzontali (...)**.",
-            html: `<div class="mock-browser"><div class="mock-content" style="align-items:flex-end; justify-content:flex-end; padding-bottom: 60px;"><div class="mock-menu-panel shadow-lg" style="right: 10px; width: 200px;"><div class="mock-menu-item text-muted"><i class="bi bi-arrow-clockwise"></i> Ricarica</div><div class="mock-menu-item blink-target position-relative"><b><i class="bi bi-share"></i> Condividi...</b><div class="mock-hand" style="right: 10px; top: 10px;">👆</div></div></div></div><div class="mock-bar mock-bar-bottom"><div class="bg-light rounded-pill w-75 p-2"></div><i class="bi bi-three-dots-vertical fs-4 text-dark"></i></div></div>`
+        { 
+            title: "Passo 2: Condividi / Altro", 
+            text: "Tocca l'icona di **Condivisione** o la voce **Altro (Tre puntini orizzontali ...)**.", 
+            html: `<div class="mock-browser"><div class="mock-content" style="align-items:flex-end; justify-content:flex-end; padding-bottom: 60px;"><div class="mock-menu-panel shadow-lg" style="right: 10px; width: 200px;"><div class="mock-menu-item text-muted"><i class="bi bi-arrow-clockwise"></i> Ricarica</div><div class="mock-menu-item blink-target position-relative"><b><i class="bi bi-share"></i> Condividi... / Altro</b><div class="mock-hand" style="right: 10px; top: 10px;">👆</div></div><div class="mock-menu-item text-muted"><i class="bi bi-star"></i> Segnalibro</div></div></div><div class="mock-bar mock-bar-bottom"><div class="bg-light rounded-pill w-75 p-2"></div><i class="bi bi-three-dots-vertical fs-4 text-dark"></i></div></div>` 
         },
-        {
-            title: "Passo 3: Aggiungi a Home", text: "Tocca l'icona a forma di **casetta o schermo col segno +**.",
-            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: 0; left: 0; width: 100%; height: 180px; border-radius: 16px 16px 0 0;"><div class="p-3 fw-bold border-bottom">Condividi con...</div><div class="mock-menu-item text-muted"><i class="bi bi-link-45deg"></i> Copia link</div><div class="mock-menu-item blink-target position-relative py-3"><i class="bi bi-house-add fs-5 text-dark"></i> <b>Aggiungi a schermata Home</b><div class="mock-hand" style="right: 20px; top: 15px;">👆</div></div></div></div>`
+        { 
+            title: "Passo 3: Scorri le Opzioni", 
+            text: "Si aprirà un pannello di sistema. **Scorri verso l'alto** per superare Copia Link, Salva in PDF, ecc.", 
+            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: 0; left: 0; width: 100%; height: 180px; border-radius: 16px 16px 0 0; animation: slideUpiOS 3s infinite;"><div class="p-3 fw-bold border-bottom">Azione...</div><div class="mock-menu-item text-muted"><i class="bi bi-link-45deg"></i> Copia link</div><div class="mock-menu-item text-muted"><i class="bi bi-device-ssd"></i> Invia a dispositivo</div><div class="mock-menu-item text-muted"><i class="bi bi-file-pdf"></i> Salva in PDF</div><div class="mock-hand" style="right: 20px; bottom: 20px; animation: swipeUp 3s infinite;">👆</div></div></div>` 
+        },
+        { 
+            title: "Passo 4: Aggiungi a Home", 
+            text: "In fondo alla lista, tocca l'icona della **Casetta o Schermo col segno + (Aggiungi a schermata Home)**.", 
+            html: `<div class="mock-browser" style="background:#ddd;"><div class="mock-content"></div><div class="mock-menu-panel" style="bottom: 0; left: 0; width: 100%; height: 180px; border-radius: 16px 16px 0 0;"><div class="mock-menu-item text-muted" style="margin-top:-30px;"><i class="bi bi-device-ssd"></i> Invia a dispositivo</div><div class="mock-menu-item text-muted"><i class="bi bi-file-pdf"></i> Salva in PDF</div><div class="mock-menu-item blink-target position-relative py-3"><i class="bi bi-house-add fs-5 text-dark"></i> <b>Aggiungi a schermata Home</b><div class="mock-hand" style="right: 20px; top: 15px;">👆</div></div></div></div>` 
         }
     ],
-    // 💻 DESKTOP CHROME / EDGE
+    // 💻 DESKTOP CHROME / EDGE (Icona nella barra)
     "Desktop_Any_Chrome": [
-        {
-            title: "Installazione Veloce Desktop", text: "Nella **barra degli indirizzi**, clicca sull'icona del **Monitor**, poi 'Installa'.",
-            html: `<div class="mock-browser" style="height: 180px;"><div class="mock-bar" style="background: #eef1f5; border-bottom: 2px solid #ccc;"><div class="bg-white rounded-pill px-3 py-1 w-100 d-flex justify-content-between align-items-center shadow-sm" style="border: 1px solid #ddd;"><span class="small text-dark"><i class="bi bi-lock-fill text-muted me-2"></i>https://wildu.it</span><div class="d-flex gap-3 align-items-center"><div class="blink-target p-1 position-relative"><i class="bi bi-display text-dark fw-bold"></i><i class="bi bi-arrow-down-short text-dark position-absolute" style="left:8px; top:8px; font-size:0.6rem;"></i><div class="mock-mouse" style="right: -15px; top: 15px;">↖</div></div><i class="bi bi-star text-muted"></i></div></div></div><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-3">WILDU WEB APP</div></div></div>`
+        { 
+            title: "Installazione PC", 
+            text: "Nella **barra degli indirizzi**, clicca sull'icona del **Monitor**, poi 'Installa'.", 
+            html: `<div class="mock-browser" style="height: 180px;"><div class="mock-bar" style="background: #eef1f5; border-bottom: 2px solid #ccc;"><div class="bg-white rounded-pill px-3 py-1 w-100 d-flex justify-content-between align-items-center shadow-sm" style="border: 1px solid #ddd;"><span class="small text-dark"><i class="bi bi-lock-fill text-muted me-2"></i>https://wildu.it</span><div class="d-flex gap-3 align-items-center"><div class="blink-target p-1 position-relative"><i class="bi bi-display text-dark fw-bold"></i><i class="bi bi-arrow-down-short text-dark position-absolute" style="left:8px; top:8px; font-size:0.6rem;"></i><div class="mock-mouse" style="right: -15px; top: 15px;">↖</div></div><i class="bi bi-star text-muted"></i></div></div></div><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-3">WILDU WEB APP</div></div></div>` 
         }
     ],
-    // 🦊 DESKTOP FIREFOX
+    // 🦊 DESKTOP FIREFOX (Non supporta PWA)
     "Desktop_Any_Firefox": [
-        {
-            title: "Firefox Desktop (Segnalibri)", text: "Firefox per PC non supporta PWA. <br>Clicca la **Stella (⭐️)** per salvarla nei Segnalibri.",
-            html: `<div class="mock-browser" style="height: 180px;"><div class="mock-bar" style="background: #eef1f5; border-bottom: 2px solid #ccc;"><div class="bg-white rounded px-3 py-1 w-100 d-flex justify-content-between align-items-center shadow-sm" style="border: 1px solid #ddd;"><span class="small text-dark"><i class="bi bi-shield-lock-fill text-muted me-2"></i>https://wildu.it</span><div class="blink-target p-1 position-relative"><i class="bi bi-star text-dark fs-5"></i><div class="mock-mouse" style="right: -15px; top: 15px;">↖</div></div></div></div><div class="mock-content text-center px-4"><p class="text-danger small fw-bold mb-0"><i class="bi bi-exclamation-triangle"></i> PWA non supportata da Mozilla.</p></div></div>`
+        { 
+            title: "Firefox PC", 
+            text: "Firefox per PC non supporta l'installazione nativa. <br>Clicca la **Stella (⭐️)** per salvare nei Segnalibri.", 
+            html: `<div class="mock-browser" style="height: 180px;"><div class="mock-bar" style="background: #eef1f5; border-bottom: 2px solid #ccc;"><div class="bg-white rounded px-3 py-1 w-100 d-flex justify-content-between align-items-center shadow-sm" style="border: 1px solid #ddd;"><span class="small text-dark"><i class="bi bi-shield-lock-fill text-muted me-2"></i>https://wildu.it</span><div class="blink-target p-1 position-relative"><i class="bi bi-star text-dark fs-5"></i><div class="mock-mouse" style="right: -15px; top: 15px;">↖</div></div></div></div><div class="mock-content text-center px-4"><p class="text-danger small fw-bold mb-0"><i class="bi bi-exclamation-triangle"></i> PWA non supportata da Mozilla.</p></div></div>` 
         }
     ]
 };
@@ -1350,8 +1339,9 @@ const theaterScripts = {
 theaterScripts["Mobile_Any_Chrome"] = theaterScripts["Mobile_Android_Chrome"];
 theaterScripts["Desktop_iOS_Safari"] = theaterScripts["Mobile_iOS_Safari"];
 
-let currentInstallPath = []; let currentInstallStep = 0;
-
+let currentInstallPath = [];
+let currentInstallStep = 0;
+  
 // 4. REGIA: Inietta la Scena
 function startTheater(device, os, browser) {
     let key = `${device}_${os}_${browser}`;
@@ -3138,25 +3128,15 @@ function controllaSicurezzaNinja() {
 
 <div class="modal fade" id="installModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered text-dark">
-    <div class="modal-content rounded-4 border-0 shadow">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-body text-center p-4">
-        <h5 class="fw-bold mb-3">📱 Salva l'App sulla Home</h5>
-        <div id="install-choice-container" class="text-start bg-light p-3 rounded-3 small mb-4">
-  <!-- contenuto dinamico -->
-</div>
-        <div class="d-grid gap-2">
-
-  <!-- INSTALLAZIONE GUIDATA (COMPARE SOLO SE DISPONIBILE) -->
-  <button id="btn-install-app" class="btn btn-success rounded-pill w-100 fw-bold" style="display:none;" onclick="avviaInstallGuidata()">
-    📲 Installazione Guidata
-  </button>
-
-  <!-- TUTORIAL CLASSICO -->
-  <button type="button" class="btn btn-dark rounded-pill w-100 fw-bold" data-bs-dismiss="modal">
-    🎬 Tutorial Visivo
-  </button>
-
-</div>
+        <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-file-text"></i> Istruzioni Rapide</h5>
+        <div class="text-start bg-light p-3 rounded-3 small mb-4 border border-secondary">
+          <p class="mb-2"><strong>📱 Su iPhone (Safari):</strong><br>1. Tocca l'icona <b>Condividi</b> in basso (quadrato con freccia).<br>2. Scorri il menu e tocca <strong>"Aggiungi alla schermata Home"</strong>.</p>
+          <hr class="my-2">
+          <p class="mb-0"><strong>🤖 Su Android (Chrome):</strong><br>1. Tocca i <b>Tre Puntini (⋮)</b> in alto a destra.<br>2. Scorri e tocca <strong>"Installa App"</strong> o "Aggiungi a schermata Home".</p>
+        </div>
+        <button type="button" class="btn btn-dark rounded-pill w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
       </div>
     </div>
   </div>
@@ -3409,44 +3389,6 @@ function controllaSicurezzaNinja() {
 
 <script>
     let currentTutStep = 1;
-
-// ===== GUIDA INSTALLAZIONE (TESTO DINAMICO) =====
-function renderInstallInstructions() {
-    const box = document.getElementById('install-choice-container');
-    if (!box) return;
-
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isAndroid = /Android/i.test(navigator.userAgent);
-
-    if (isIOS) {
-        box.innerHTML = `
-        📱 iPhone:<br>
-        1. Tocca il tasto <b>Condividi</b><br>
-        2. Premi <b>"Aggiungi alla Home"</b>`;
-        
-    } else if (isAndroid) {
-        box.innerHTML = `
-        📱 Android:<br>
-        1. Tocca ⋮ (in alto a destra)<br>
-        2. Premi <b>"Installa App"</b>`;
-        
-    } else {
-        box.innerHTML = `
-        💻 Computer:<br>
-        1. Guarda vicino alla barra URL<br>
-        2. Clicca <b>"Installa"</b>`;
-    }
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById('installModal');
-    if (!modal) return;
-
-    modal.addEventListener('show.bs.modal', function () {
-        renderInstallInstructions();
-    });
-});
-
   
     function avviaTutorialWildu() {
         currentTutStep = 1;
