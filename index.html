@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v6.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v6.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.wildu-version-text').forEach(el => {
@@ -288,9 +288,8 @@ body {
     <h2 class="fw-bold text-white mb-3">Wildu Partner</h2>
     <p class="text-muted mb-4">Accedi con il tuo account Google per iniziare a configurare i tuoi eventi.</p>
     
-    <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 mb-4 shadow-sm" type="button" onclick="loginGoogle()">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2">
-      Accedi con Google
+  <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 mb-4 shadow-sm" type="button" disabled onclick="loginGoogle()">
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Verifica credenziali...
     </button>
 
     <div class="border-top border-secondary pt-3 mt-2">
@@ -300,8 +299,10 @@ body {
     </div>
   </div>
 
-  <p class="text-center text-muted small mt-4 mb-0 px-3" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    SISTEMA PARTNER HUB <span class="wildu-version-text text-info fw-bold"></span><br> || Wildu srl tour operator || <br>
+  <p class="text-center text-muted small mt-4 mb-0 px-3" style="letter-spacing: 1px;">
+   SISTEMA PARTNER HUB<br> 
+    <span class="wildu-version-text text-info fw-bold" style="user-select: none; -webkit-user-select: none; cursor: pointer; padding: 10px 5px; margin: -10px -5px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()"></span> 
+    || Wildu srl tour operator || <br>
     P.iva 02536770502
   </p>
 </div>
@@ -437,8 +438,10 @@ function goToStripe(tipo) {
     </button>
 </div>
   
-  <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-   SISTEMA PARTNER HUB <span class="wildu-version-text text-info fw-bold"></span><br> || Wildu srl tour operator || <br>
+  <p class="text-center text-muted small mt-5 mb-4" style="letter-spacing: 1px;">
+  SISTEMA PARTNER HUB<br> 
+    <span class="wildu-version-text text-info fw-bold" style="user-select: none; -webkit-user-select: none; cursor: pointer; padding: 10px 5px; margin: -10px -5px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()"></span> 
+    || Wildu srl tour operator || <br>
     P.iva 02536770502
   </p>
 </div>
@@ -1150,9 +1153,23 @@ function clearGallerySelection() {
 }
 
 function loginGoogle() { 
+  // 🛡️ 1. SCUDO ANTI-PANICO: Blocchiamo subito il bottone al click
+  const btn = document.getElementById('btn-login-google');
+  if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Accesso in corso...';
+  }
+
   // Forza Google a chiedere quale account usare
   provider.setCustomParameters({ prompt: 'select_account' });
-  auth.signInWithPopup(provider).catch(e => alert("Errore: " + e.message)); 
+  auth.signInWithPopup(provider).catch(e => {
+      // Se l'utente chiude la finestra o c'è un errore, sblocchiamo il bottone
+      if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2"> Accedi con Google';
+      }
+      alert("Errore: " + e.message);
+  }); 
 }
 
 auth.onAuthStateChanged(async (user) => {
@@ -1184,9 +1201,17 @@ auth.onAuthStateChanged(async (user) => {
       profileOverlay.style.display = 'flex';
     }
   } else {
+    // 👤 UTENTE NON LOGGATO
     authOverlay.style.display = 'flex';
     profileOverlay.style.display = 'none';
     document.getElementById('home-view').style.display = 'none';
+
+    // 🛡️ 2. RISVEGLIO DEL BOTTONE: Ora siamo sicuri che deve fare il login, sblocchiamo il tasto!
+    const btnLogin = document.getElementById('btn-login-google');
+    if (btnLogin) {
+        btnLogin.disabled = false;
+        btnLogin.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2"> Accedi con Google';
+    }
   }
   
   if (initScreen) {
