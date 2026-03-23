@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v6.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v6.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.wildu-version-text').forEach(el => {
@@ -342,16 +342,17 @@ function goToStripe(tipo) {
     }
   }
 
-  function aggiornaLimiteDalServer(data) {
+ function aggiornaLimiteDalServer(data) {
      if (data && data.config && data.config.limiteProposte && !isNaN(data.config.limiteProposte)) {
          MAX_PROPOSTE_ATTIVE = parseInt(data.config.limiteProposte, 10);
      } else {
          MAX_PROPOSTE_ATTIVE = 3; 
      }
      
-     if (data && data.config && data.config.logoUrl) {
-         const logoImg = document.getElementById('app-logo');
-         if (logoImg) {
+     // 🛡️ LOGICA LOGO BLINDATA
+     const logoImg = document.getElementById('app-logo');
+     if (logoImg) {
+         if (data && data.config && data.config.logoUrl && data.config.logoUrl.trim() !== "") {
              let finalUrl = String(data.config.logoUrl);
              const driveRegex = /drive\.google\.com\/file\/d\/([-_A-Za-z0-9]+)/;
              const match = finalUrl.match(driveRegex);
@@ -359,8 +360,17 @@ function goToStripe(tipo) {
                  finalUrl = "https://drive.google.com/thumbnail?id=" + match[1] + "&sz=w500";
              }
              logoImg.src = finalUrl;
-             logoImg.style.display = 'block'; 
+             
+             // Se il link fornito dal server è rotto, interviene il salvagente Javascript
+             logoImg.onerror = function() {
+                 this.onerror = null; // Evita loop infiniti
+                 this.src = 'https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png';
+             };
+         } else {
+             // Se non c'è un link nel Master, mettiamo quello di default a prescindere!
+             logoImg.src = 'https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png';
          }
+         logoImg.style.display = 'block'; 
      }
 
      // 👑 FIX CORONA: Accendiamo la filigrana in Home
@@ -373,6 +383,7 @@ function goToStripe(tipo) {
          }
      }
   }
+  
 </script>
 
 
@@ -1242,20 +1253,24 @@ async function saveFirstProfile() {
     document.getElementById('g_nome').value = nome;
     document.getElementById('g_tel').value = tel;
 
-    // 🚀 3. SINCRONIZZAZIONE IMMEDIATA: Forza il Master a creare la riga STANDARD
+    // 🧹 3. IL SEGRETO: DISTRUGGIAMO LA CACHE DEI FANTASMI!
+    // Così forziamo l'App a bussare al Master e imporgli i nuovi dati
+    sessionStorage.removeItem('wildu_cache_proposte');
+    sessionStorage.removeItem('wildu_cache_time');
+
+    // 🚀 4. SINCRONIZZAZIONE IMMEDIATA: Ora bussa al Master per davvero
     await checkProposalLimitAtStartup(user.uid);
 
     document.getElementById('profile-overlay').style.display = 'none';
     
     // 🟢 NUOVO FLUSSO ONBOARDING
-    // Mettiamo in tasca il bigliettino per fargli fare il tour
     sessionStorage.setItem('wildu_nuovo_partner_tour', 'true');
     
     alert("✅ Profilo creato! Benvenuto nella famiglia Wildu.");
     
     // Lo facciamo atterrare sulla Home (nascosta dal modale) e lanciamo subito il tutorial
     showPage('home');
-    setTimeout(() => { avviaTutorialWildu(); }, 800); // Piccolo ritardo elegante
+    setTimeout(() => { avviaTutorialWildu(); }, 800); 
     
   } catch (e) { 
     console.error(e);
