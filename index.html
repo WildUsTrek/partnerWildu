@@ -364,7 +364,7 @@ function goToStripe(tipo) {
   
   <div class="d-flex gap-2">
     <button class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" type="button" onclick="copyAppLink()"><i class="bi bi-share"></i> Condividi App</button>
-    <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" type="button" onclick="showInstallInfo()"><i class="bi bi-download"></i> Salva App</button>
+    <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" type="button" onclick="showInstallInfo()"><i class="bi bi-download"></i> Salva-App</button>
   </div>
 </div>  
 
@@ -419,7 +419,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.4 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.5 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -1273,9 +1273,9 @@ function openProfile() {
               <div class="p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
                   <p class="small text-light m-0 mb-1">${fraseStato}</p>
                   <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}${stringaDisdetta}</p>
-                  <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light p-3 rounded-pill fw-bold w-100 shadow-sm">
+                  <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light py-2 rounded-pill fw-bold w-100 shadow-sm text-nowrap" style="font-size: 0.9rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis;">
                   ⚙️ Gestisci / Disdici Abbonamento
-              </button>
+                  </button>
               </div>`; 
           }
       } else {
