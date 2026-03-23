@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v6.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v6.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.wildu-version-text').forEach(el => {
@@ -1382,17 +1382,21 @@ function closeProfile() { document.getElementById('edit-profile-overlay').style.
 // 🟢 AGGIORNA PROFILO: Sincronizzazione totale Firebase -> App UI -> Google Sheets
 async function updateProfile() {
   const user = auth.currentUser;
-  const nuovoNome = document.getElementById('edit_p_nome').value.trim();
-  const nuovoTel = document.getElementById('edit_p_tel').value.trim();
+  const inputNome = document.getElementById('edit_p_nome');
+  const inputTel = document.getElementById('edit_p_tel');
+  const nuovoNome = inputNome.value.trim();
+  const nuovoTel = inputTel.value.trim();
   
   if (!nuovoNome || !nuovoTel) return alert("⚠️ Inserisci tutti i campi!");
 
-  // 🛡️ SCUDO ANTI-PANICO: Blocchiamo il bottone e mostriamo il caricamento
+  // 🛡️ SCUDO ANTI-PANICO: Blocchiamo bottone E CAMPI di testo all'istante
   const btn = document.getElementById('btn-update-profile');
   if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
   }
+  if (inputNome) inputNome.disabled = true;
+  if (inputTel) inputTel.disabled = true;
 
   try {
     // 1. Aggiorna Firebase (Il database "veloce")
@@ -1419,11 +1423,13 @@ async function updateProfile() {
     console.error("Errore aggiornamento profilo:", e);
     alert("Errore nell'aggiornamento: " + e.message); 
   } finally {
-    // 🔓 SBLOCCO FINALE: Qualunque cosa succeda (successo o errore), rimettiamo il bottone a posto
+    // 🔓 SBLOCCO FINALE: Riapriamo tutto a operazione conclusa (con successo o errore)
     if (btn) {
         btn.disabled = false;
         btn.innerHTML = 'AGGIORNA DATI';
     }
+    if (inputNome) inputNome.disabled = false;
+    if (inputTel) inputTel.disabled = false;
   }
 }
   
