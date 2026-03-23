@@ -1208,14 +1208,21 @@ async function avviaInstallGuidata() {
 
   
 // =========================================================
-// 🪄 IL "TASTO MAGICO" (Integrazione Prompt Nativo)
+// 📲 INSTALL PROMPT HANDLER (PWA)
 // =========================================================
 let deferredPrompt = null;
 
-// Il browser avvisa l'App: "Ehi, sono pronto a installare in 1-click!"
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); 
-    deferredPrompt = e; 
+  e.preventDefault();
+  deferredPrompt = e;
+
+  console.log("📲 Installazione disponibile!");
+
+  // Attiva bottone nel tutorial se esiste
+  const btnInstall = document.getElementById('btn-install-app');
+  if (btnInstall) {
+    btnInstall.style.display = 'block';
+  }
 });
 
 // 2. IL BIVIO PRINCIPALE (Intelligente e a prova di bomba)
@@ -3156,7 +3163,19 @@ function controllaSicurezzaNinja() {
         <div id="install-choice-container" class="text-start bg-light p-3 rounded-3 small mb-4">
   <!-- contenuto dinamico -->
 </div>
-        <button type="button" class="btn btn-dark rounded-pill w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
+        <div class="d-grid gap-2">
+
+  <!-- INSTALLAZIONE GUIDATA (COMPARE SOLO SE DISPONIBILE) -->
+  <button id="btn-install-app" class="btn btn-success rounded-pill w-100 fw-bold" style="display:none;" onclick="installaApp()">
+    📲 Installazione Guidata
+  </button>
+
+  <!-- TUTORIAL CLASSICO -->
+  <button type="button" class="btn btn-dark rounded-pill w-100 fw-bold" data-bs-dismiss="modal">
+    🎬 Tutorial Visivo
+  </button>
+
+</div>
       </div>
     </div>
   </div>
