@@ -419,7 +419,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.6 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB v5.7 || Wildu srl tour operator ||   
     P.iva 02536770502
   </p>
 </div>
@@ -2411,9 +2411,25 @@ async function generaLocandinaFinale() {
 }
   
 function logout() {
-  if(confirm("Vuoi uscire dall'app?")) {
-    auth.signOut().then(() => { localStorage.removeItem('wildu_p_nome'); localStorage.removeItem('wildu_p_tel'); location.reload(); })
-    .catch(e => alert("Errore: " + e.message));
+  if(confirm("Vuoi davvero uscire dall'account?")) {
+    auth.signOut().then(() => { 
+      // ☢️ PULIZIA NUCLEARE TOTALE
+      sessionStorage.clear(); // Distrugge la cache VIP, le proposte e i timer
+      
+      // Elimina dal localStorage TUTTE le chiavi che iniziano per "wildu_"
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+          let key = localStorage.key(i);
+          if (key && key.startsWith('wildu_')) {
+              keysToRemove.push(key);
+          }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      
+      // Ricarica la pagina pulita
+      location.replace(window.location.pathname); 
+    })
+    .catch(e => alert("Errore in uscita: " + e.message));
   }
 }
 
