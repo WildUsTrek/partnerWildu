@@ -1136,6 +1136,25 @@ function copyAppLink() {
         });
     }
 }
+
+
+  // =========================================================
+// START CHAT GPT
+// =========================================================
+
+// =========================================================
+// 📱 PWA INSTALL MANAGER (Wildu)
+// =========================================================
+window.deferredInstallPrompt = null;
+window.isInstallAvailable = false;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window.deferredInstallPrompt = e;
+  window.isInstallAvailable = true;
+
+  console.log("📱 Installazione PWA disponibile");
+});
   
 // =========================================================
 // 🎬 CINEMA 3.0 - MOTORE TUTORIAL "SALVA APP"
@@ -1158,6 +1177,27 @@ function detectUserEnvironment() {
     return { deviceType, os, browser };
 }
 
+async function avviaInstallGuidata() {
+  if (!window.deferredInstallPrompt) {
+    alert("Installazione non disponibile.");
+    return;
+  }
+
+  window.deferredInstallPrompt.prompt();
+
+  const { outcome } = await window.deferredInstallPrompt.userChoice;
+
+  if (outcome === 'accepted') {
+    console.log("✅ App installata");
+  } else {
+    console.log("❌ Installazione rifiutata");
+  }
+
+  window.deferredInstallPrompt = null;
+  window.isInstallAvailable = false;
+} // ========= end CHAT GPT
+
+  
 // =========================================================
 // 🪄 IL "TASTO MAGICO" (Integrazione Prompt Nativo)
 // =========================================================
@@ -1245,7 +1285,8 @@ function apriBivioManuale() {
                 }
             });
         } else if (result.dismiss === Swal.DismissReason.cancel) {
-            new bootstrap.Modal(document.getElementById('installModal')).show();
+            preparaInstallModal();
+new bootstrap.Modal(document.getElementById('installModal')).show();
         }
     });
 }
@@ -3093,6 +3134,8 @@ function controllaSicurezzaNinja() {
         }
     }).catch(e => console.log("Errore Guardiano:", e));
 }
+
+
   
 </script>
 
@@ -3101,10 +3144,9 @@ function controllaSicurezzaNinja() {
     <div class="modal-content rounded-4 border-0 shadow">
       <div class="modal-body text-center p-4">
         <h5 class="fw-bold mb-3">📱 Salva l'App sulla Home</h5>
-        <div class="text-start bg-light p-3 rounded-3 small mb-4">
-          <strong>Su iPhone (Safari):</strong><br>1. Condividi.<br>2. <strong>"Aggiungi alla schermata Home"</strong>.<br><br>
-          <strong>Su Android (Chrome):</strong><br>1. Menu (tre puntini).<br>2. <strong>"Installa App"</strong> o "Aggiungi a Home".
-        </div>
+        <div id="install-choice-container" class="text-start bg-light p-3 rounded-3 small mb-4">
+  <!-- contenuto dinamico -->
+</div>
         <button type="button" class="btn btn-dark rounded-pill w-100 fw-bold" data-bs-dismiss="modal">Ho Capito</button>
       </div>
     </div>
