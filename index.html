@@ -16,13 +16,22 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v6.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.0"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll('.wildu-version-text').forEach(el => {
-        el.innerText = APP_VERSION;
-    });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('✅ Service Worker registrato', reg))
+      .catch(err => console.error('❌ SW errore:', err));
+  }
+
+  document.querySelectorAll('.wildu-version-text').forEach(el => {
+      el.innerText = APP_VERSION;
+  });
+
 });
+  
   const firebaseConfig = {
     apiKey: "AIzaSyDIPgFA_caKIMHFgEa-enO4Jk0d7eTCFLI",
     authDomain: "wild-u-server.firebaseapp.com",
