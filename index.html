@@ -16,6 +16,13 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+  const APP_VERSION = "v6.0"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.wildu-version-text').forEach(el => {
+        el.innerText = APP_VERSION;
+    });
+});
   const firebaseConfig = {
     apiKey: "AIzaSyDIPgFA_caKIMHFgEa-enO4Jk0d7eTCFLI",
     authDomain: "wild-u-server.firebaseapp.com",
@@ -281,7 +288,7 @@ body {
     <h2 class="fw-bold text-white mb-3">Wildu Partner</h2>
     <p class="text-muted mb-4">Accedi con il tuo account Google per iniziare a configurare i tuoi eventi.</p>
     
-    <button class="btn btn-light rounded-pill w-100 fw-bold p-3 mb-4 shadow-sm" type="button" onclick="loginGoogle()">
+    <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 mb-4 shadow-sm" type="button" onclick="loginGoogle()">
       <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2">
       Accedi con Google
     </button>
@@ -291,8 +298,12 @@ body {
             <i class="bi bi-whatsapp text-success fs-5"></i> Problemi all'accesso? Contattaci!
         </a>
     </div>
-
   </div>
+
+  <p class="text-center text-muted small mt-4 mb-0 px-3" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
+    || SISTEMA PARTNER HUB <span class="wildu-version-text text-info fw-bold"></span> || Wildu srl tour operator || <br>
+    P.iva 02536770502
+  </p>
 </div>
 
 <div id="profile-overlay" class="loader-overlay" style="display: none;">
@@ -427,7 +438,7 @@ function goToStripe(tipo) {
 </div>
   
   <p class="text-center text-muted small mt-5 mb-4" style="user-select: none; -webkit-user-select: none; letter-spacing: 1px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()">
-    || SISTEMA PARTNER HUB v5.9 || Wildu srl tour operator ||   
+    || SISTEMA PARTNER HUB <span class="wildu-version-text text-info fw-bold"></span> || Wildu srl tour operator || <br>
     P.iva 02536770502
   </p>
 </div>
