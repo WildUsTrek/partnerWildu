@@ -1185,7 +1185,7 @@ function detectUserEnvironment() {
 
 async function avviaInstallGuidata() {
   if (!window.deferredInstallPrompt) {
-    alert("Installazione non disponibile.");
+    alert("👉 Premi ⋮ in alto a destra e poi 'Aggiungi alla schermata Home'");
     return;
   }
 
@@ -1201,45 +1201,10 @@ async function avviaInstallGuidata() {
 
   window.deferredInstallPrompt = null;
   window.isInstallAvailable = false;
-} // ========= end CHAT GPT
+}
+ // ========= end CHAT GPT
 
   
-// =========================================================
-// 📲 INSTALL PROMPT HANDLER (PWA)
-// =========================================================
-let deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-
-  console.log("📲 Installazione disponibile!");
-
-  // Attiva bottone nel tutorial se esiste
-  const btnInstall = document.getElementById('btn-install-app');
-  if (btnInstall) {
-    btnInstall.style.display = 'block';
-  }
-});
-
-function installaApp() {
-    if (!deferredPrompt) {
-        alert("⚠️ Installazione non disponibile su questo dispositivo");
-        return;
-    }
-
-    deferredPrompt.prompt();
-
-    deferredPrompt.userChoice.then(choice => {
-        if (choice.outcome === 'accepted') {
-            console.log("✅ App installata");
-        } else {
-            console.log("❌ Installazione rifiutata");
-        }
-        deferredPrompt = null;
-    });
-}
-
   
 // 2. IL BIVIO PRINCIPALE (Intelligente e a prova di bomba)
 function showInstallInfo() {
@@ -3182,7 +3147,7 @@ function controllaSicurezzaNinja() {
         <div class="d-grid gap-2">
 
   <!-- INSTALLAZIONE GUIDATA (COMPARE SOLO SE DISPONIBILE) -->
-  <button id="btn-install-app" class="btn btn-success rounded-pill w-100 fw-bold" style="display:none;" onclick="installaApp()">
+  <button id="btn-install-app" class="btn btn-success rounded-pill w-100 fw-bold" style="display:none;" onclick="avviaInstallGuidata()">
     📲 Installazione Guidata
   </button>
 
