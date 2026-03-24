@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.0"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1493,7 +1493,7 @@ if (compressedFile.size > 5 * 1024 * 1024) {
   throw new Error("IMAGE_TOO_BIG_OPTIONAL");
 }
 
-// 🔴 NUOVO: calcola i tags e chiedi firma al Postino
+// 🔴 NUOVO: chiedi firma al Postino (con Tags e URL corretti)
   let signatureData;
 
   try {
@@ -1504,16 +1504,16 @@ if (compressedFile.size > 5 * 1024 * 1024) {
       return "";
     }
 
-    const token = await user.getIdToken();
-
-    // 🟢 PREPARIAMO I TAGS DA INVIARE PER LA FIRMA
+    // 🟢 CALCOLO TAGS PRIMA DELLA FIRMA
     const shareCheckbox = document.getElementById('condividi_foto_community');
     let uploadTags = getGuideTag(); 
     if (shareCheckbox && shareCheckbox.checked) {
       uploadTags = 'archivio_wildu,' + uploadTags;
     }
 
-    const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+    const token = await user.getIdToken();
+
+    const res = await fetch(MOTORE_API_URL, {
       method: "POST",
       body: JSON.stringify({
         action: "GET_CLOUDINARY_SIGNATURE",
@@ -1526,8 +1526,10 @@ if (compressedFile.size > 5 * 1024 * 1024) {
 
     if (!signatureData.success) {
       console.warn("Token fallito, retry...");
-      const tokenRetry = await user.getIdToken(true);
-      const resRetry = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+      // 🔥 IL VERO REFRESH SI FA PASSANDO TRUE
+      const tokenRetry = await user.getIdToken(true); 
+      
+      const resRetry = await fetch(MOTORE_API_URL, {
         method: "POST",
         body: JSON.stringify({
           action: "GET_CLOUDINARY_SIGNATURE",
@@ -1535,6 +1537,7 @@ if (compressedFile.size > 5 * 1024 * 1024) {
           tags: uploadTags
         })
       });
+
       signatureData = await resRetry.json();
     }
 
