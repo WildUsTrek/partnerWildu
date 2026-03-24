@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v8.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -3290,8 +3290,15 @@ async function deleteSelectedImage() {
 
   try {
 
-    const token = await firebase.auth().currentUser.getIdToken();
+const user = firebase.auth().currentUser;
 
+if (!user) {
+  alert("Utente non pronto");
+  return;
+}
+
+const token = await user.getIdToken(true); // 🔥 forza refresh
+    
     const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
   method: "POST",
   body: JSON.stringify({
