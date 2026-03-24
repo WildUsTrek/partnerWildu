@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v8.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1494,29 +1494,40 @@ if (compressedFile.size > 5 * 1024 * 1024) {
 }
 
   // 🔴 NUOVO: chiedi firma al Postino
-  let signatureData;
-  try {
-    const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
-  method: "POST",
-  body: JSON.stringify({
-    action: "GET_CLOUDINARY_SIGNATURE",
-    token: await firebase.auth().currentUser.getIdToken()
-  })
-});
+ let signatureData;
 
-    signatureData = await res.json();
+try {
 
-    console.log("SIGNATURE RESPONSE:", signatureData);
+  const user = firebase.auth().currentUser;
 
-    if (!signatureData.signature) {
-      alert("Errore firma upload");
-      return "";
-    }
-
-  } catch (e) {
-    alert("Errore connessione");
+  if (!user) {
+    alert("Utente non pronto, riprova");
     return "";
   }
+
+  const token = await user.getIdToken(true);
+
+  const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+    method: "POST",
+    body: JSON.stringify({
+      action: "GET_CLOUDINARY_SIGNATURE",
+      token: token
+    })
+  });
+
+  signatureData = await res.json();
+
+  console.log("SIGNATURE RESPONSE:", signatureData);
+
+  if (!signatureData.signature) {
+    alert(signatureData.error || "Errore firma upload");
+    return "";
+  }
+
+} catch (e) {
+  alert("Errore connessione");
+  return "";
+}
 
   const formData = new FormData();
   formData.append('file', compressedFile);
