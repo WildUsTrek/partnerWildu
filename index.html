@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v8.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1089,7 +1089,26 @@ try {
   }
 
 } catch (e) {
-  console.error("Errore foto:", e);
+
+  if (e.message === "IMAGE_TOO_BIG_OPTIONAL") {
+
+    loader.style.display = 'none';
+
+    const scelta = confirm(
+      "⚠️ L'immagine è troppo grande.\n\nVuoi inviare la proposta SENZA immagine?"
+    );
+
+    if (scelta) {
+      fotoUrl = ""; // 🔥 invia senza immagine
+    } else {
+      return; // 🔥 annulla invio
+    }
+
+  } else {
+    console.error("Errore foto:", e);
+    loader.style.display = 'none';
+    return;
+  }
 }
 
     
@@ -1463,8 +1482,15 @@ async function uploadToCloudinary() {
 
   // 🔥 controllo DOPO compressione
 if (compressedFile.size > 5 * 1024 * 1024) {
-  alert("Immagine troppo grande anche dopo ottimizzazione");
-  return "";
+
+  const scelta = confirm("⚠️ L'immagine è troppo grande.\n\nVuoi selezionarne un'altra?");
+
+  if (scelta) {
+    resetImage(); // 🔥 pulisce preview e input
+  }
+
+  // 🔴 BLOCCA COMPLETAMENTE
+  throw new Error("IMAGE_TOO_BIG_OPTIONAL");
 }
 
   // 🔴 NUOVO: chiedi firma al Postino
