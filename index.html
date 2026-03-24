@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v8.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1459,12 +1459,13 @@ async function uploadToCloudinary() {
     return "";
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    alert("Immagine troppo grande (max 5MB)");
-    return "";
-  }
-
   const compressedFile = await compressImage(file);
+
+  // 🔥 controllo DOPO compressione
+if (compressedFile.size > 5 * 1024 * 1024) {
+  alert("Immagine troppo grande anche dopo ottimizzazione");
+  return "";
+}
 
   // 🔴 NUOVO: chiedi firma al Postino
   let signatureData;
