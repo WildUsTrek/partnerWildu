@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.0"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1493,46 +1493,50 @@ if (compressedFile.size > 5 * 1024 * 1024) {
   throw new Error("IMAGE_TOO_BIG_OPTIONAL");
 }
 
-  // 🔴 NUOVO: chiedi firma al Postino
- let signatureData;
+// 🔴 NUOVO: calcola i tags e chiedi firma al Postino
+  let signatureData;
 
-try {
+  try {
+    const user = firebase.auth().currentUser;
 
-  const user = firebase.auth().currentUser;
+    if (!user) {
+      alert("Utente non pronto, riprova");
+      return "";
+    }
 
-  if (!user) {
-    alert("Utente non pronto, riprova");
-    return "";
-  }
+    const token = await user.getIdToken();
 
-  const token = await user.getIdToken();
+    // 🟢 PREPARIAMO I TAGS DA INVIARE PER LA FIRMA
+    const shareCheckbox = document.getElementById('condividi_foto_community');
+    let uploadTags = getGuideTag(); 
+    if (shareCheckbox && shareCheckbox.checked) {
+      uploadTags = 'archivio_wildu,' + uploadTags;
+    }
 
-  const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
-    method: "POST",
-    body: JSON.stringify({
-      action: "GET_CLOUDINARY_SIGNATURE",
-      token: token
-    })
-  });
+    const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "GET_CLOUDINARY_SIGNATURE",
+        token: token,
+        tags: uploadTags
+      })
+    });
 
-  signatureData = await res.json();
+    signatureData = await res.json();
 
-  if (!signatureData.success) {
-
-  console.warn("Token fallito, retry...");
-
-  const tokenRetry = await user.getIdToken();
-
-  const resRetry = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
-    method: "POST",
-    body: JSON.stringify({
-      action: "GET_CLOUDINARY_SIGNATURE",
-      token: tokenRetry
-    })
-  });
-
-  signatureData = await resRetry.json();
-}
+    if (!signatureData.success) {
+      console.warn("Token fallito, retry...");
+      const tokenRetry = await user.getIdToken(true);
+      const resRetry = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "GET_CLOUDINARY_SIGNATURE",
+          token: tokenRetry,
+          tags: uploadTags
+        })
+      });
+      signatureData = await resRetry.json();
+    }
 
   console.log("SIGNATURE RESPONSE:", signatureData);
 
@@ -1555,14 +1559,8 @@ try {
   formData.append('signature', signatureData.signature);
   formData.append('folder', signatureData.folder);
 
-  const shareCheckbox = document.getElementById('condividi_foto_community');
-  let tags = getGuideTag(); 
-
-  if (shareCheckbox && shareCheckbox.checked) {
-    tags = 'archivio_wildu,' + tags;
-  }
-
-  formData.append('tags', tags);
+// 🟢 I Tags sono già stati firmati dal Postino, usiamo quelli
+  formData.append('tags', signatureData.tags);
 
   const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', {
     method: 'POST',
@@ -3352,7 +3350,7 @@ if (!user) {
   return;
 }
 
-const token = await user.getIdToken(); // 🔥 forza refresh
+const token = await user.getIdToken(true); // 🔥 forza refresh
     
     const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
   method: "POST",
