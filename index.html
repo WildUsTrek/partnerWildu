@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v7.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -352,6 +352,11 @@ body {
 <script>
   const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
   let MAX_PROPOSTE_ATTIVE = 3;
+
+  // --- MOTORE CACHE-FIRST E SICUREZZA (Wildu 2.0) ---
+  window.wilduFetchCounter = 0;
+  window.lastServerSync = 0;
+  const SYNC_COOLDOWN = 45000; // 45 secondi di respiro tra chiamate in background
 
 function goToStripe(tipo) {
     const user = firebase.auth().currentUser;
