@@ -1559,11 +1559,6 @@ async function loadGallery(tipo) {
        class="gallery-img rounded-3 shadow-sm" 
        style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;" 
        onclick="selectGalleryImage(this, '${imgUrl}', '${img.public_id}')">
-
-  <button onclick="deleteImage('${img.public_id}')" 
-          style="position:absolute; top:2px; right:2px; background:red; color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer;">
-    ✕
-  </button>
 </div>`;
     });
     html += '</div>';
@@ -3267,33 +3262,46 @@ async function controllaSicurezzaNinja() {
     }).catch(e => console.log("Errore Guardiano:", e));
 }
 
-async function deleteImage(publicId) {
-  if (!confirm("Eliminare questa immagine?")) return;
+async function deleteSelectedImage() {
+
+  if (!window.selectedPublicId) {
+    alert("Nessuna immagine selezionata");
+    return;
+  }
+
+  if (!confirm("Vuoi eliminare questa immagine?")) return;
 
   try {
+
     const token = await firebase.auth().currentUser.getIdToken();
 
-    const res = await fetch("https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec", {
+    const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         action: "DELETE_IMAGE",
-        token: token,
-        public_id: publicId
+        public_id: window.selectedPublicId,
+        token: token
       })
     });
 
     const data = await res.json();
 
     if (!data.success) {
-      alert("Errore eliminazione");
+      alert(data.error || "Errore eliminazione");
       return;
     }
 
     alert("Immagine eliminata");
+
     loadGallery('mie');
+
+    window.selectedPublicId = null;
+
+    let btn = document.getElementById("delete_image_btn");
+    if (btn) btn.style.display = "none";
 
   } catch (e) {
     alert("Errore connessione");
