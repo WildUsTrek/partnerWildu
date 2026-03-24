@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.8"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v8.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1505,7 +1505,7 @@ try {
     return "";
   }
 
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
     method: "POST",
@@ -1516,6 +1516,23 @@ try {
   });
 
   signatureData = await res.json();
+
+  if (!signatureData.success) {
+
+  console.warn("Token fallito, retry...");
+
+  const tokenRetry = await user.getIdToken();
+
+  const resRetry = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+    method: "POST",
+    body: JSON.stringify({
+      action: "GET_CLOUDINARY_SIGNATURE",
+      token: tokenRetry
+    })
+  });
+
+  signatureData = await resRetry.json();
+}
 
   console.log("SIGNATURE RESPONSE:", signatureData);
 
@@ -3335,7 +3352,7 @@ if (!user) {
   return;
 }
 
-const token = await user.getIdToken(true); // 🔥 forza refresh
+const token = await user.getIdToken(); // 🔥 forza refresh
     
     const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
   method: "POST",
