@@ -616,7 +616,21 @@ function goToStripe(tipo) {
             </div>
           </div>
         </div>
-        <div class="tab-pane fade" id="pane-mie" role="tabpanel"><div id="gallery-mie" class="p-3 rounded-3" style="background: #161616; min-height: 150px;"></div></div>
+        <div class="tab-pane fade" id="pane-mie" role="tabpanel">
+
+  <!-- 🔴 BOTTONE ELIMINA -->
+  <div class="text-center mb-2">
+    <button id="delete_image_btn"
+            class="btn btn-danger"
+            style="display:none"
+            onclick="deleteSelectedImage()">
+      🗑️ Elimina immagine selezionata
+    </button>
+  </div>
+
+  <div id="gallery-mie" class="p-3 rounded-3" style="background: #161616; min-height: 150px;"></div>
+
+</div>
         <div class="tab-pane fade" id="pane-archivio" role="tabpanel"><div id="gallery-archivio" class="p-3 rounded-3" style="background: #161616; min-height: 150px;"></div></div>
       </div>
       <div class="d-flex gap-2 mt-4">
@@ -1411,6 +1425,9 @@ function resetImage() {
   document.getElementById('preview_container').style.display = 'none';
   document.getElementById('upload_prompt').style.display = 'block';
   selectedGalleryUrl = "";
+  let deleteBtn = document.getElementById("delete_image_btn");
+  if (deleteBtn) deleteBtn.style.display = "none";
+  window.selectedPublicId = null;
 }
 
 async function uploadToCloudinary() {
@@ -1561,8 +1578,17 @@ function selectGalleryImage(imgElement, url, publicId) {
   imgElement.style.borderColor = '#0d6efd';
   selectedGalleryUrl = url;
   selectedPublicId = publicId;
+
+  // 🔴 mostra bottone elimina
+let deleteBtn = document.getElementById("delete_image_btn");
+if (deleteBtn) deleteBtn.style.display = "block";
+
+// 🔴 salva public_id (estratto dall'URL)
+window.selectedPublicId = url.split('/upload/')[1].split('/').slice(1).join('/').split('.')[0];
+  
 }
 
+  
 function clearGallerySelection() {
   selectedGalleryUrl = "";
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
