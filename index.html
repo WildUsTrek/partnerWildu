@@ -1011,12 +1011,17 @@ function renderEquipmentSteps() {
     else window.open(mapsUrl, '_blank');
   }
 
-  function autoFetchRegion() {
+async function autoFetchRegion() {
     const l = document.getElementById('od_luogo_nome').value.trim();
     const s = document.getElementById('od_regione');
     if(!l || s.value !== "") return; 
     s.classList.add('auto-calculating');
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', token: "WILDU_TOKEN_2026_XYZ", luogo: l }) })
+    
+    // 🛡️ GENERA TOKEN SICURO
+    const user = firebase.auth().currentUser;
+    const safeToken = user ? await user.getIdToken() : "GUEST";
+
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', token: safeToken, luogo: l }) })
     .then(r => r.json()).then(d => {
       s.classList.remove('auto-calculating');
       if(d.regione) s.value = d.regione;
@@ -1083,10 +1088,15 @@ function renderEquipmentSteps() {
       let n = document.getElementById('note_' + cb.id).value.trim();
       if(cb.checked || n !== "") eqArray.push({ item: cb.value, note: n });
     });
+    
     payload.attrezzaturaJson = JSON.stringify(eqArray);
 
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: "WILDU_TOKEN_2026_XYZ", payload: payload }) })
+    // 🛡️ GENERA TOKEN SICURO
+    const safeToken = await currentUser.getIdToken();
+
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: safeToken, payload: payload }) })
     .then(r => r.json())
+      
     .then(res => {
       if(res.success) {
         localStorage.setItem('wildu_p_nome', payload.guidaNome);
@@ -1892,9 +1902,13 @@ async function checkProposalLimitAtStartup(uid) {
         const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
         const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
+        // 🛡️ GENERA TOKEN SICURO
+        const currentUser = firebase.auth().currentUser;
+        const safeToken = currentUser ? await currentUser.getIdToken() : "GUEST";
+
         const response = await fetch(MOTORE_API_URL, { 
             method: 'POST', 
-            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: uid, nome: nomeG, tel: telG }) 
+            body: JSON.stringify({ action: "getUserData", token: safeToken, uid: uid, nome: nomeG, tel: telG }) 
         });
         
         if (myFetchId !== window.wilduFetchCounter) return;
@@ -2456,7 +2470,11 @@ async function annullaProposta(itemEncoded) {
 
   document.getElementById('loader').style.display = 'flex';
   try {
-    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "DELETE_PENDING", token: "WILDU_TOKEN_2026_XYZ", payload: { tempId: item.tempId } }) });
+    
+// 🛡️ GENERA TOKEN SICURO
+    const safeToken = await user.getIdToken();
+    const response = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: "DELETE_PENDING", token: safeToken, payload: { tempId: item.tempId } }) });    
+    
     const res = await response.json();
     if(res.success) {
       sessionStorage.removeItem('wildu_cache_proposte');
@@ -3008,20 +3026,23 @@ document.addEventListener("visibilitychange", function() {
     else console.log("🥷 Ronda Silenziosa (60s). Controllo passivo.");
 
     // 4. Esecuzione (Ritardo anti-amnesia Firebase)
-    setTimeout(() => {
+    setTimeout(async () => {
         const user = auth.currentUser;
         if (!user) return; 
 
         const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
         const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-        // 🛡️ RACE CONDITION GUARD: Firma digitale di questa ronda
+        // 🛡️ RACE CONDITION GUARD E TOKEN SICURO
         const myFetchId = ++window.wilduFetchCounter;
+        const safeToken = await user.getIdToken();
 
         fetch(MOTORE_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
+            body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
         })
+
+          
         .then(r => r.json())
         .then(data => {
             // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
@@ -3090,27 +3111,29 @@ document.addEventListener("visibilitychange", function() {
 // =========================================================
 // 🥷 NINJA GUARDIANO (Protegge le porte Profilo e Modulo)
 // =========================================================
-function controllaSicurezzaNinja() {
-    // 1. Lo Scudo: Manteniamo i 60 secondi in comune con l'altro Ninja!
-    const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
-    if (Date.now() - ultimoControllo < 60000) return; 
-    
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-    
-    sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
-    console.log("🥷 Ninja Guardiano: Controllo i permessi di nascosto...");
-    
-    const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+async function controllaSicurezzaNinja() {
+    // 1. Lo Scudo: Manteniamo i 60 secondi in comune con l'altro Ninja!
+    const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
+    if (Date.now() - ultimoControllo < 60000) return; 
+    
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
+    console.log("🥷 Ninja Guardiano: Controllo i permessi di nascosto...");
+    
+    const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
     const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
     
-    // 🛡️ RACE CONDITION GUARD: Firma digitale di questa ronda
+    // 🛡️ RACE CONDITION GUARD E TOKEN SICURO
     const myFetchId = ++window.wilduFetchCounter;
+    const safeToken = await user.getIdToken();
 
     fetch(MOTORE_API_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
+        body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
     })
+      
     .then(r => r.json())
     .then(data => {
         // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
