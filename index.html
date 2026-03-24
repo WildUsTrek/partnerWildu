@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v8.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v8.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1449,7 +1449,6 @@ function resetImage() {
 }
 
 async function uploadToCloudinary() {
-  console.log("SIGNATURE RESPONSE:", signatureData);
   const fileInput = document.getElementById('foto_input');
   if (fileInput.files.length === 0) return ""; 
 
@@ -1479,6 +1478,8 @@ async function uploadToCloudinary() {
 });
 
     signatureData = await res.json();
+
+    console.log("SIGNATURE RESPONSE:", signatureData);
 
     if (!signatureData.signature) {
       alert("Errore firma upload");
