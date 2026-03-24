@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v7.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1416,20 +1416,83 @@ function resetImage() {
 async function uploadToCloudinary() {
   const fileInput = document.getElementById('foto_input');
   if (fileInput.files.length === 0) return ""; 
+
   const file = fileInput.files[0];
+
+  if (!['image/jpeg','image/png','image/jpg'].includes(file.type)) {
+    alert("Seleziona un'immagine valida");
+    return "";
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Immagine troppo grande (max 5MB)");
+    return "";
+  }
+
   const compressedFile = await compressImage(file);
+
+  // 🔴 NUOVO: chiedi firma al Postino
+  let signatureData;
+  try {
+    const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "GET_CLOUDINARY_SIGNATURE",
+        token: await firebase.auth().currentUser.getIdToken()
+      })
+    });
+
+    signatureData = await res.json();
+
+    if (!signatureData.signature) {
+      alert("Errore firma upload");
+      return "";
+    }
+
+  } catch (e) {
+    alert("Errore connessione");
+    return "";
+  }
+
   const formData = new FormData();
   formData.append('file', compressedFile);
-  formData.append('upload_preset', 'WILDU_s'); 
-  formData.append('cloud_name', 'daiyrgmbb');
+
+  // 🔴 sostituisce upload_preset
+  formData.append('api_key', signatureData.apiKey);
+  formData.append('timestamp', signatureData.timestamp);
+  formData.append('signature', signatureData.signature);
+  formData.append('folder', signatureData.folder);
+
   const shareCheckbox = document.getElementById('condividi_foto_community');
   let tags = getGuideTag(); 
-  if (shareCheckbox && shareCheckbox.checked) { tags = 'archivio_wildu,' + tags; }
+
+  if (shareCheckbox && shareCheckbox.checked) {
+    tags = 'archivio_wildu,' + tags;
+  }
+
   formData.append('tags', tags);
 
-  const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', { method: 'POST', body: formData });
+  const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!resp.ok) {
+    alert("Errore upload");
+    return "";
+  }
+
   const data = await resp.json();
-  return data.secure_url; 
+
+  if (!data.secure_url) {
+    alert("Upload fallito");
+    return "";
+  }
+
+  return data.secure_url;
 }
 
 function compressImage(file) {
@@ -1472,18 +1535,32 @@ async function loadGallery(tipo) {
     if (!data.resources || data.resources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
     let html = '<div class="d-flex flex-wrap gap-2 justify-content-center">';
     data.resources.forEach(img => {
-      let imgUrl = `https://res.cloudinary.com/daiyrgmbb/image/upload/v${img.version}/${img.public_id}.${img.format}`;
-      html += `<img src="${imgUrl}" class="gallery-img rounded-3 shadow-sm" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;" onclick="selectGalleryImage(this, '${imgUrl}')">`;
+      let imgUrl = `https://res.cloudinary.com/daiyrgmbb/image/upload/w_800,c_limit,q_auto,f_auto/v${img.version}/${img.public_id}.${img.format}`;
+      html += `
+<div style="position: relative; display:inline-block;">
+  <img src="${imgUrl}" 
+       class="gallery-img rounded-3 shadow-sm" 
+       style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;" 
+       onclick="selectGalleryImage(this, '${imgUrl}', '${img.public_id}')">
+
+  <button onclick="deleteImage('${img.public_id}')" 
+          style="position:absolute; top:2px; right:2px; background:red; color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer;">
+    ✕
+  </button>
+</div>`;
     });
     html += '</div>';
     container.innerHTML = html;
   } catch (err) { container.innerHTML = `<p class="text-danger small mt-4">Errore di connessione.</p>`; }
 }
 
-function selectGalleryImage(imgElement, url) {
+let selectedPublicId = "";
+
+function selectGalleryImage(imgElement, url, publicId) {
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
   imgElement.style.borderColor = '#0d6efd';
   selectedGalleryUrl = url;
+  selectedPublicId = publicId;
 }
 
 function clearGallerySelection() {
@@ -3164,7 +3241,38 @@ async function controllaSicurezzaNinja() {
     }).catch(e => console.log("Errore Guardiano:", e));
 }
 
+async function deleteImage(publicId) {
+  if (!confirm("Eliminare questa immagine?")) return;
 
+  try {
+    const token = await firebase.auth().currentUser.getIdToken();
+
+    const res = await fetch("https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "DELETE_IMAGE",
+        token: token,
+        public_id: publicId
+      })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      alert("Errore eliminazione");
+      return;
+    }
+
+    alert("Immagine eliminata");
+    loadGallery('mie');
+
+  } catch (e) {
+    alert("Errore connessione");
+  }
+}
   
 </script>
 
