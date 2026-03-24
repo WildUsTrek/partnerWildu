@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v7.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v7.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -356,7 +356,7 @@ body {
   // --- MOTORE CACHE-FIRST E SICUREZZA (Wildu 2.0) ---
   window.wilduFetchCounter = 0;
   window.lastServerSync = 0;
-  const SYNC_COOLDOWN = 45000; // 45 secondi di respiro tra chiamate in background
+  window.SYNC_COOLDOWN = 45000; // 45s di respiro tra fetch di startup
 
 function goToStripe(tipo) {
     const user = firebase.auth().currentUser;
@@ -1030,17 +1030,25 @@ function renderEquipmentSteps() {
   }
 
   async function sendToWildu() {
+  // PRE-FLIGHT CHECK: Controllo di Sicurezza con oggetto Auth corretto
+  const user = typeof auth !== 'undefined' ? auth.currentUser : null;
+  if (!user) return alert("⚠️ Rilevata disconnessione. Ricarica la pagina.");
+
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   if (memoria) {
-    const datiCache = JSON.parse(memoria);
-    aggiornaLimiteDalServer(datiCache);
-    const totaleAttive = datiCache.pending ? datiCache.pending.length : 0;
-    if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
-       alert(`⚠️ ERRORE: Hai già ${MAX_PROPOSTE_ATTIVE} proposte in attesa di valutazione.`);
-       return; 
-    }
+    try {
+        const datiCache = JSON.parse(memoria);
+        aggiornaLimiteDalServer(datiCache);
+        const totaleAttive = datiCache.pending ? datiCache.pending.length : 0;
+        if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
+            alert(`🛑 INVIO BLOCCATO: Hai raggiunto il limite massimo di ${MAX_PROPOSTE_ATTIVE} proposte in attesa. Modifica quelle esistenti o attendi.`);
+            return; 
+        }
+    } catch(e) {}
   }
-    const loader = document.getElementById('loader');
+
+  const loader = document.getElementById('loader');
+    
     loader.style.display = 'flex';
     const currentUserKey = firebase.auth().currentUser ? firebase.auth().currentUser.uid : "Utente_Anonimo";
     let fotoUrl = selectedGalleryUrl; 
@@ -1833,98 +1841,99 @@ function gestisciLimiteProposte(data) {
 }
 
 async function checkProposalLimitAtStartup(uid) {
-  const btnNuova = document.getElementById('btn-nuova-proposta');
-  const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
-  const loader = document.getElementById('loader');
+    const btnNuova = document.getElementById('btn-nuova-proposta');
+    const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
+    const loader = document.getElementById('loader');
+    const now = Date.now();
 
-  // 🛡️ 1. LOCK IMMEDIATO: Schermo nero e rotellina. 
-  // Nessuno può vedere "Standard" o cliccare "Paga" finché non abbiamo finito.
-  if (loader) {
-    loader.style.display = 'flex';
-    loader.querySelector('h5').innerText = "sincronizzazione...";
-  }
+    // 🛡️ 1. VERIFICA STRIPE (Delega totale al tuo Ninja)
+    let isStripeLocked = localStorage.getItem('attesa_novita_stripe') !== null;
 
-  if (btnNuova) { 
-    btnNuova.style.pointerEvents = "none"; 
-    btnNuova.style.opacity = "0.7"; 
-  }
-  
-  // 2. GESTIONE CACHE (30 MINUTI)
-  const memoria = sessionStorage.getItem('wildu_cache_proposte');
-  const timestamp = sessionStorage.getItem('wildu_cache_time');
-  const adesso = new Date().getTime();
-  
-  if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
-    try {
-      const datiCache = JSON.parse(memoria); 
-      aggiornaLimiteDalServer(datiCache);     
-      gestisciLimiteProposte(datiCache);      
-      renderizzaPagineStatiche(datiCache.config); // 🎨 INNESTO: Stampa i testi e le foto
-      
-      // Fine operazione da cache
-      if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; } 
-      if (loader) loader.style.display = 'none'; // Sblocca lo schermo
-      return;
-    } catch(e) { console.warn("Cache corrotta, procedo con fetch..."); }
-  }
+    // ⚡ 2. LETTURA CACHE E SOFT-RENDER
+    let useCache = false;
+    if (!isStripeLocked) {
+        const memoria = sessionStorage.getItem('wildu_cache_proposte');
+        const timestamp = sessionStorage.getItem('wildu_cache_time');
+        
+        if (memoria && timestamp && (now - parseInt(timestamp) < 1800000)) {
+            try {
+                const datiCache = JSON.parse(memoria);
+                aggiornaLimiteDalServer(datiCache);     
+                gestisciLimiteProposte(datiCache);      
+                renderizzaPagineStatiche(datiCache.config);
+                if (typeof checkVipMessages === "function") checkVipMessages(datiCache);
+                useCache = true;
+                
+                if (desc) desc.innerHTML = "<span class='text-muted'><i class='bi bi-arrow-repeat spin-anim'></i> Sincronizzazione in background...</span>";
+            } catch(e) { console.warn("Cache corrosa, procedo con fetch..."); }
+        }
+    }
 
-  // 3. SE NON C'È CACHE, CHIEDIAMO AL MASTER
-  if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Sincronizzazione Master...</span>";
-  
-  try {
-    const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-    const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    // 🛑 3. BLOCCO HARD (UI)
+    if (!useCache) {
+        if (loader) {
+            loader.style.display = 'flex';
+            loader.querySelector('h5').innerText = isStripeLocked ? "Attesa conferma pagamento..." : "sincronizzazione...";
+        }
+        if (btnNuova) { btnNuova.style.pointerEvents = "none"; btnNuova.style.opacity = "0.7"; }
+        if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Sincronizzazione Master...</span>";
+    }
 
-    const response = await fetch(MOTORE_API_URL, { 
-        method: 'POST', 
-        body: JSON.stringify({ 
-          action: "getUserData", 
-          token: "WILDU_TOKEN_2026_XYZ", 
-          uid: uid, 
-          nome: nomeG, 
-          tel: telG 
-        }) 
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (!data.error) {
-          // SALVATAGGIO DATI E STATO VIP
-          sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-          sessionStorage.setItem('wildu_cache_time', adesso.toString());
-          
-          aggiornaLimiteDalServer(data); 
-          gestisciLimiteProposte(data);  
-          renderizzaPagineStatiche(data.config); // 🎨 INNESTO: Stampa i testi e le foto dal server
-          
-          // 👑 CONTROLLO ALERT (Qui l'app capisce se sei VIP o CANCELED)
-          if (typeof checkVipMessages === "function") checkVipMessages(data);
-
-          // =========================================================
-          // 🔄 AUTO-REFRESH PROFILO IN DIRETTA
-          // Se l'utente è tornato da Stripe col Profilo ancora aperto, lo ridisegniamo al volo!
-          // =========================================================
-          const profileOverlay = document.getElementById('edit-profile-overlay');
-          if (profileOverlay && profileOverlay.style.display === 'flex') {
-              openProfile(); // Ricarica la grafica usando la cache appena salvata!
-          }
-      }
-    } else {
+    // 🔄 4. BACKGROUND FETCH E COOLDOWN
+    if (useCache && (now - window.lastServerSync < window.SYNC_COOLDOWN)) {
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+        return; 
     }
-  } catch (e) {
-    console.error("Errore Startup:", e);
-    if (desc) desc.innerText = "Errore di connessione. Riprova.";
-  } finally {
-    // 🔓 4. SBLOCCO FINALE: Solo quando tutto è stato disegnato correttamente
-    if (btnNuova) { 
-      btnNuova.style.pointerEvents = "auto"; 
-      btnNuova.style.opacity = "1"; 
-    }
-    if (loader) loader.style.display = 'none';
-  }
-}
 
+    const myFetchId = ++window.wilduFetchCounter; 
+    window.lastServerSync = now;
+
+    try {
+        const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+        const telG = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+
+        const response = await fetch(MOTORE_API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: uid, nome: nomeG, tel: telG }) 
+        });
+        
+        if (myFetchId !== window.wilduFetchCounter) return;
+
+        if (response.ok) {
+            const data = await response.json();
+            if (!data.error) {
+                sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+                sessionStorage.setItem('wildu_cache_time', Date.now().toString());
+                
+                aggiornaLimiteDalServer(data); 
+                gestisciLimiteProposte(data);  
+                renderizzaPagineStatiche(data.config);
+                if (typeof checkVipMessages === "function") checkVipMessages(data);
+
+                if (desc) desc.innerText = "Wizard guidato in pochi passi.";
+
+                const profileOverlay = document.getElementById('edit-profile-overlay');
+                if (profileOverlay && profileOverlay.style.display === 'flex' && typeof openProfile === "function") {
+                    openProfile();
+                }
+            } else {
+                if (desc) desc.innerText = "Errore dal server.";
+            }
+        } else {
+            if (desc) desc.innerText = "Errore di connessione. Riprova.";
+        }
+    } catch (e) {
+        console.error("Errore Startup:", e);
+        if (myFetchId === window.wilduFetchCounter && desc) desc.innerText = "Errore di connessione. Riprova.";
+    } finally {
+        // 🔓 5. SBLOCCO FINALE
+        if (myFetchId === window.wilduFetchCounter) {
+            if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
+            if (!isStripeLocked && loader) loader.style.display = 'none';
+        }
+    }
+}
+  
 async function openMyProposals() {
   const user = auth.currentUser;
   if (!user) return alert("⚠️ Devi essere loggato per vedere le tue proposte.");
@@ -2999,21 +3008,27 @@ document.addEventListener("visibilitychange", function() {
     else console.log("🥷 Ronda Silenziosa (60s). Controllo passivo.");
 
     // 4. Esecuzione (Ritardo anti-amnesia Firebase)
-    setTimeout(() => {
-        const user = auth.currentUser;
-        if (!user) return; 
+    setTimeout(() => {
+        const user = auth.currentUser;
+        if (!user) return; 
 
-        const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-        const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+        const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+        const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-        fetch(MOTORE_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data && !data.error) {
-                const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
+        // 🛡️ RACE CONDITION GUARD: Firma digitale di questa ronda
+        const myFetchId = ++window.wilduFetchCounter;
+
+        fetch(MOTORE_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
+        })
+        .then(r => r.json())
+        .then(data => {
+            // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
+            if (myFetchId !== window.wilduFetchCounter) return;
+
+            if (data && !data.error) {
+                const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
                 let isCambiato = false;
 
                 if (memVecchia) {
@@ -3087,16 +3102,22 @@ function controllaSicurezzaNinja() {
     console.log("🥷 Ninja Guardiano: Controllo i permessi di nascosto...");
     
     const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-    const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
-    
-    fetch(MOTORE_API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data && !data.error) {
-            const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
+    const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    
+    // 🛡️ RACE CONDITION GUARD: Firma digitale di questa ronda
+    const myFetchId = ++window.wilduFetchCounter;
+
+    fetch(MOTORE_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "getUserData", token: "WILDU_TOKEN_2026_XYZ", uid: user.uid, nome: n, tel: t })
+    })
+    .then(r => r.json())
+    .then(data => {
+        // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
+        if (myFetchId !== window.wilduFetchCounter) return;
+
+        if (data && !data.error) {
+            const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
             let isCambiato = false;
             if (memVecchia) {
                 const cacheObj = JSON.parse(memVecchia);
