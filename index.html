@@ -1449,6 +1449,7 @@ function resetImage() {
 }
 
 async function uploadToCloudinary() {
+  console.log("SIGNATURE RESPONSE:", signatureData);
   const fileInput = document.getElementById('foto_input');
   if (fileInput.files.length === 0) return ""; 
 
