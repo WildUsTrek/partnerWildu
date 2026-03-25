@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v2.8"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v2.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -346,16 +346,17 @@ body {
         transition: none !important; /* Il calo di luce deve essere immediato */
     }
 
-    /* 🌊 FIX FLASH NERO: Transizione fluida */
+    /* 🌊 FIX ANTI-FLASH: Gestione comparsa step */
     .step-content {
         display: none;
         opacity: 0;
+        /* Rimuoviamo il transform che può causare micro-scatti durante il caricamento */
     }
 
     .step-content.active {
         display: block;
         opacity: 1;
-        transition: opacity 0.3s ease-in;
+        /* Nessuna transizione in entrata qui per rendere lo scambio istantaneo */
     }
 
 
@@ -533,7 +534,7 @@ function goToStripe(tipo) {
     <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">⏳ Caricamento slot...</span>
   </div>
 
-  <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form')">
+  <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form'); goToStep(1);">
     <span class="menu-icon">🗓️</span>
     <div class="menu-title">Nuova Proposta</div>
     <div class="menu-desc">Wizard guidato in pochi passi per configurare l'evento.</div>
@@ -591,7 +592,7 @@ function goToStripe(tipo) {
     <span class="step-header" tabindex="-1">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="mb-4 pb-3 border-bottom border-secondary">
-        <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
+        <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(2)">Avanti →: Luogo e Tecnica →</button>
       </div>
       <div class="row g-3">
         <div class="col-md-6"><label>Nome e Cognome Guida</label><input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
@@ -976,18 +977,20 @@ function goToStep(step) {
     if (window.navigator.vibrate) window.navigator.vibrate(15);
     if (document.activeElement) document.activeElement.blur();
 
-    // Ritardo di 200ms: permette all'occhio di vedere il tasto che si "spegne" (:active nel CSS)
+    // Ritardo di 200ms: permette all'occhio di vedere il tasto che si "spegne"
     setTimeout(() => {
-        const allSteps = document.querySelectorAll('.step-content');
+        const currentStep = document.querySelector('.step-content.active');
         const nextStep = document.getElementById('step-' + step);
 
         if (nextStep) {
-            // Nascondiamo il vecchio e prepariamo il nuovo in un colpo solo
-            allSteps.forEach(s => { 
-                s.style.display = 'none'; 
-                s.classList.remove('active'); 
-            });
+            // 🚀 SCAMBIO A STAFFETTA (Risolve il flash nero)
+            // Invece di resettare tutti i passi, colpiamo solo quello attivo
+            if (currentStep) {
+                currentStep.classList.remove('active');
+                currentStep.style.display = 'none';
+            }
 
+            // Accendiamo il nuovo istantaneamente nella stessa esecuzione
             nextStep.style.display = 'block';
             
             // Forza il browser a processare il display:block prima di animare l'opacità
@@ -995,7 +998,7 @@ function goToStep(step) {
                 nextStep.classList.add('active');
             });
 
-            // Aggiornamento progresso e scroll fluido
+            // --- TUTTO IL RESTO È RIMASTO INTEGRALE RIGA PER RIGA ---
             const progress = (step / 8 * 100);
             const pBar = document.getElementById('progress-bar');
             if (pBar) pBar.style.width = progress + "%";
@@ -2141,12 +2144,25 @@ function removeProfileLogo() {
 
 function cancelProposal() {
   if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
-    document.querySelectorAll('.form-control').forEach(i => { if (i.id !== 'g_nome' && i.id !== 'g_tel') i.value = ""; }); 
+    // 1. Pulizia campi (esclusi quelli guida)
+    document.querySelectorAll('#form-view .form-control, #form-view .form-select').forEach(i => { 
+        if (i.id !== 'g_nome' && i.id !== 'g_tel') i.value = ""; 
+    }); 
     
-    // 🟢 FIX BUG FANTASMA: Riavvolgiamo il nastro al Passo 1
-    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+    // 2. RESET TOTALE DEGLI STEP (Risolve il bug della pagina bianca)
+    document.querySelectorAll('.step-content').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = ''; // ⬅️ RIMUOVE lo stile inline (display:none) e ridà il potere al CSS
+        s.style.opacity = ''; // Pulisce anche l'opacità residua
+    });
+
+    // 3. Riavvogliamo al Passo 1
     const firstStep = document.getElementById('step-1');
-    if (firstStep) firstStep.classList.add('active');
+    if (firstStep) {
+        firstStep.classList.add('active');
+        // Non serve forzare il display qui, ci pensa il CSS ora che è pulito
+    }
+
     const progressBar = document.getElementById('progress-bar');
     if (progressBar) progressBar.style.width = "12.5%";
     
