@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -28,24 +28,46 @@ document.addEventListener("DOMContentLoaded", function() {
 
   document.querySelectorAll('.wildu-version-text').forEach(el => {
       el.innerText = APP_VERSION;
+});
 
-// 🪄 BILANCIAMENTO "BOTTE DI FERRO": Pausa al tocco, riavvio al rilascio
+// 3. MOTORE CAROSELLO (Fuori dai cicli, pulito)  
+// 🪄 BOTTE DI FERRO: Controllo totale Manuale vs Automatico
 const myCarousel = document.getElementById('pitchCarousel');
-const carouselInstance = new bootstrap.Carousel(myCarousel);
-
-// Quando l'utente smette di toccare o sposta il mouse fuori, diamo un calcio al motore
-myCarousel.addEventListener('mouseleave', () => carouselInstance.cycle());
-myCarousel.addEventListener('touchend', () => {
-    // Piccolo delay per sicurezza dopo lo swipe
-    setTimeout(() => carouselInstance.cycle(), 500); 
+const carouselInstance = new bootstrap.Carousel(myCarousel, {
+    interval: 5000,
+    pause: false // Disattiviamo la pausa automatica di Bootstrap che non funziona su mobile
 });
 
-// Forza il ciclo continuo anche dopo un cambio slide manuale
-myCarousel.addEventListener('slid.bs.carousel', () => carouselInstance.cycle());
-    
-  });
+// Avvia il carosello
+carouselInstance.cycle();
 
+// 🛑 FUNZIONE CONGELAMENTO (Quando tocchi o passi il mouse)
+const stopCarousel = () => {
+    carouselInstance.pause();
+};
+
+// ▶️ FUNZIONE SCONGELAMENTO (Quando stacchi il dito o esci col mouse)
+const startCarousel = () => {
+    carouselInstance.cycle();
+};
+
+// AGGANCIAMO I SENSORI (PC + MOBILE)
+myCarousel.addEventListener('mouseenter', stopCarousel); // PC: Mouse sopra
+myCarousel.addEventListener('mouseleave', startCarousel); // PC: Mouse fuori
+
+myCarousel.addEventListener('touchstart', stopCarousel); // MOBILE: Dito sopra
+myCarousel.addEventListener('touchend', () => {           // MOBILE: Dito staccato
+    setTimeout(startCarousel, 1000); // Aspetta 1 secondo e riparti
 });
+
+// Impediamo che il cambio slide forzi il riavvio se il dito è ancora sopra
+myCarousel.addEventListener('slid.bs.carousel', () => {
+    // Se non ci sono dita sopra (controllato dai sensori), continua il ciclo
+    if (!myCarousel.matches(':hover')) {
+        carouselInstance.cycle();
+    }
+});
+
   
   const firebaseConfig = {
     apiKey: "AIzaSyDIPgFA_caKIMHFgEa-enO4Jk0d7eTCFLI",
@@ -437,7 +459,7 @@ body {
          </a>
      </div>
 
-     <div id="pitchCarousel" class="carousel slide w-100 mt-2" data-bs-ride="carousel" data-bs-interval="5000" data-bs-touch="true" data-bs-pause="hover">
+     <div id="pitchCarousel" class="carousel slide w-100 mt-2" data-bs-interval="5000" data-bs-touch="true">
         
         <div class="carousel-indicators" style="bottom: -45px;">
           <button type="button" data-bs-target="#pitchCarousel" data-bs-slide-to="0" class="active" aria-current="true"></button>
@@ -453,7 +475,7 @@ body {
             <div class="carousel-item active p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-backpack text-primary display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">L'Ufficio nello Zaino</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;"><br>Meno lavoro da pc, più vita reale.<br><br>Organizza e gestisci i tuoi trekking e le prenotazioni direttamente dal tuo smartphone, mentre bevi un caffè al rifugio.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Meno lavoro da pc, più vita reale.<br><br>Organizza e gestisci i tuoi trekking e le prenotazioni direttamente dal tuo smartphone, mentre bevi un caffè al rifugio.</p>
             <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -464,7 +486,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-piggy-bank text-success display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Il 100% del tuo sudore resta a te<br>(Zero Commissioni)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;"><br>Mentre gli altri ti chiedono percentuali su ogni biglietto venduto, Wildu è il tuo alleato silenzioso.<br><br>Ti porta nuovi clienti e ti lascia ogni 💸 in tasca.<br>Nessun pedaggio sul tuo lavoro.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Mentre gli altri ti chiedono percentuali su ogni biglietto venduto, Wildu è il tuo alleato silenzioso.<br><br>Ti porta nuovi clienti e ti lascia ogni 💸 in tasca.<br>Nessun pedaggio sul tuo lavoro.</p>
             <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -475,7 +497,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-magic text-warning display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Meno scrivania più sentieri<br>(Magia Locandina)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;"><br>Dimentica di impazzire ore per creare un post su canva, o per pensare cosa scrivere sul messaggio promo!<br><br>Tu metti i dati, noi creiamo una locandina ed un testo ✨ già pronti da lanciare su WhatsApp (o FB/IG/TG) con 1 solo tap.<br>Sembri un'agenzia, fai tutto mentre sei al rifugio.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Dimentica di impazzire ore per creare un post su canva, o per pensare cosa scrivere sul messaggio promo!<br><br>Tu metti i dati, noi creiamo una locandina ed un testo ✨ già pronti da lanciare su WhatsApp (o FB/IG/TG) con 1 solo tap.<br>Sembri un'agenzia, fai tutto mentre sei al rifugio.</p>
             <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -486,7 +508,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-people-fill text-info display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Mai più caos prenotazioni<br>(I tuoi Clienti in un Tap)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;"><br>Basta fogli, messaggi persi o chat disordinate.<br><br>Hai una lista iscritti 👥 pulita in tempo reale, con il conto dei posti prenotati e un link diretto per scrivere su WhatsApp a ogni partecipante.<br>Hai il polso della situazione sempre, anche offline grazie al sensore!</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Basta fogli, messaggi persi o chat disordinate.<br><br>Hai una lista iscritti 👥 pulita in tempo reale, con il conto dei posti prenotati e un link diretto per scrivere su WhatsApp a ogni partecipante.<br>Hai il polso della situazione sempre, anche offline grazie al sensore!</p>
            <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -497,7 +519,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-star-fill text-warning display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Una Vetrina che premia il merito<br>(Open vs Pay)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;"><br>Il sys "1 a 1" (1 evento gratis x sbloccare 1 ⚖️ a cash) non è un limite, è un patto di fiducia.<br><br>Ti fa conoscere dalla gente offrendo valore, per poi monetizzare con i trek più esclusivi.<br>Vuoi + libertà di pubblicazione?<br>L'abbon.opzionale (costo irrisorio) toglie i vincoli!</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Il sys "1 a 1" (1 evento gratis x sbloccare 1 ⚖️ a cash) non è un limite, è un patto di fiducia.<br><br>Ti fa conoscere dalla gente offrendo valore, per poi monetizzare con i trek più esclusivi.<br>Vuoi + libertà di pubblicazione?<br>L'abbon.opzionale (costo irrisorio) toglie i vincoli!</p>
            <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -508,7 +530,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-shield-check text-success display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Costruita per non tradirti mai</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;"><br>Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati, e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati, e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
            <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
