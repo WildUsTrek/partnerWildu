@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v3.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -443,7 +443,7 @@ body {
 
   // --- MOTORE CACHE-FIRST E SICUREZZA (Wildu 2.0) ---
   window.wilduFetchCounter = 0;
-  window.lastServerSync = 0;
+  //window.lastServerSync = 0;DISATTIVATA NON SERVE PIU'
   window.SYNC_COOLDOWN = 45000; // 45s di respiro tra fetch di startup
 
 function goToStripe(tipo) {
@@ -2211,6 +2211,15 @@ async function checkProposalLimitAtStartup(uid) {
     // 🛡️ 1. VERIFICA STRIPE (Delega totale al tuo Ninja)
     let isStripeLocked = localStorage.getItem('attesa_novita_stripe') !== null;
 
+    // 🧠 1.5 RILEVATORE DI PARADOSSI (Self-Healing Timer)
+    // Se il timer esiste ma la cache è stata piallata (es. da inserimento proposta o reset), distruggi il timer!
+    const cooldownGlobale = sessionStorage.getItem('wildu_global_cooldown');
+    const memoriaAttuale = sessionStorage.getItem('wildu_cache_proposte');
+    if (cooldownGlobale && !memoriaAttuale) {
+        console.warn("🛡️ Paradosso Rilevato: Timer attivo ma dati assenti. Ignoro il timer.");
+        sessionStorage.removeItem('wildu_global_cooldown');
+    }
+
     // ⚡ 2. LETTURA CACHE E SOFT-RENDER
     let useCache = false;
     if (!isStripeLocked) {
@@ -2241,14 +2250,17 @@ async function checkProposalLimitAtStartup(uid) {
         if (desc) desc.innerHTML = "<span class='text-info'><span class='spinner-border spinner-border-sm' role='status' aria-hidden='true'></span> Sincronizzazione Master...</span>";
     }
 
-    // 🔄 4. BACKGROUND FETCH E COOLDOWN
-    if (useCache && (now - window.lastServerSync < window.SYNC_COOLDOWN)) {
+    // 🔄 4. BACKGROUND FETCH E COOLDOWN (Anti-Spam Definitivo)
+    const timerAttuale = sessionStorage.getItem('wildu_global_cooldown');
+    if (useCache && timerAttuale && (now - parseInt(timerAttuale) < window.SYNC_COOLDOWN)) {
         if (desc) desc.innerText = "Wizard guidato in pochi passi.";
         return; 
     }
 
     const myFetchId = ++window.wilduFetchCounter; 
-    window.lastServerSync = now;
+    
+    // 🚀 IMPOSTIAMO IL TIMER GLOBALE (Sostituisce il vecchio window.lastServerSync volatile)
+    sessionStorage.setItem('wildu_global_cooldown', now.toString());
 
     try {
         const nomeG = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
