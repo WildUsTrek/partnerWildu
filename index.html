@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v3.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -383,7 +383,7 @@ body {
   
 <div id="init-screen">
   <div class="text-center px-4">
-    <img src="https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png" alt="Wildu" style="height: 90px; margin-bottom: 20px; animation: fadeIn 0.5s ease;">
+    <img src="./icona_trasp_bocyr5.png" alt="Wildu" style="height: 90px; margin-bottom: 20px; animation: fadeIn 0.5s ease;">
     
     <div class="spinner-border text-primary mb-3 d-block mx-auto" style="width: 2rem; height: 2rem;"></div>
     <h5 class="text-white fw-bold">WILDU <span class="text-primary">PARTNER</span></h5>
@@ -485,11 +485,11 @@ function goToStripe(tipo) {
              // Se il link fornito dal server è rotto, interviene il salvagente Javascript
              logoImg.onerror = function() {
                  this.onerror = null; // Evita loop infiniti
-                 this.src = 'https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png';
+                 this.src = './icona_trasp_bocyr5.png';
              };
          } else {
              // Se non c'è un link nel Master, mettiamo quello di default a prescindere!
-             logoImg.src = 'https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png';
+             logoImg.src = './icona_trasp_bocyr5.png';
          }
          logoImg.style.display = 'block'; 
      }
@@ -510,7 +510,7 @@ function goToStripe(tipo) {
 
 <div class="util-nav d-flex justify-content-between align-items-center">
   <div class="d-flex align-items-center">
-     <img id="app-logo" src="https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png" onerror="this.onerror=null; this.src='https://res.cloudinary.com/daiyrgmbb/image/upload/v1773848193/icona_trasp_bocyr5.png';" alt="Wildu" style="height: 32px; width: auto; margin-right: 12px; border-radius: 6px;">
+     <img id="app-logo" src="./icona_trasp_bocyr5.png" onerror="this.onerror=null; this.src='./icona_trasp_bocyr5.png';" alt="Wildu" style="height: 32px; width: auto; margin-right: 12px; border-radius: 6px;">
      <span class="text-white fw-bold" onclick="location.reload()" style="cursor:pointer">WILDU <span class="text-primary">PARTNER</span></span>
   </div>
   
@@ -3292,17 +3292,37 @@ let pressTimer;
 function startSyncTimer() { pressTimer = setTimeout(() => { forceSync(); }, 3000); }
 function cancelSyncTimer() { clearTimeout(pressTimer); }
 function forceSync() {
-    // 🔒 Chiede la password invece della semplice conferma
-    let pin = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza 3 per forzare il ripristino di sistema:");
-    
-    // Controlla se il PIN è esatto
-    if (pin === "371") {
-        sessionStorage.removeItem('wildu_cache_proposte'); 
-        sessionStorage.removeItem('wildu_cache_time'); 
-        alert("✅ PIN corretto. Pulizia cache e ripristino in corso...");
+    let input = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza per forzare il ripristino di sistema:");
+    if (!input) return;
+
+    // 1. Andiamo a pescare il PIN nascosto scaricato silenziosamente all'avvio
+    let improntaServer = null;
+    try {
+        const mem = sessionStorage.getItem('wildu_cache_proposte');
+        if (mem) {
+            const data = JSON.parse(mem);
+            // Cerca il pin nel config scaricato dal server
+            if (data.config && data.config.pinSegreto) {
+                improntaServer = data.config.pinSegreto;
+            }
+        }
+    } catch(e) { console.warn("Memoria illeggibile"); }
+
+    // 2. Fallback temporaneo (finché non aggiorni il Google Script)
+    // Se il server non manda ancora il PIN, usiamo l'impronta di "371" di default
+    if (!improntaServer) {
+        improntaServer = "V2lsZHUzNzE="; // "Wildu371" in Base64
+    }
+
+    // 3. Creiamo l'impronta di quello che ha digitato l'utente e confrontiamo
+    const improntaDigitata = btoa("Wildu" + input.trim());
+
+    if (improntaDigitata === improntaServer) {
+        // ☢️ PULIZIA TOTALE (Meglio del clear specifico, pialla tutto per sicurezza)
+        sessionStorage.clear(); 
+        alert("✅ Autorizzazione confermata. Pulizia cache in corso...");
         location.reload(); 
-    } else if (pin !== null) {
-        // Se ha inserito un pin sbagliato (e non ha premuto "Annulla")
+    } else {
         alert("❌ PIN errato. Operazione annullata.");
     }
 }
