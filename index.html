@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1985,6 +1985,14 @@ function removeProfileLogo() {
 function cancelProposal() {
   if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
     document.querySelectorAll('.form-control').forEach(i => { if (i.id !== 'g_nome' && i.id !== 'g_tel') i.value = ""; }); 
+    
+    // 🟢 FIX BUG FANTASMA: Riavvolgiamo il nastro al Passo 1
+    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+    const firstStep = document.getElementById('step-1');
+    if (firstStep) firstStep.classList.add('active');
+    const progressBar = document.getElementById('progress-bar');
+    if (progressBar) progressBar.style.width = "12.5%";
+    
     showPage('home');
   }
 }
@@ -3348,21 +3356,22 @@ async function deleteSelectedImage() {
 
 const user = firebase.auth().currentUser;
 
-if (!user) {
-  alert("Utente non pronto");
-  return;
-}
+    if (!user) {
+      alert("Utente non pronto");
+      return;
+    }
 
-const token = await user.getIdToken(true); // 🔥 forza refresh
-    
-    const res = await fetch("https://script.google.com/macros/s/AKfycbyUZC8JQPpP8lMJAwR7WmhxsbLlVmJLaSH_C896nvzzj8Lu5_dbU0s0oUybhmVzwo6c/exec", {
-  method: "POST",
-  body: JSON.stringify({
-    action: "DELETE_IMAGE",
-    public_id: window.selectedPublicId,
-    token: token
-  })
-});
+    // 🟢 VERO REFRESH E MOTORE_API_URL
+    const token = await user.getIdToken(true); 
+        
+    const res = await fetch(MOTORE_API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "DELETE_IMAGE",
+        public_id: window.selectedPublicId,
+        token: token
+      })
+    });
 
     const data = await res.json();
 
