@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -408,12 +408,12 @@ body {
      <div class="w-100 text-center mb-4">
          <img src="./icona_trasp_bocyr5.png" alt="Wildu" style="height: 70px; margin-bottom: 25px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
          
-         <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 shadow-lg mb-3" type="button" disabled onclick="loginGoogle()" style="transition: 0.2s; font-size: 1.1rem;">
+         <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 shadow-lg mb-3 d-flex align-items-center justify-content-center" type="button" disabled onclick="loginGoogle()" style="transition: 0.2s; font-size: 1rem;">
            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Verifica credenziali...
          </button>
 
-         <a href="https://wa.me/3931326733" target="_blank" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-2 transition" style="transition: 0.3s; background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid #333;">
-             <i class="bi bi-whatsapp text-success fs-5"></i> Problemi all'accesso? Scrivici!
+         <a href="https://wa.me/3931326733" target="_blank" class="btn rounded-pill w-100 fw-bold p-3 d-flex align-items-center justify-content-center shadow-sm" style="transition: 0.3s; background: rgba(0,0,0,0.4); border: 1px solid #444; color: #ddd; font-size: 1rem;">
+             <i class="bi bi-whatsapp text-success fs-5 me-2"></i> Problemi all'accesso? Scrivici!
          </a>
      </div>
 
@@ -481,18 +481,26 @@ body {
 </div>
 
 <style>
-/* 🪄 FIX MAGICO: La card si adatta al testo fluidamente, ma i bottoni in alto non saltano MAI! */
+/* 🪄 FIX MAGICO: Tutte le card hanno la STESSA dimensione esatta (100% dello spazio) */
+#pitchCarousel .carousel-inner {
+    height: 100%; /* La scatola madre prende tutto lo spazio */
+}
+
+#pitchCarousel .carousel-item {
+    display: none; 
+    height: 100%; /* Ogni singola slide prende la stessa identica altezza della scatola madre */
+    transition: transform 0.6s ease-in-out; 
+}
+
+/* Centratura perfetta del testo all'interno dell'altezza fissa */
 #pitchCarousel .carousel-item.active,
 #pitchCarousel .carousel-item-next,
-#pitchCarousel .carousel-item-prev {
+#pitchCarousel .carousel-item-prev,
+#pitchCarousel .carousel-item-start,
+#pitchCarousel .carousel-item-end {
     display: flex !important;
     flex-direction: column;
     justify-content: center;
-    min-height: 280px; /* Altezza minima per estetica */
-}
-#pitchCarousel .carousel-item {
-    display: none; 
-    transition: transform 0.6s ease-in-out; 
 }
 </style>
 
@@ -1956,7 +1964,7 @@ auth.onAuthStateChanged(async (user) => {
     const btnLogin = document.getElementById('btn-login-google');
     if (btnLogin) {
         btnLogin.disabled = false;
-        btnLogin.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="22" class="me-2" style="transform: translateY(-2px);"> Inizia con Google';
+        btnLogin.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="22" class="me-2" style="transform: translateY(-2px);"> Accedi con Google';
     }
 
     // 🚀 3. ACCENSIONE MANUALE DEL CAROSELLO 
