@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -522,7 +522,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-shield-check text-success display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Costruita per non tradirti</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati, e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati,<br>e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
            <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -644,10 +644,16 @@ body {
 }
   
 
-/* 🪄 FIX BOTTE DI FERRO: Riduce lo spazio tra l'icona gigante e il titolo nel carosello */
-#pitchCarousel .carousel-item i.bi.display-3 {
-    margin-bottom: 7px !important; /* Schiaccia l'icona verso il titolo (prima era ~16px) */
-    line-height: 1 !important;     /* Rimuove lo spazio extra invisibile sopra e sotto l'icona */
+/* 🪄 FIX BOTTE DI FERRO: Compressione totale Icona-Titolo (Anti-Mobile) */
+#pitchCarousel .carousel-item i.bi {
+    margin-bottom: 0px !important;     /* Uccidiamo il margine inferiore dell'icona */
+    padding-bottom: 5px !important;    /* Usiamo il padding per un controllo millimetrico */
+    line-height: 1 !important;
+    display: inline-block !important;  /* Forza il comportamento corretto anche su iOS */
+}
+
+#pitchCarousel .carousel-item h3 {
+    margin-top: 0px !important;        /* Assicuriamoci che il titolo non "respinga" l'icona in giù */
 }
   
 </style>
