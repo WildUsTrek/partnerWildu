@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v2.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v2.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -349,7 +349,25 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
-    
+
+
+    /* 🎨 FIX TOTALE TASTO INDIETRO (Anti-Inversione) */
+    .btn-outline-light:hover, 
+    .btn-outline-light:focus, 
+    .btn-outline-light:active {
+        background-color: transparent !important; /* Non deve mai diventare bianco solido */
+        color: #f8f9fa !important;               /* Il testo deve restare bianco */
+        border-color: #f8f9fa !important;         /* Il bordo deve restare bianco */
+        box-shadow: none !important;
+    }
+
+    /* L'unico momento in cui può cambiare leggermente è quando il dito lo sta schiacciando */
+    .btn-outline-light:active {
+        opacity: 0.5 !important;
+        transform: scale(0.95);
+    }
+
+
   </style>
 </head>
 <body>
@@ -640,7 +658,7 @@ function goToStripe(tipo) {
     <div class="card shadow-lg p-4">
       <div class="d-flex gap-2 mb-4 pb-3 border-bottom border-secondary">
         <button type="button" class="btn btn-outline-light btn-step-nav w-50" onclick="goToStep(1)">← Indietro</button>
-        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti: Nutrizione →</button>
+        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti</button>
       </div>
       <div class="row g-3">
         <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" onblur="autoFetchRegion()" placeholder="Es. Bar Centrale, Roma"></div>
