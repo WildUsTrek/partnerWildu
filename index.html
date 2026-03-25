@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2556,95 +2556,141 @@ function finalLaunchWA(isBusiness) {
 }
   
 // 🟢 FIX PROPOSTE: Scudo di Gomma per dati vuoti + BULK READING ISCRITTI SULLA CARD
+let currentProposalFilter = "ALL";
+let lastProposalsData = null;
+
+// Funzione per cambiare filtro
+function setProposalFilter(filter) {
+    currentProposalFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('f-' + filter.toLowerCase()).classList.add('active');
+    if (lastProposalsData) renderProposals(lastProposalsData);
+}
+
+// Funzione per espandere/chiudere la card
+function toggleCard(element) {
+    element.closest('.proposal-card').classList.toggle('is-expanded');
+}
+
 function renderProposals(data) {
-  const pList = document.getElementById('list-pending');
-  const aList = document.getElementById('list-accepted');
-  if (!pList || !aList) return; 
+    lastProposalsData = data;
+    const container = document.getElementById('timeline-proposals');
+    if (!container) return;
+    container.innerHTML = "";
 
-  // 🟢 ORDINA LE PROPOSTE PRIMA DI DISEGNARLE
-  if (data.pending) data.pending.sort((a, b) => a.dataOrdinamento - b.dataOrdinamento);
-  if (data.accepted) data.accepted.sort((a, b) => a.dataOrdinamento - b.dataOrdinamento);
+    // 1. Unione e marcatura status
+    let pending = (data.pending || []).map(p => ({ ...p, uiStatus: 'PENDING' }));
+    let accepted = (data.accepted || []).map(a => ({ ...a, uiStatus: 'ACCEPTED' }));
+    let all = [...pending, ...accepted];
 
-  const pendingArr = (data && data.pending) ? data.pending : [];
-  const acceptedArr = (data && data.accepted) ? data.accepted : [];
-
-  pList.innerHTML = pendingArr.length ? "" : "<p class='text-muted small'>Nessuna in attesa.</p>";
-  aList.innerHTML = acceptedArr.length ? "" : "<p class='text-muted small'>Nessuna approvata.</p>";
-
-  const totaleAttive = pendingArr.length;
-  const limiteRaggiunto = totaleAttive >= MAX_PROPOSTE_ATTIVE;
-
-  const generateCard = (item, colorClass, isPending) => {
-    const dIn = item.dataInizio || "N/D";
-    const dFine = item.dataFine ? " - " + item.dataFine : "";
-    const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
-    let itemStr = "";
-    try { itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27"); } catch(e) {}
-
-    // IL FIX VISIVO: Etichetta per i Pay-Day
-    const isPaid = (item.tipo === 'PAID' || (item.prezzo && item.prezzo != "0"));
-    const badgeTipo = isPaid 
-        ? `<div class="badge bg-warning text-dark fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-cash-coin"></i> PAY-DAY: € ${item.prezzo} a persona</div>`
-        : `<div class="badge bg-success text-white fw-bold mb-2 p-2 w-100 text-start" style="font-size: 0.85rem;"><i class="bi bi-star-fill"></i> OPEN DAY (Gratuito)</div>`;
-
-    // 🟢 AGGIORNAMENTO: Badge iscritti + Logica Posti Max per il Partner
-    let conteggioIscritti = 0;
-    if (item.iscritti && Array.isArray(item.iscritti)) {
-        conteggioIscritti = item.iscritti.length;
+    // 2. Filtro
+    if (currentProposalFilter !== "ALL") {
+        all = all.filter(p => p.uiStatus === currentProposalFilter);
     }
-    
-    let badgeIscritti = "";
-    if (!isPending) {
-        let max = parseInt(item.postiMax);
-        // Se il partner ha impostato un limite...
-        if (!isNaN(max) && max > 0) {
-            if (conteggioIscritti >= max) {
-                // SOLD OUT: Badge rosso
-                badgeIscritti = `<span class="badge bg-danger shadow-sm small ms-2"><i class="bi bi-x-octagon-fill"></i> SOLD OUT (${conteggioIscritti}/${max})</span>`;
+
+    // 3. Ordinamento Cronologico (Più vicina in alto)
+    all.sort((a, b) => {
+        const timeA = a.dataOrdinamento || new Date(a.dataInizio.split('/').reverse().join('-')).getTime();
+        const timeB = b.dataOrdinamento || new Date(b.dataInizio.split('/').reverse().join('-')).getTime();
+        return timeA - timeB;
+    });
+
+    if (all.length === 0) {
+        container.innerHTML = "<p class='text-muted text-center mt-5 small'>Nessuna proposta trovata.</p>";
+        return;
+    }
+
+    let lastMonthYear = "";
+
+    all.forEach(item => {
+        // --- LOGICA ORIGINALE RECUPERATA RIGA PER RIGA ---
+        const dIn = item.dataInizio || "N/D";
+        const dFine = item.dataFine ? " - " + item.dataFine : "";
+        const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
+        
+        let itemStr = "";
+        try { itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27"); } catch(e) {}
+
+        const isPaid = (item.tipo === 'PAID' || (item.prezzo && item.prezzo != "0"));
+        const colorClass = item.uiStatus === 'PENDING' ? 'warning' : 'success';
+        
+        // Recupero esatto del badge iscritti (la tua logica originale)
+        let conteggioIscritti = (item.iscritti && Array.isArray(item.iscritti)) ? item.iscritti.length : 0;
+        let badgeIscritti = "";
+        if (item.uiStatus === 'ACCEPTED') {
+            let max = parseInt(item.postiMax);
+            if (!isNaN(max) && max > 0) {
+                if (conteggioIscritti >= max) {
+                    badgeIscritti = `<span class="badge bg-danger shadow-sm small ms-2"><i class="bi bi-x-octagon-fill"></i> SOLD OUT (${conteggioIscritti}/${max})</span>`;
+                } else {
+                    let color = conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary';
+                    badgeIscritti = `<span class="badge ${color} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti} / ${max}</span>`;
+                }
             } else {
-                // POSTI DISPONIBILI: Rapporto (es. 5 / 15)
                 let color = conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary';
-                badgeIscritti = `<span class="badge ${color} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti} / ${max}</span>`;
+                badgeIscritti = `<span class="badge ${color} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti}</span>`;
             }
-        } else {
-            // NESSUN LIMITE: Solo totale
-            let color = conteggioIscritti > 0 ? 'bg-primary' : 'bg-secondary';
-            badgeIscritti = `<span class="badge ${color} small ms-2"><i class="bi bi-people-fill"></i> ${conteggioIscritti}</span>`;
         }
-    }
 
-    const btnInfo = `<button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>`;
-    let btnRiproponi = `<button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>`;
-    const btnAnnulla = isPending ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : '';
-    const btnLocandina = `<button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>`;
-    const btnCondividi = !isPending ? `<button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Genera Post Condivisione</button>` : '';
-    const btnIscritti = !isPending ? `<button class="btn btn-sm btn-primary text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="vediIscrittiPartner('${itemStr}')"><i class="bi bi-people-fill"></i> Vedi Iscritti</button>` : '';
+        // --- GESTIONE SEPARATORI TEMPORALI ---
+        const dParts = dIn.split('/');
+        const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+        const currentMonthYear = monthNames[parseInt(dParts[1]) - 1] + " " + dParts[2];
 
-    return `
-      <div class="card bg-dark border-0 shadow-sm mb-3" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
-        <div class="card-body p-3">
-          ${badgeTipo}
-          <div class="d-flex justify-content-between align-items-start mb-2 mt-1">
-            <h6 class="text-white fw-bold m-0">${item.titolo || "Senza Titolo"}</h6>
-            <div class="text-end">
-                <span class="badge bg-secondary small">${item.regione || "N/D"}</span>
-                ${badgeIscritti}
+        if (currentMonthYear !== lastMonthYear) {
+            container.innerHTML += `<div class="month-divider"><span>${currentMonthYear}</span></div>`;
+            lastMonthYear = currentMonthYear;
+        }
+
+        // --- COSTRUZIONE CARD (Fedeltà Visiva) ---
+        container.innerHTML += `
+            <div class="card bg-dark border-0 shadow-sm mb-3 proposal-card" style="border-left: 5px solid var(--bs-${colorClass}) !important; border-radius: 16px;">
+                <div class="card-body p-3" onclick="toggleCard(this)">
+                    
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="mb-2">
+                                ${isPaid 
+                                    ? `<span class="badge bg-warning text-dark fw-bold"><i class="bi bi-cash-coin"></i> PAY-DAY: € ${item.prezzo}</span>`
+                                    : `<span class="badge bg-success text-white fw-bold"><i class="bi bi-star-fill"></i> OPEN DAY</span>`
+                                }
+                                ${badgeIscritti}
+                            </div>
+                            <h6 class="text-white fw-bold m-0 mb-1">${item.titolo || "Senza Titolo"}</h6>
+                            <div class="small text-info fw-bold">
+                                <i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari}
+                                <br>
+                                <i class="bi bi-geo-alt"></i> ${item.luogoNome || item.luogo || ""}
+                            </div>
+                        </div>
+                        <div class="ps-2"><i class="bi bi-chevron-down expand-indicator fs-5"></i></div>
+                    </div>
+
+                    <div class="card-body-expanded">
+                        <div class="pt-3 mt-3 border-top border-secondary">
+                            <p class="small text-light opacity-75 mb-3">${item.desc || item.descrizione || ""}</p>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="${item.luogoLink || item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1" onclick="event.stopPropagation()"><i class="bi bi-map"></i> Mappa</a>
+                                <button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="event.stopPropagation(); mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info & Kit</button>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="event.stopPropagation(); riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi (Copia)</button>
+                            
+                            ${item.uiStatus === 'PENDING' ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')"><i class="bi bi-trash"></i> Ritira Proposta</button>` : ''}
+                            
+                            <button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); generaLocandina('${itemStr}')"><i class="bi bi-image"></i> Genera Locandina</button>
+                            
+                            ${item.uiStatus === 'ACCEPTED' ? `
+                                <button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="event.stopPropagation(); openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Genera Post Condivisione</button>
+                                <button class="btn btn-sm btn-primary text-white rounded-pill w-100 mt-2 fw-bold shadow-sm" type="button" onclick="event.stopPropagation(); vediIscrittiPartner('${itemStr}')"><i class="bi bi-people-fill"></i> Vedi Iscritti</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div class="small text-info fw-bold mb-3"><i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari} <br><i class="bi bi-geo-alt"></i> ${item.luogo || ""}</div>
-          <p class="small text-light opacity-75 mb-3 text-truncate-2">${item.desc || ""}</p>
-          <div class="d-flex gap-2">
-            <a href="${item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1"><i class="bi bi-map"></i> Mappa</a>
-            ${btnInfo}
-          </div>
-          ${btnRiproponi} ${btnAnnulla} ${btnLocandina} ${btnCondividi} ${btnIscritti}
-        </div>
-      </div>
-    `;
-  };
-
-  pendingArr.forEach(item => pList.innerHTML += generateCard(item, 'warning', true));
-  acceptedArr.forEach(item => aList.innerHTML += generateCard(item, 'success', false));
+        `;
+    });
 }
 
 function mostraInfoKit(itemEncoded) {
