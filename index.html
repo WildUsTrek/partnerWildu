@@ -30,43 +30,34 @@ document.addEventListener("DOMContentLoaded", function() {
       el.innerText = APP_VERSION;
 });
 
-// 3. MOTORE CAROSELLO (Fuori dai cicli, pulito)  
-// 🪄 BOTTE DI FERRO: Controllo totale Manuale vs Automatico
-const myCarousel = document.getElementById('pitchCarousel');
-const carouselInstance = new bootstrap.Carousel(myCarousel, {
-    interval: 5000,
-    pause: false // Disattiviamo la pausa automatica di Bootstrap che non funziona su mobile
-});
+// 3. MOTORE CAROSELLO (Fuori dai cicli, pulito)
+    const myCarousel = document.getElementById('pitchCarousel');
+    if (myCarousel) {
+      const carouselInstance = new bootstrap.Carousel(myCarousel, {
+          interval: 5000,
+          pause: false 
+      });
 
-// Avvia il carosello
-carouselInstance.cycle();
+      carouselInstance.cycle();
 
-// 🛑 FUNZIONE CONGELAMENTO (Quando tocchi o passi il mouse)
-const stopCarousel = () => {
-    carouselInstance.pause();
-};
+      // Funzioni di stop/start
+      const stopCarousel = () => carouselInstance.pause();
+      const startCarousel = () => carouselInstance.cycle();
 
-// ▶️ FUNZIONE SCONGELAMENTO (Quando stacchi il dito o esci col mouse)
-const startCarousel = () => {
-    carouselInstance.cycle();
-};
+      // Sensori PC & Mobile
+      myCarousel.addEventListener('mouseenter', stopCarousel);
+      myCarousel.addEventListener('mouseleave', startCarousel);
+      myCarousel.addEventListener('touchstart', stopCarousel);
+      myCarousel.addEventListener('touchend', () => setTimeout(startCarousel, 1000));
 
-// AGGANCIAMO I SENSORI (PC + MOBILE)
-myCarousel.addEventListener('mouseenter', stopCarousel); // PC: Mouse sopra
-myCarousel.addEventListener('mouseleave', startCarousel); // PC: Mouse fuori
-
-myCarousel.addEventListener('touchstart', stopCarousel); // MOBILE: Dito sopra
-myCarousel.addEventListener('touchend', () => {           // MOBILE: Dito staccato
-    setTimeout(startCarousel, 1000); // Aspetta 1 secondo e riparti
-});
-
-// Impediamo che il cambio slide forzi il riavvio se il dito è ancora sopra
-myCarousel.addEventListener('slid.bs.carousel', () => {
-    // Se non ci sono dita sopra (controllato dai sensori), continua il ciclo
-    if (!myCarousel.matches(':hover')) {
-        carouselInstance.cycle();
+      // Fix per non far ripartire il giro se il mouse/dito è ancora sopra
+      myCarousel.addEventListener('slid.bs.carousel', () => {
+          if (!myCarousel.matches(':hover')) {
+              carouselInstance.cycle();
+          }
+      });
     }
-});
+  }); // Chiusura corretta del DOMContentLoaded
 
   
   const firebaseConfig = {
