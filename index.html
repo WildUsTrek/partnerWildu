@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -543,7 +543,11 @@ function goToStripe(tipo) {
         
         <div class="section-title">DETTAGLI TEMPORALI</div>
         <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
-        <div class="col-6"><label>Data Inizio *</label><input type="date" id="od_data_inizio" class="form-control border-primary"></div>
+        <div class="col-6">
+    <label>Data Inizio *</label>
+    <input type="date" id="od_data_inizio" class="form-control border-primary">
+    <p class="tiny text-muted m-0 mt-1">Scegli una data ad almeno 7 giorni da oggi.</p>
+ </div>
         <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
         <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
         <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
@@ -837,9 +841,33 @@ function renderizzaPagineStatiche(configData) {
     }
 }
   
- function goToStep(step) {
+function goToStep(step) {
     let current = parseInt(document.querySelector('.step-content.active').id.split('-')[1]);
-    if (step > current && current === 1) if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
+    
+    if (step > current && current === 1) {
+      // 1. Controllo campi vuoti
+      if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
+      
+      // 🟢 2. IL GUARDIANO DEL TEMPO (Minimo 7 giorni)
+      const dataInserita = document.getElementById('od_data_inizio').value;
+      const oggi = new Date();
+      oggi.setHours(0, 0, 0, 0); // Reset ore per confronto puro tra date
+      
+      const dataMinima = new Date(oggi);
+      dataMinima.setDate(oggi.getDate() + 7); // Oggi + 7 giorni
+      
+      const selDate = new Date(dataInserita);
+      selDate.setHours(0, 0, 0, 0);
+
+      if (selDate < dataMinima) {
+        const gg = String(dataMinima.getDate()).padStart(2, '0');
+        const mm = String(dataMinima.getMonth() + 1).padStart(2, '0');
+        const aaaa = dataMinima.getFullYear();
+        alert(`evento troppo vicino da proporre, scegli almeno data oltre ${gg}/${mm}/${aaaa}`);
+        return;
+      }
+    }
+
     if (step > current && current === 2) if (!checkFields(['od_luogo_nome', 'od_regione', 'od_luogo_link', 'od_km', 'od_dislivello', 'od_descrizione'])) return;
     if (step > current && current >= 3 && current <= 7) {
         let cat = eqCategories.find(c => c.step === current);
