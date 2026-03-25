@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -403,9 +403,21 @@ body {
   
   <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('https://res.cloudinary.com/daiyrgmbb/image/upload/v1774052257/edera_NG1_av6tgs.jpg') center/cover; opacity: 0.15; z-index: 0; pointer-events: none;"></div>
 
-  <div class="container position-relative d-flex flex-column align-items-center justify-content-center" style="z-index: 1; max-width: 450px; height: 100vh; padding: 20px;">
+  <div class="container position-relative d-flex flex-column align-items-center justify-content-start" style="z-index: 1; max-width: 450px; min-height: 100vh; padding: 40px 20px 30px 20px;">
 
-     <div id="pitchCarousel" class="carousel slide w-100 mb-4 mt-3" data-bs-ride="carousel" data-bs-interval="4500">
+     <div class="w-100 text-center mb-4">
+         <img src="./icona_trasp_bocyr5.png" alt="Wildu" style="height: 70px; margin-bottom: 25px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
+         
+         <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 shadow-lg mb-3" type="button" disabled onclick="loginGoogle()" style="transition: 0.2s; font-size: 1.1rem;">
+           <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Verifica credenziali...
+         </button>
+
+         <a href="https://wa.me/3931326733" target="_blank" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-2 transition" style="transition: 0.3s; background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid #333;">
+             <i class="bi bi-whatsapp text-success fs-5"></i> Problemi all'accesso? Scrivici!
+         </a>
+     </div>
+
+     <div id="pitchCarousel" class="carousel slide w-100 mt-2 flex-grow-1" data-bs-ride="carousel" data-bs-interval="4500">
         
         <div class="carousel-indicators" style="bottom: -45px;">
           <button type="button" data-bs-target="#pitchCarousel" data-bs-slide-to="0" class="active" aria-current="true"></button>
@@ -433,7 +445,7 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-magic text-warning display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Meno scrivania più sentieri<br>(Magia Locandina)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;">Dimentica le ore perse a impazzire su app di grafica per creare un post decente, o a fare copia-incolla di testi infiniti.<br><br>Tu metti i dati essenziali, e Wildu genera istantaneamente una locandina mozzafiato ✨ e un testo persuasivo, già formattato e pronto da lanciare su WhatsApp o Telegram con un solo tap.<br>Sembri un'agenzia strutturata, ma fai tutto mentre bevi un caffè al rifugio.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Dimentica le ore perse a impazzire per creare un post decente, o a fare copia-incolla di testi.<br><br>Tu metti i dati, e Wildu genera una locandina mozzafiato ✨ e un testo persuasivo, già pronto da lanciare su WhatsApp o Telegram con un solo tap.<br>Sembri un'agenzia, ma fai tutto mentre bevi un caffè al rifugio.</p>
             </div>
             
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
@@ -445,55 +457,42 @@ body {
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-star-fill text-warning display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Una Vetrina che premia il merito<br>(Ecosistema Open & Pay)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;">Il sistema "1 a 1" (un evento gratuito per sbloccare uno ⚖️ a pagamento) non è un limite, è un patto di fiducia.<br><br>Ti permette di farti conoscere dalla community offrendo valore (Open Day), per poi monetizzare con i trek più esclusivi (Pay-Day).<br>Vuoi saltare la fila e avere libertà di pubblicazione?<br>L'abbonamento VIP ti consegna le chiavi del sistema a un costo irrisorio.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Il sistema "1 a 1" (un evento gratis per sbloccare uno ⚖️ a pagamento) non è un limite, è un patto di fiducia.<br><br>Ti fa conoscere dalla community offrendo valore (Open Day), per poi monetizzare con i trek più esclusivi (Pay-Day).<br>Vuoi la libertà di pubblicazione?<br>L'abbonamento VIP ti consegna le chiavi in tasca ad un costo irrisorio.</p>
             </div>
 
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-shield-check text-success display-3 mb-3 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Costruita per non tradirti mai</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che si installa sul telefono, che capisce se sei offline per proteggere i tuoi dati, e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
+                <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati, e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
             </div>
           
         </div>
      </div>
 
-     <div class="w-100 mt-5">
-         <button id="btn-login-google" class="btn btn-light rounded-pill w-100 fw-bold p-3 shadow-lg" type="button" disabled onclick="loginGoogle()" style="transition: 0.2s; font-size: 1.05rem;">
-           <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Verifica credenziali...
-         </button>
+    <div class="mt-auto pt-5 w-100 text-center">
+         <p class="text-muted small m-0" style="letter-spacing: 1px; font-size: 0.65rem;">
+           SISTEMA PARTNER HUB
+           <span class="wildu-version-text text-info fw-bold" style="user-select: none; -webkit-user-select: none; cursor: pointer; padding: 10px 5px; margin: -10px -5px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()"></span> 
+           <br> || Wildu srl tour operator || <br>
+           P.iva 02536770502
+         </p>
      </div>
-
-     <div class="w-100 text-center mt-4">
-         <a href="https://wa.me/3931326733" target="_blank" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-2 transition" style="transition: 0.3s; background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid #333;">
-             <i class="bi bi-whatsapp text-success fs-5"></i> Problemi all'accesso? Scrivici!
-         </a>
-     </div>
-
-     <p class="text-center text-muted small mt-4 mb-0 px-3" style="letter-spacing: 1px; font-size: 0.65rem;">
-       SISTEMA PARTNER HUB
-       <span class="wildu-version-text text-info fw-bold" style="user-select: none; -webkit-user-select: none; cursor: pointer; padding: 10px 5px; margin: -10px -5px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()"></span> 
-       <br> || Wildu srl tour operator || <br>
-       P.iva 02536770502
-     </p>
   </div>
 </div>
 
 <style>
-/* 🪄 FIX MAGICO: Risolve il bug di Bootstrap per i caroselli Flex e previene i salti da 1 millisecondo */
-#pitchCarousel .carousel-item {
-    display: none; 
-    transition: transform 0.6s ease-in-out; /* Forza l'animazione morbida */
-}
-
-/* Mantiene la struttura Flex anche DURANTE lo scorrimento, evitando crolli visivi */
+/* 🪄 FIX MAGICO: La card si adatta al testo fluidamente, ma i bottoni in alto non saltano MAI! */
 #pitchCarousel .carousel-item.active,
 #pitchCarousel .carousel-item-next,
-#pitchCarousel .carousel-item-prev,
-#pitchCarousel .carousel-item-start,
-#pitchCarousel .carousel-item-end {
+#pitchCarousel .carousel-item-prev {
     display: flex !important;
     flex-direction: column;
     justify-content: center;
+    min-height: 280px; /* Altezza minima per estetica */
+}
+#pitchCarousel .carousel-item {
+    display: none; 
+    transition: transform 0.6s ease-in-out; 
 }
 </style>
 
