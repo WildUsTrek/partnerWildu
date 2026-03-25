@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.8"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -299,6 +299,23 @@ body {
 
     /* Regolazione spaziatura in alto a dx */
     .card-meta-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+
+
+    .btn-back-top { 
+        background: rgba(255,255,255,0.05); 
+        border: 1px dashed #444; 
+        color: #888; 
+        font-size: 0.75rem; 
+        font-weight: bold; 
+        padding: 12px; 
+        border-radius: 12px; 
+        width: 100%; 
+        margin-top: 20px; 
+        transition: 0.3s;
+    }
+    .btn-back-top:active { background: rgba(13,110,253,0.1); color: #0d6efd; border-color: #0d6efd; }
+
+
     
   </style>
 </head>
@@ -579,6 +596,9 @@ function goToStripe(tipo) {
         <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
         <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
       </div>
+      <button type="button" class="btn btn-back-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
+      </button>
     </div>
   </div>
 
@@ -610,6 +630,9 @@ function goToStripe(tipo) {
         <div class="section-title">DESCRIZIONE EMOZIONALE *</div>
         <div class="col-12"><textarea id="od_descrizione" class="form-control" rows="5" placeholder="Scrivi qui la descrizione emozionale del tuo evento..."></textarea></div>
       </div>
+      <button type="button" class="btn btn-back-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
+      </button>
     </div>
   </div>
 
@@ -1063,6 +1086,11 @@ function renderEquipmentSteps() {
               }).join('')}
             </div>
           </div>
+
+          <button type="button" class="btn btn-back-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+            <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
+          </button>
+
         </div>
       </div>`;
     container.innerHTML += html;
@@ -2728,23 +2756,42 @@ function mostraInfoKit(itemEncoded) {
 }  
 
 function riproponiEvento(itemEncoded) {
+  // 🟢 1. SCUDO DI SICUREZZA: Controllo slot prima di lavorare
+  const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  if (memoria) {
+    try {
+      const dati = JSON.parse(memoria);
+      const totaleAttive = dati.pending ? dati.pending.length : 0;
+      if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
+        alert(`🛑 SLOT PIENI: Hai già ${totaleAttive} proposte in attesa. Non puoi caricarne altre finché non vengono approvate o eliminate.`);
+        return; 
+      }
+    } catch(e) { console.error("Errore check slot:", e); }
+  }
+
+  // 🟢 2. LOGICA ORIGINALE (Recuperata riga per riga senza perdite)
   const item = JSON.parse(decodeURIComponent(itemEncoded));
+  
+  // Campi base (Inclusi fallback per compatibilità timeline/master)
   document.getElementById('od_titolo').value = item.titolo || "";
-  document.getElementById('od_luogo_nome').value = item.luogo || "";
-  document.getElementById('od_luogo_link').value = item.link || "";
+  document.getElementById('od_luogo_nome').value = item.luogo || item.luogoNome || "";
+  document.getElementById('od_luogo_link').value = item.link || item.luogoLink || "";
   document.getElementById('od_km').value = item.km || "";
   document.getElementById('od_dislivello').value = item.dislivello || "";
   document.getElementById('od_regione').value = item.regione || "";
   document.getElementById('od_orario_inizio').value = item.oraIn || "";
   document.getElementById('od_orario_fine').value = item.oraOut || "";
   document.getElementById('propPostiMax').value = item.postiMax || "";
-  let testoPulito = (item.desc || "").replace(/^Guida:.*?\|\s*/i, "");
+  
+  // Descrizione con pulizia prefisso Guida
+  let testoPulito = (item.desc || item.descrizione || "").replace(/^Guida:.*?\|\s*/i, "");
   document.getElementById('od_descrizione').value = testoPulito.trim();
 
+  // Date (Recupero integrale anche di dataFine)
   if (item.dataInizio) document.getElementById('od_data_inizio').value = item.dataInizio.split('/').reverse().join('-');
   if (item.dataFine) document.getElementById('od_data_fine').value = item.dataFine.split('/').reverse().join('-');
 
-  // FIX BUG CLONA (Forziamo il tipo evento originale, se non esiste lo mettiamo FREE, ma sblocchiamo la logica visiva)
+  // Tipo Evento e Prezzo (Fix Bug Clona originale)
   const menuTipo = document.getElementById('od_tipo_evento');
   menuTipo.value = item.tipo || "FREE";
   if (item.tipo === 'PAID') {
@@ -2752,18 +2799,25 @@ function riproponiEvento(itemEncoded) {
   } else {
       document.getElementById('od_prezzo').value = "";
   }
-  togglePrezzoField(); // Attiva la logica dei messaggi di blocco/sblocco
+  togglePrezzoField(); 
 
+  // Reset e ricaricamento Attrezzatura (JSON loop originale)
   document.querySelectorAll('.od-eq').forEach(cb => cb.checked = false);
   document.querySelectorAll('.note-input').forEach(n => n.value = "");
   try {
     const eqArray = JSON.parse(item.eq);
     eqArray.forEach(eqItem => {
       const checkbox = Array.from(document.querySelectorAll('.od-eq')).find(cb => cb.value === eqItem.item);
-      if(checkbox) { checkbox.checked = true; document.getElementById('note_' + checkbox.id).value = eqItem.note || ""; }
+      if(checkbox) { 
+        checkbox.checked = true; 
+        document.getElementById('note_' + checkbox.id).value = eqItem.note || ""; 
+      }
     });
-  } catch(e) {}
-  showPage('form'); goToStep(1);
+  } catch(e) { console.warn("Dati attrezzatura non presenti o corrotti"); }
+
+  // Navigazione
+  showPage('form'); 
+  goToStep(1);
 }
 
 async function annullaProposta(itemEncoded) {
