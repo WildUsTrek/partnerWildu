@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1608,8 +1608,10 @@ function compressImage(file) {
 
 let selectedGalleryUrl = ""; 
 function getGuideTag() {
-  let nomeRaw = document.getElementById('g_nome').value || localStorage.getItem('wildu_p_nome') || 'anonimo';
-  return 'guida_' + nomeRaw.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+  const user = firebase.auth().currentUser;
+  // 🟢 IL FIX DEFINITIVO: Usiamo l'UID di sicurezza invece del nome
+  const uidRaw = user ? user.uid : 'anonimo';
+  return 'guida_' + uidRaw.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
 }
 
 async function loadGallery(tipo) {
