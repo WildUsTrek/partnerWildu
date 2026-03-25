@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -481,18 +481,18 @@ body {
 </div>
 
 <style>
-/* 🪄 FIX MAGICO: Tutte le card hanno la STESSA dimensione esatta (100% dello spazio) */
+/* 🪄 FIX MAGICO: Tutte le card hanno la STESSA dimensione e il testo parte dall'ALTO */
 #pitchCarousel .carousel-inner {
-    height: 100%; /* La scatola madre prende tutto lo spazio */
+    height: 100%; 
 }
 
 #pitchCarousel .carousel-item {
     display: none; 
-    height: 100%; /* Ogni singola slide prende la stessa identica altezza della scatola madre */
+    height: 100%; 
     transition: transform 0.6s ease-in-out; 
 }
 
-/* Centratura perfetta del testo all'interno dell'altezza fissa */
+/* 🟢 MODIFICA: Allineamento al bordo superiore (flex-start) */
 #pitchCarousel .carousel-item.active,
 #pitchCarousel .carousel-item-next,
 #pitchCarousel .carousel-item-prev,
@@ -500,7 +500,8 @@ body {
 #pitchCarousel .carousel-item-end {
     display: flex !important;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; /* Spinge tutto verso l'alto */
+    padding-top: 30px;            /* Un pizzico di spazio dal bordo per eleganza */
 }
 </style>
 
