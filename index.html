@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -417,7 +417,7 @@ body {
          </a>
      </div>
 
-     <div id="pitchCarousel" class="carousel slide w-100 mt-2 flex-grow-1" data-bs-ride="carousel" data-bs-interval="4500">
+     <div id="pitchCarousel" class="carousel slide w-100 mt-2" data-bs-ride="carousel" data-bs-interval="4500">
         
         <div class="carousel-indicators" style="bottom: -45px;">
           <button type="button" data-bs-target="#pitchCarousel" data-bs-slide-to="0" class="active" aria-current="true"></button>
@@ -481,18 +481,19 @@ body {
 </div>
 
 <style>
-/* 🪄 FIX MAGICO: Tutte le card hanno la STESSA dimensione e il testo parte dall'ALTO */
+/* 🪄 FIX DEFINITIVO: Card uniformi, allineate in alto e senza vuoti infiniti */
+
 #pitchCarousel .carousel-inner {
-    height: 100%; 
+    height: auto; /* Non forza più l'altezza fino in fondo */
 }
 
 #pitchCarousel .carousel-item {
     display: none; 
-    height: 100%; 
+    height: auto;
     transition: transform 0.6s ease-in-out; 
 }
 
-/* 🟢 MODIFICA: Allineamento al bordo superiore (flex-start) */
+/* Mantiene l'altezza della card più lunga per tutte, ma non oltre */
 #pitchCarousel .carousel-item.active,
 #pitchCarousel .carousel-item-next,
 #pitchCarousel .carousel-item-prev,
@@ -500,8 +501,10 @@ body {
 #pitchCarousel .carousel-item-end {
     display: flex !important;
     flex-direction: column;
-    justify-content: flex-start; /* Spinge tutto verso l'alto */
-    padding-top: 40px;            /* Un pizzico di spazio dal bordo per eleganza */
+    justify-content: flex-start; /* Testo attaccato in alto */
+    padding-top: 30px;            /* Respiro dal bordo superiore */
+    padding-bottom: 30px;         /* Respiro dal bordo inferiore */
+    min-height: 350px;           /* Altezza minima per evitare "scatti" se le slide sono molto diverse */
 }
 </style>
 
