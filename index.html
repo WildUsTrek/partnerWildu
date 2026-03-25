@@ -272,6 +272,24 @@ body {
         z-index: -2; 
         pointer-events: none;
     }
+
+
+/* --- NUOVO DESIGN ARCHIVIO --- */
+    .filter-bar { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; }
+    .filter-btn { border-radius: 50px; font-size: 0.8rem; font-weight: bold; padding: 8px 16px; border: 1px solid #444; color: #888; background: transparent; transition: 0.3s; }
+    .filter-btn.active { background: #0d6efd; color: white; border-color: #0d6efd; box-shadow: 0 4px 12px rgba(13,110,253,0.3); }
+
+    .month-divider { display: flex; align-items: center; text-align: center; margin: 30px 0 15px; }
+    .month-divider::before, .month-divider::after { content: ''; flex: 1; border-bottom: 1px solid #333; }
+    .month-divider span { padding: 0 15px; font-size: 0.75rem; font-weight: 800; color: #666; text-transform: uppercase; letter-spacing: 2px; }
+
+    /* Fisarmonica Card */
+    .proposal-card { cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card-body-expanded { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+    .proposal-card.is-expanded .card-body-expanded { max-height: 1200px; } /* Abbastanza spazio per tutto il contenuto */
+    .expand-indicator { transition: 0.3s; color: #0d6efd; }
+    .proposal-card.is-expanded .expand-indicator { transform: rotate(180deg); }
+
     
   </style>
 </head>
@@ -650,13 +668,17 @@ function goToStripe(tipo) {
   
 <div id="my-proposals-view" class="container pb-5 pt-3" style="max-width: 600px; display:none;">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="text-white fw-bold m-0">Le mie Proposte</h2>
-    <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="showPage('home')">Indietro</button>
+    <h4 class="text-white fw-bold m-0">Archivio Proposte</h4>
+    <button type="button" class="btn btn-dark btn-sm rounded-pill px-3 border-secondary" onclick="showPage('home')">Indietro</button>
   </div>
-  <div class="section-title text-warning" style="border-bottom-color: #ffc107;">⏳ In Valutazione</div>
-  <div id="list-pending" class="mb-4"></div>
-  <div class="section-title text-success" style="border-bottom-color: #198754;">✅ Accettate</div>
-  <div id="list-accepted"></div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" id="f-all" onclick="setProposalFilter('ALL')">Tutte</button>
+    <button class="filter-btn" id="f-pending" onclick="setProposalFilter('PENDING')">In Valutazione</button>
+    <button class="filter-btn" id="f-accepted" onclick="setProposalFilter('ACCEPTED')">Accettate</button>
+  </div>
+
+  <div id="timeline-proposals"></div>
 </div>
 
 
