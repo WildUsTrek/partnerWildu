@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1647,15 +1647,13 @@ function selectGalleryImage(imgElement, url, publicId) {
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
   imgElement.style.borderColor = '#0d6efd';
   selectedGalleryUrl = url;
-  selectedPublicId = publicId;
+  
+  // 🟢 LA VITTORIA: Usiamo l'ID puro di Cloudinary fornito dal server, senza tagli strani!
+  window.selectedPublicId = publicId;
 
   // 🔴 mostra bottone elimina
-let deleteBtn = document.getElementById("delete_image_btn");
-if (deleteBtn) deleteBtn.style.display = "block";
-
-// 🔴 salva public_id (estratto dall'URL)
-window.selectedPublicId = url.split('/upload/')[1].split('/').slice(1).join('/').split('.')[0];
-  
+  let deleteBtn = document.getElementById("delete_image_btn");
+  if (deleteBtn) deleteBtn.style.display = "block";
 }
 
   
