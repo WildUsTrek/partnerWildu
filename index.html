@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v9.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -224,7 +224,8 @@ body {
     .form-check-label { font-size: 0.85rem; font-weight: 600; color: #ddd; }
     .note-input { font-size: 0.85rem !important; height: 38px !important; }
 
-    .btn-submit { background: #0d6efd; border: none; border-radius: 50px; padding: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+    .btn-submit { background: #0d6efd; border: none; border-radius: 12px; padding: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+    .btn-step-nav { border-radius: 12px; padding: 15px; font-weight: bold; }
     .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
     
     input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
@@ -503,6 +504,9 @@ function goToStripe(tipo) {
  <div id="step-1" class="step-content active">
     <span class="step-header">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
+      <div class="mb-4 pb-3 border-bottom border-secondary">
+        <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
+      </div>
       <div class="row g-3">
         <div class="col-md-6"><label>Nome e Cognome Guida</label><input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
         <div class="col-md-6"><label>WhatsApp</label><input type="text" id="g_tel" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
@@ -544,13 +548,16 @@ function goToStripe(tipo) {
         <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
         <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
       </div>
-      <button type="button" class="btn btn-submit text-white w-100 mt-4" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
     </div>
   </div>
 
   <div id="step-2" class="step-content">
     <span class="step-header">Passo 2 di 8: Luogo e Tecnica</span>
     <div class="card shadow-lg p-4">
+      <div class="d-flex gap-2 mb-4 pb-3 border-bottom border-secondary">
+        <button type="button" class="btn btn-outline-light btn-step-nav w-50" onclick="goToStep(1)">← Indietro</button>
+        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti: Nutrizione →</button>
+      </div>
       <div class="row g-3">
         <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" onblur="autoFetchRegion()" placeholder="Es. Bar Centrale, Roma"></div>
         <div class="col-md-6"><label>Regione *</label>
@@ -571,10 +578,6 @@ function goToStripe(tipo) {
         <div class="col-6"><label>Dislivello (m) *</label><input type="number" id="od_dislivello" class="form-control" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
         <div class="section-title">DESCRIZIONE EMOZIONALE *</div>
         <div class="col-12"><textarea id="od_descrizione" class="form-control" rows="5" placeholder="Scrivi qui la descrizione emozionale del tuo evento..."></textarea></div>
-      </div>
-      <div class="d-flex gap-2 mt-4">
-        <button type="button" class="btn btn-outline-light w-50" onclick="goToStep(1)">← Indietro</button>
-        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti: Nutrizione →</button>
       </div>
     </div>
   </div>
@@ -974,37 +977,37 @@ function renderizzaPagineStatiche(configData) {
   };
 
 function renderEquipmentSteps() {
-    let container = document.getElementById('equipment-steps-container');
-    eqCategories.forEach((cat, idx) => {
-      let isLast = (idx === eqCategories.length - 1);
-      let html = `
-        <div id="step-${cat.step}" class="step-content">
-          <span class="step-header">Passo ${cat.step} di 8: ${cat.name}</span>
-          <div class="card shadow-lg p-4">
-            <div class="eq-category-card">
-              <div class="row m-0">
-                ${cat.items.map(it => {
-                  let placeholder = (it.id === 'eq4') ? "Indumenti qtà e strati, gusci..." : "Qtà o tipologia...";
-                  return `
-                    <div class="col-12 mb-3 eq-item pb-2 border-bottom" style="border-color: #2a2a2a !important;">
-                      <div class="d-flex align-items-center mb-2">
-                        <input class="form-check-input od-eq m-0" type="checkbox" value="${it.val}" id="${it.id}">
-                        <label class="form-check-label ms-3 mb-0 text-white" for="${it.id}">${it.icon} ${it.val}</label>
-                      </div>
-                      <input type="text" class="form-control form-control-sm note-input w-100" id="note_${it.id}" placeholder="${placeholder}">
-                    </div>`;
-                }).join('')}
-              </div>
-            </div>
-            <div class="d-flex gap-2 mt-4">
-              <button type="button" class="btn btn-outline-light w-50" onclick="goToStep(${cat.step - 1})">← Indietro</button>
-              ${isLast ? `<button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(8)">Avanti: Foto →</button>` : `<button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(${cat.step + 1})">Avanti →</button>`}
+  let container = document.getElementById('equipment-steps-container');
+  eqCategories.forEach((cat, idx) => {
+    let isLast = (idx === eqCategories.length - 1);
+    let html = `
+      <div id="step-${cat.step}" class="step-content">
+        <span class="step-header">Passo ${cat.step} di 8: ${cat.name}</span>
+        <div class="card shadow-lg p-4">
+          <div class="d-flex gap-2 mb-4 pb-3 border-bottom border-secondary">
+            <button type="button" class="btn btn-outline-light btn-step-nav w-50" onclick="goToStep(${cat.step - 1})">← Indietro</button>
+            ${isLast ? `<button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(8)">Avanti: Foto →</button>` : `<button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(${cat.step + 1})">Avanti →</button>`}
+          </div>
+          <div class="eq-category-card">
+            <div class="row m-0">
+              ${cat.items.map(it => {
+                let placeholder = (it.id === 'eq4') ? "Indumenti qtà e strati, gusci..." : "Qtà o tipologia...";
+                return `
+                  <div class="col-12 mb-3 eq-item pb-2 border-bottom" style="border-color: #2a2a2a !important;">
+                    <div class="d-flex align-items-center mb-2">
+                      <input class="form-check-input od-eq m-0" type="checkbox" value="${it.val}" id="${it.id}">
+                      <label class="form-check-label ms-3 mb-0 text-white" for="${it.id}">${it.icon} ${it.val}</label>
+                    </div>
+                    <input type="text" class="form-control form-control-sm note-input w-100" id="note_${it.id}" placeholder="${placeholder}">
+                  </div>`;
+              }).join('')}
             </div>
           </div>
-        </div>`;
-      container.innerHTML += html;
-    });
-  }
+        </div>
+      </div>`;
+    container.innerHTML += html;
+  });
+}
 
   async function smartPaste() {
     try {
