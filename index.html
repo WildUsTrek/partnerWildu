@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v2.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v2.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -315,29 +315,34 @@ body {
     }
     .btn-back-top:active { background: rgba(13,110,253,0.1); color: #0d6efd; border-color: #0d6efd; }
 
-/* 🟢 STRATEGIA A: Feedback ad opacità (Anti-Ghosting) */
-    .btn, .btn-submit, .btn-step-nav, .btn-back-top {
-        transition: opacity 0.1s ease !important;
+/* 🛑 ZERO DISCOTECA: I tasti navigazione non cambiano MAI colore di stato */
+    .btn-submit, .btn-step-nav, .btn-back-top, .btn-outline-light {
+        transition: none !important; /* Elimina ogni ritardo che causa lo sfarfallio */
         outline: none !important;
         box-shadow: none !important;
-        -webkit-tap-highlight-color: transparent !important; /* Elimina il flash azzurro di sistema */
+        -webkit-tap-highlight-color: transparent !important;
     }
 
-    /* Impedisce ai colori di restare "accesi" su mobile */
-    .btn:hover, .btn:focus, .btn:active, 
-    .btn-submit:hover, .btn-submit:focus, 
-    .btn-outline-light:hover, .btn-outline-light:focus {
-        background-color: inherit !important;
-        color: inherit !important;
-        border-color: inherit !important;
+    /* Forza il colore originale su TUTTI gli stati possibili */
+    /* Per il tasto AVANTI (Blu) */
+    .btn-submit, .btn-submit:hover, .btn-submit:focus, .btn-submit:active {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border: none !important;
         box-shadow: none !important;
-        transform: none !important;
-        opacity: 1;
     }
 
-    /* L'unico feedback visivo ammesso: un leggero "lampo" di trasparenza al tocco */
-    .btn:active, .btn-submit:active {
-        opacity: 0.6 !important;
+    /* Per il tasto INDIETRO (Trasparente/Bianco) */
+    .btn-outline-light, .btn-outline-light:hover, .btn-outline-light:focus, .btn-outline-light:active {
+        background-color: transparent !important;
+        color: #f8f9fa !important;
+        border-color: #f8f9fa !important;
+        box-shadow: none !important;
+    }
+
+    /* Unico feedback visivo: una leggerissima e fulminea variazione di opacità */
+    .btn-submit:active, .btn-outline-light:active, .btn-back-top:active {
+        opacity: 0.7 !important;
     }
     
   </style>
@@ -569,7 +574,7 @@ function goToStripe(tipo) {
   <div class="progress-container mb-4"><div id="progress-bar" class="progress-bar-fill"></div></div>
   
  <div id="step-1" class="step-content active">
-    <span class="step-header">Passo 1 di 8: Dati Base</span>
+    <span class="step-header" tabindex="-1">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="mb-4 pb-3 border-bottom border-secondary">
         <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(2)">Avanti: Luogo e Tecnica →</button>
@@ -626,7 +631,7 @@ function goToStripe(tipo) {
   </div>
 
   <div id="step-2" class="step-content">
-    <span class="step-header">Passo 2 di 8: Luogo e Tecnica</span>
+    <span class="step-header" tabindex="-1">Passo 2 di 8: Luogo e Tecnica</span>
     <div class="card shadow-lg p-4">
       <div class="d-flex gap-2 mb-4 pb-3 border-bottom border-secondary">
         <button type="button" class="btn btn-outline-light btn-step-nav w-50" onclick="goToStep(1)">← Indietro</button>
@@ -662,7 +667,7 @@ function goToStripe(tipo) {
   <div id="equipment-steps-container"></div>
 
   <div id="step-8" class="step-content">
-    <span class="step-header">Passo 8 di 8: Foto di Copertina</span>
+    <span class="step-header" tabindex="-1">Passo 8 di 8: Foto di Copertina</span>
     <div class="card shadow-lg p-4 text-center">
       <div class="section-title">📸 IMMAGINE DEL TREKKING</div>
       <p class="text-muted small mb-3">Carica una nuova foto o scegline una dal tuo archivio.</p>
@@ -920,14 +925,20 @@ function renderizzaPagineStatiche(configData) {
 }
   
 function goToStep(step) {
-    document.activeElement.blur(); 
-    
-    // 🟢 STRATEGIA B: Micro-vibrazione (10 millisecondi)
+    // 🟢 1. Silenzia il focus: lo spostiamo sul testo dello step, non sui tasti
+    const nextStepHeader = document.querySelector(`#step-${step} .step-header`);
+    if (nextStepHeader) {
+        nextStepHeader.focus(); 
+    } else {
+        document.activeElement.blur();
+    }
+
+    // 🟢 2. Micro-vibrazione (Strategia B sempre attiva)
     if (window.navigator.vibrate) {
         window.navigator.vibrate(10);
     }
-    
-    // ... resto del tuo codice (controlli campi, animazioni, ecc.)
+
+    // ... resto del tuo codice (controlli campi, logica active, ecc.)
     let current = parseInt(document.querySelector('.step-content.active').id.split('-')[1]);
     
     if (step > current && current === 1) {
@@ -1096,7 +1107,7 @@ function renderEquipmentSteps() {
     let isLast = (idx === eqCategories.length - 1);
     let html = `
       <div id="step-${cat.step}" class="step-content">
-        <span class="step-header">Passo ${cat.step} di 8: ${cat.name}</span>
+        <span class="step-header" tabindex="-1">Passo ${cat.step} di 8: ${cat.name}</span>
         <div class="card shadow-lg p-4">
           <div class="d-flex gap-2 mb-4 pb-3 border-bottom border-secondary">
             <button type="button" class="btn btn-outline-light btn-step-nav w-50" onclick="goToStep(${cat.step - 1})">← Indietro</button>
