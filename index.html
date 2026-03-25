@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -3414,42 +3414,52 @@ function logout() {
 let pressTimer;
 function startSyncTimer() { pressTimer = setTimeout(() => { forceSync(); }, 3000); }
 function cancelSyncTimer() { clearTimeout(pressTimer); }
+
+  
 function forceSync() {
     let input = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza per forzare il ripristino di sistema:");
     if (!input) return;
 
-    // 1. Andiamo a pescare il PIN nascosto scaricato silenziosamente all'avvio
     let improntaServer = null;
     try {
         const mem = sessionStorage.getItem('wildu_cache_proposte');
         if (mem) {
             const data = JSON.parse(mem);
-            // Cerca il pin nel config scaricato dal server
             if (data.config && data.config.pinSegreto) {
                 improntaServer = data.config.pinSegreto;
             }
         }
-    } catch(e) { console.warn("Memoria illeggibile"); }
+    } catch(e) { console.warn("Memoria corrosa"); }
 
-    // 2. Fallback temporaneo (finché non aggiorni il Google Script)
-    // Se il server non manda ancora il PIN, usiamo l'impronta di "371" di default
+    // 🛑 IL MURO: Se non c'è il PIN in memoria (es. offline e senza cache), non si passa. Nessuna backdoor.
     if (!improntaServer) {
-        improntaServer = "V2lsZHUzNzE="; // "Wildu371" in Base64
+        alert("❌ Impossibile verificare il PIN (Memoria vuota o server irraggiungibile). Se l'app è bloccata, ricarica la pagina o usa il Tasto Rosso di emergenza.");
+        return;
     }
 
-    // 3. Creiamo l'impronta di quello che ha digitato l'utente e confrontiamo
+    // Creiamo l'impronta e confrontiamo RIGOROSAMENTE con quella del server
     const improntaDigitata = btoa("Wildu" + input.trim());
 
     if (improntaDigitata === improntaServer) {
-        // ☢️ PULIZIA TOTALE (Meglio del clear specifico, pialla tutto per sicurezza)
+        // ☢️ PULIZIA NUCLEARE TOTALE
         sessionStorage.clear(); 
+        localStorage.removeItem('wildu_global_cooldown'); // Pulizia extra del nuovo timer
+        
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            let key = localStorage.key(i);
+            if (key && key.startsWith('wildu_')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        
         alert("✅ Autorizzazione confermata. Pulizia cache in corso...");
         location.reload(); 
     } else {
         alert("❌ PIN errato. Operazione annullata.");
     }
 }
-
 
 
 // =========================================================
