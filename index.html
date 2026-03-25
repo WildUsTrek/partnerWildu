@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -30,7 +30,8 @@ document.addEventListener("DOMContentLoaded", function() {
       el.innerText = APP_VERSION;
 });
 
-// 3. MOTORE CAROSELLO (Fuori dai cicli, pulito)
+
+// 3. MOTORE CAROSELLO (Nativo e Pulito - Fix Mobile)
     const myCarousel = document.getElementById('pitchCarousel');
     if (myCarousel) {
       const carouselInstance = new bootstrap.Carousel(myCarousel, {
@@ -40,25 +41,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
       carouselInstance.cycle();
 
-      // Funzioni di stop/start
-      const stopCarousel = () => carouselInstance.pause();
-      const startCarousel = () => carouselInstance.cycle();
-
-      // 🪄 SENSORI BOTTE DI FERRO V2: Universali e Anti-Hijack
-      // Sostituiscono touchstart/mouseenter e non si fanno bloccare dal CSS!
-      myCarousel.addEventListener('pointerdown', stopCarousel);
-      myCarousel.addEventListener('pointerup', () => setTimeout(startCarousel, 1000));
-      myCarousel.addEventListener('pointercancel', () => setTimeout(startCarousel, 1000));
-      myCarousel.addEventListener('pointerleave', () => setTimeout(startCarousel, 1000));
-
-      // Fix per non far ripartire il giro se il mouse/dito è ancora sopra
-      myCarousel.addEventListener('slid.bs.carousel', () => {
-          // Aggiunto anche :active per sicurezza su mobile
-          if (!myCarousel.matches(':hover') && !myCarousel.matches(':active')) {
-              carouselInstance.cycle();
-          }
-      });
+      // SENSORI INFALLIBILI: passive: true impedisce al telefono di rubare il tocco
+      myCarousel.addEventListener('touchstart', () => carouselInstance.pause(), {passive: true});
+      myCarousel.addEventListener('touchend', () => setTimeout(() => carouselInstance.cycle(), 1000), {passive: true});
+      
+      // SENSORI PC
+      myCarousel.addEventListener('mouseenter', () => carouselInstance.pause());
+      myCarousel.addEventListener('mouseleave', () => carouselInstance.cycle());
     }
+  
   }); // Chiusura corazzata del DOMContentLoaded
   
   const firebaseConfig = {
@@ -465,7 +456,7 @@ body {
         <div class="carousel-inner shadow-lg rounded-4 border border-secondary" style="background: rgba(25, 25, 25, 0.85); backdrop-filter: blur(10px);">
             
             <div class="carousel-item active p-4 text-center" style="min-height: 340px;">
-                <i class="bi bi-backpack text-primary display-3 mb-3 d-block"></i>
+                <i class="bi bi-backpack text-primary display-3 mb-0 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">L'Ufficio nello Zaino</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Meno lavoro da pc, più vita reale.<br><br>Organizza e gestisci i tuoi trekking e le prenotazioni direttamente dal tuo smartphone, mentre bevi un caffè al rifugio.</p>
             <div class="mt-auto pt-4">
@@ -476,7 +467,7 @@ body {
             </div>
             
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
-                <i class="bi bi-piggy-bank text-success display-3 mb-3 d-block"></i>
+                <i class="bi bi-piggy-bank text-success display-3 mb-0 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Il 100%<br>del tuo sudore resta a te<br>(Zero Commissioni)</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Mentre gli altri ti chiedono percentuali su ogni biglietto venduto, Wildu è il tuo alleato.<br><br>Ti porta nuovi clienti<br>e ti lascia ogni 💸 in tasca.<br>Nessun pedaggio sul tuo lavoro.</p>
             <div class="mt-auto pt-4">
@@ -487,7 +478,7 @@ body {
             </div>
             
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
-                <i class="bi bi-magic text-warning display-3 mb-3 d-block"></i>
+                <i class="bi bi-magic text-warning display-3 mb-0 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">➖ scrivania ➕ sentieri<br>(Magia Locandina)</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Basta impazzire ore per creare un post su canva, o per pensare cosa scrivere sul mex promo!<br><br>Tu metti i dati, noi creiamo ✨ una locandina ed un testo pronti da lanciare<br>su 💬WA, 📸IG, 📘FB, ✈️TG: con 1 solo tap!<br><br>Sembri un'agenzia, ma fai tutto mentre sei al rifugio.</p>
             <div class="mt-auto pt-4">
@@ -498,7 +489,7 @@ body {
             </div>
             
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
-                <i class="bi bi-people-fill text-info display-3 mb-3 d-block"></i>
+                <i class="bi bi-people-fill text-info display-3 mb-0 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Mai più caos prenotazioni<br>(I tuoi Clienti in un Tap)</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Basta fogli, messaggi persi o chat disordinate.<br><br>Hai una lista iscritti 👥 pulita in tempo reale, con il conto dei posti prenotati<br>e un link diretto per scrivere su WhatsApp 💬 a ogni partecipante.<br><br>Hai il polso della situazione sempre, anche offline grazie al sensore!</p>
            <div class="mt-auto pt-4">
@@ -509,7 +500,7 @@ body {
             </div>
 
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
-                <i class="bi bi-star-fill text-warning display-3 mb-3 d-block"></i>
+                <i class="bi bi-star-fill text-warning display-3 mb-0 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Una Vetrina che<br>premia il merito<br>(Open vs Pay)</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Il sistema "1 a 1" ⚖️<br>(1 evento gratis x sbloccare 1 a cash) non è un limite, è un patto di fiducia.<br><br>Ti fa conoscere dalla gente offrendo valore, per poi monetizzare con i trek più esclusivi.<br>Vuoi + libertà di pubblicazione?<br><br>L'abbonamento opzionale (costo irrisorio) toglie i vincoli!</p>
            <div class="mt-auto pt-4">
@@ -520,7 +511,7 @@ body {
             </div>
 
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
-                <i class="bi bi-shield-check text-success display-3 mb-3 d-block"></i>
+                <i class="bi bi-shield-check text-success display-3 mb-0 d-block"></i>
                 <h3 class="fw-bold text-white mb-3">Costruita per non tradirti</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati,<br>e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
            <div class="mt-auto pt-4">
