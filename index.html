@@ -930,75 +930,58 @@ function renderizzaPagineStatiche(configData) {
 }
   
 function goToStep(step) {
-    // 🟢 1. Pulizia Focus standard
+    // 🛡️ 1. LOGICA DI VALIDAZIONE (Deve stare dentro la funzione!)
+    let currentEl = document.querySelector('.step-content.active');
+    if (!currentEl) return;
+    let current = parseInt(currentEl.id.split('-')[1]);
+
+    if (step > current) {
+        if (current === 1) {
+            if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
+            
+            const dataInserita = document.getElementById('od_data_inizio').value;
+            const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+            const dataMinima = new Date(oggi); dataMinima.setDate(oggi.getDate() + 7);
+            const selDate = new Date(dataInserita); selDate.setHours(0, 0, 0, 0);
+
+            if (selDate < dataMinima) {
+                const gg = String(dataMinima.getDate()).padStart(2, '0');
+                const mm = String(dataMinima.getMonth() + 1).padStart(2, '0');
+                const aaaa = dataMinima.getFullYear();
+                alert(`Evento troppo vicino da proporre, scegli almeno data oltre ${gg}/${mm}/${aaaa}`);
+                return;
+            }
+        }
+        if (current === 2) if (!checkFields(['od_luogo_nome', 'od_regione', 'od_luogo_link', 'od_km', 'od_dislivello', 'od_descrizione'])) return;
+        if (current >= 3 && current <= 7) {
+            let cat = eqCategories.find(c => c.step === current);
+            let checked = cat.items.some(it => document.getElementById(it.id).checked || document.getElementById('note_' + it.id).value.trim() !== "");
+            if (!checked) {
+                if (!confirm("⚠️ Non hai selezionato nulla per \"" + cat.name + "\". Confermi?")) return;
+            }
+        }
+    }
+
+    // 🌊 2. LOGICA VISIVA (L'animazione "Premium")
     if (document.activeElement) document.activeElement.blur();
-    
-    // 🟢 2. Feedback fisico (Strategia B)
     if (window.navigator.vibrate) window.navigator.vibrate(10);
 
-    // 🟢 3. Cambio Step con mini-ritardo per fluidità
     document.querySelectorAll('.step-content').forEach(s => {
         s.classList.remove('active');
-        s.style.display = 'none'; // Forza chiusura immediata degli altri
+        s.style.display = 'none';
     });
 
     const nextStep = document.getElementById('step-' + step);
     if (nextStep) {
         nextStep.style.display = 'block';
-        // Un piccolo timeout permette al browser di applicare il display:block 
-        // prima di far partire l'animazione di opacità
-        setTimeout(() => {
-            nextStep.classList.add('active');
-        }, 10);
+        setTimeout(() => { nextStep.classList.add('active'); }, 10);
     }
 
-    // 🟢 4. Barra progresso e scroll
     const progress = (step / 8 * 100);
-    document.getElementById('progress-bar').style.width = progress + "%";
+    const pBar = document.getElementById('progress-bar');
+    if (pBar) pBar.style.width = progress + "%";
     window.scrollTo({top: 0, behavior: 'smooth'});
 }
-    // ... resto del tuo codice (controlli campi, logica active, ecc.)
-    let current = parseInt(document.querySelector('.step-content.active').id.split('-')[1]);
-    
-    if (step > current && current === 1) {
-      // 1. Controllo campi vuoti
-      if (!checkFields(['g_nome', 'g_tel', 'od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
-      
-      // 🟢 2. IL GUARDIANO DEL TEMPO (Minimo 7 giorni)
-      const dataInserita = document.getElementById('od_data_inizio').value;
-      const oggi = new Date();
-      oggi.setHours(0, 0, 0, 0); // Reset ore per confronto puro tra date
-      
-      const dataMinima = new Date(oggi);
-      dataMinima.setDate(oggi.getDate() + 7); // Oggi + 7 giorni
-      
-      const selDate = new Date(dataInserita);
-      selDate.setHours(0, 0, 0, 0);
-
-      if (selDate < dataMinima) {
-        const gg = String(dataMinima.getDate()).padStart(2, '0');
-        const mm = String(dataMinima.getMonth() + 1).padStart(2, '0');
-        const aaaa = dataMinima.getFullYear();
-        alert(`evento troppo vicino da proporre, scegli almeno data oltre ${gg}/${mm}/${aaaa}`);
-        return;
-      }
-    }
-
-    if (step > current && current === 2) if (!checkFields(['od_luogo_nome', 'od_regione', 'od_luogo_link', 'od_km', 'od_dislivello', 'od_descrizione'])) return;
-    if (step > current && current >= 3 && current <= 7) {
-        let cat = eqCategories.find(c => c.step === current);
-        let checked = cat.items.some(it => document.getElementById(it.id).checked || document.getElementById('note_' + it.id).value.trim() !== "");
-        if (!checked) {
-            let confirmSkip = confirm("⚠️ Non hai selezionato nulla per \"" + cat.name + "\". Confermi di non voler richiedere attrezzatura?");
-            if (!confirmSkip) return;
-        }
-    }
-    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
-    document.getElementById('step-' + step).classList.add('active');
-    document.getElementById('progress-bar').style.width = (step / 8 * 100) + "%";
-    window.scrollTo(0,0);
-  }
-
 
   // --- GENERATORE MENU A TENDINA ORARI (Solo :00 e :30) ---
   function popolaMenuOrari() {
