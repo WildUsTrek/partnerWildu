@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v2.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v3.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -592,7 +592,7 @@ function goToStripe(tipo) {
     <span class="step-header" tabindex="-1">Passo 1 di 8: Dati Base</span>
     <div class="card shadow-lg p-4">
       <div class="mb-4 pb-3 border-bottom border-secondary">
-        <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(2)">Avanti →: Luogo e Tecnica →</button>
+        <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(2)">Avanti : Luogo e Tecnica →</button>
       </div>
       <div class="row g-3">
         <div class="col-md-6"><label>Nome e Cognome Guida</label><input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
@@ -650,7 +650,7 @@ function goToStripe(tipo) {
     <div class="card shadow-lg p-4">
       <div class="d-flex gap-2 mb-4 pb-3 border-bottom border-secondary">
         <button type="button" class="btn btn-outline-light btn-step-nav w-50" onclick="goToStep(1)">← Indietro</button>
-        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti</button>
+        <button type="button" class="btn btn-submit text-white w-50" onclick="goToStep(3)">Avanti →</button>
       </div>
       <div class="row g-3">
         <div class="col-md-6"><label>Punto di Ritrovo *</label><input type="text" id="od_luogo_nome" class="form-control" onblur="autoFetchRegion()" placeholder="Es. Bar Centrale, Roma"></div>
@@ -1005,7 +1005,7 @@ function goToStep(step) {
             
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
-    }, 200); 
+    }, 100); 
 }
 
   // --- GENERATORE MENU A TENDINA ORARI (Solo :00 e :30) ---
