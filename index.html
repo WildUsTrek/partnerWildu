@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -44,21 +44,22 @@ document.addEventListener("DOMContentLoaded", function() {
       const stopCarousel = () => carouselInstance.pause();
       const startCarousel = () => carouselInstance.cycle();
 
-      // Sensori PC & Mobile
-      myCarousel.addEventListener('mouseenter', stopCarousel);
-      myCarousel.addEventListener('mouseleave', startCarousel);
-      myCarousel.addEventListener('touchstart', stopCarousel);
-      myCarousel.addEventListener('touchend', () => setTimeout(startCarousel, 1000));
+      // 🪄 SENSORI BOTTE DI FERRO V2: Universali e Anti-Hijack
+      // Sostituiscono touchstart/mouseenter e non si fanno bloccare dal CSS!
+      myCarousel.addEventListener('pointerdown', stopCarousel);
+      myCarousel.addEventListener('pointerup', () => setTimeout(startCarousel, 1000));
+      myCarousel.addEventListener('pointercancel', () => setTimeout(startCarousel, 1000));
+      myCarousel.addEventListener('pointerleave', () => setTimeout(startCarousel, 1000));
 
       // Fix per non far ripartire il giro se il mouse/dito è ancora sopra
       myCarousel.addEventListener('slid.bs.carousel', () => {
-          if (!myCarousel.matches(':hover')) {
+          // Aggiunto anche :active per sicurezza su mobile
+          if (!myCarousel.matches(':hover') && !myCarousel.matches(':active')) {
               carouselInstance.cycle();
           }
       });
     }
-  }); // Chiusura corretta del DOMContentLoaded
-
+  }); // Chiusura corazzata del DOMContentLoaded
   
   const firebaseConfig = {
     apiKey: "AIzaSyDIPgFA_caKIMHFgEa-enO4Jk0d7eTCFLI",
@@ -487,8 +488,8 @@ body {
             
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-magic text-warning display-3 mb-3 d-block"></i>
-                <h3 class="fw-bold text-white mb-3">- scrivania + sentieri<br>(Magia Locandina)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;">Basta impazzire ore per creare un post su canva, o per pensare cosa scrivere sul mex promo!<br><br>Tu metti i dati, noi creiamo ✨ una locandina ed un testo pronti da lanciare su 💬WA, 📸IG, 📘FB, ✈️TG: con 1 solo tap!<br><br>Sembri un'agenzia, ma fai tutto mentre sei al rifugio.</p>
+                <h3 class="fw-bold text-white mb-3">➖ scrivania ➕ sentieri<br>(Magia Locandina)</h3>
+                <p class="text-light small m-0" style="line-height: 1.6;">Basta impazzire ore per creare un post su canva, o per pensare cosa scrivere sul mex promo!<br><br>Tu metti i dati, noi creiamo ✨ una locandina ed un testo pronti<br>da lanciare su 💬WA, 📸IG, 📘FB, ✈️TG: con 1 solo tap!<br><br>Sembri un'agenzia, ma fai tutto mentre sei al rifugio.</p>
             <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -509,8 +510,8 @@ body {
 
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-star-fill text-warning display-3 mb-3 d-block"></i>
-                <h3 class="fw-bold text-white mb-3">Vetrina che premia il merito<br>(Open vs Pay)</h3>
-                <p class="text-light small m-0" style="line-height: 1.6;">Il sys "1 a 1" (1 evento gratis x sbloccare 1 ⚖️ a cash) non è un limite, è un patto di fiducia.<br><br>Ti fa conoscere dalla gente offrendo valore, per poi monetizzare con i trek più esclusivi.<br>Vuoi + libertà di pubblicazione?<br><br>L'abbonamento opzionale (costo irrisorio) toglie i vincoli!</p>
+                <h3 class="fw-bold text-white mb-3">Una Vetrina che<br>premia il merito<br>(Open vs Pay)</h3>
+                <p class="text-light small m-0" style="line-height: 1.6;">Il sistema "1 a 1" ⚖️<br>(1 evento gratis x sbloccare 1 a cash) non è un limite, è un patto di fiducia.<br><br>Ti fa conoscere dalla gente offrendo valore, per poi monetizzare con i trek più esclusivi.<br>Vuoi + libertà di pubblicazione?<br><br>L'abbonamento opzionale (costo irrisorio) toglie i vincoli!</p>
            <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
         Scopri di più <i class="bi bi-chevron-right ms-2"></i>
@@ -520,7 +521,7 @@ body {
 
             <div class="carousel-item p-4 text-center" style="min-height: 340px;">
                 <i class="bi bi-shield-check text-success display-3 mb-3 d-block"></i>
-                <h3 class="fw-bold text-white mb-3">Costruita per non tradirti mai</h3>
+                <h3 class="fw-bold text-white mb-3">Costruita per non tradirti</h3>
                 <p class="text-light small m-0" style="line-height: 1.6;">Non è un sito web che si blocca se perdi il segnale in montagna.<br><br>È una vera App (PWA) 🛡️ che capisce se sei offline per proteggere i tuoi dati, e che sincronizza tutto in background senza farti sprecare Giga o batteria.</p>
            <div class="mt-auto pt-4">
     <button class="btn btn-outline-info fw-bold" type="button" data-bs-target="#pitchCarousel" data-bs-slide="next" style="min-width: 170px; border-radius: 50px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">
@@ -642,6 +643,12 @@ body {
     cursor: default;
 }
   
+
+/* 🪄 FIX BOTTE DI FERRO: Riduce lo spazio tra l'icona gigante e il titolo nel carosello */
+#pitchCarousel .carousel-item i.bi.display-3 {
+    margin-bottom: 7px !important; /* Schiaccia l'icona verso il titolo (prima era ~16px) */
+    line-height: 1 !important;     /* Rimuove lo spazio extra invisibile sopra e sotto l'icona */
+}
   
 </style>
   
