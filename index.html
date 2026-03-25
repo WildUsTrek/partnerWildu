@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v2.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v2.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -315,34 +315,39 @@ body {
     }
     .btn-back-top:active { background: rgba(13,110,253,0.1); color: #0d6efd; border-color: #0d6efd; }
 
-/* 🛑 ZERO DISCOTECA: I tasti navigazione non cambiano MAI colore di stato */
-    .btn-submit, .btn-step-nav, .btn-back-top, .btn-outline-light {
-        transition: none !important; /* Elimina ogni ritardo che causa lo sfarfallio */
+/* 💎 UI REFINED: Navigazione fluida e solida */
+    .btn-submit, .btn-step-nav, .btn-back-top {
+        transition: transform 0.1s ease, opacity 0.2s ease !important;
         outline: none !important;
         box-shadow: none !important;
-        -webkit-tap-highlight-color: transparent !important;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
     }
 
-    /* Forza il colore originale su TUTTI gli stati possibili */
-    /* Per il tasto AVANTI (Blu) */
-    .btn-submit, .btn-submit:hover, .btn-submit:focus, .btn-submit:active {
-        background-color: #0d6efd !important;
-        color: white !important;
-        border: none !important;
+    /* Invece di cambiare colore, il tasto "affonda" quando premuto (Feedback tattile visivo) */
+    .btn-submit:active, .btn-step-nav:active, .btn-back-top:active {
+        transform: scale(0.96); /* Effetto pressione */
+        opacity: 0.8;
+    }
+
+    /* Impedisce al browser di evidenziare il tasto dopo il tocco */
+    .btn:focus:not(:focus-visible) {
+        outline: none !important;
         box-shadow: none !important;
     }
 
-    /* Per il tasto INDIETRO (Trasparente/Bianco) */
-    .btn-outline-light, .btn-outline-light:hover, .btn-outline-light:focus, .btn-outline-light:active {
-        background-color: transparent !important;
-        color: #f8f9fa !important;
-        border-color: #f8f9fa !important;
-        box-shadow: none !important;
+    /* 🌊 Transizione fluida tra gli step */
+    .step-content {
+        display: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
     }
 
-    /* Unico feedback visivo: una leggerissima e fulminea variazione di opacità */
-    .btn-submit:active, .btn-outline-light:active, .btn-back-top:active {
-        opacity: 0.7 !important;
+    .step-content.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
     }
     
   </style>
@@ -925,19 +930,33 @@ function renderizzaPagineStatiche(configData) {
 }
   
 function goToStep(step) {
-    // 🟢 1. Silenzia il focus: lo spostiamo sul testo dello step, non sui tasti
-    const nextStepHeader = document.querySelector(`#step-${step} .step-header`);
-    if (nextStepHeader) {
-        nextStepHeader.focus(); 
-    } else {
-        document.activeElement.blur();
+    // 🟢 1. Pulizia Focus standard
+    if (document.activeElement) document.activeElement.blur();
+    
+    // 🟢 2. Feedback fisico (Strategia B)
+    if (window.navigator.vibrate) window.navigator.vibrate(10);
+
+    // 🟢 3. Cambio Step con mini-ritardo per fluidità
+    document.querySelectorAll('.step-content').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none'; // Forza chiusura immediata degli altri
+    });
+
+    const nextStep = document.getElementById('step-' + step);
+    if (nextStep) {
+        nextStep.style.display = 'block';
+        // Un piccolo timeout permette al browser di applicare il display:block 
+        // prima di far partire l'animazione di opacità
+        setTimeout(() => {
+            nextStep.classList.add('active');
+        }, 10);
     }
 
-    // 🟢 2. Micro-vibrazione (Strategia B sempre attiva)
-    if (window.navigator.vibrate) {
-        window.navigator.vibrate(10);
-    }
-
+    // 🟢 4. Barra progresso e scroll
+    const progress = (step / 8 * 100);
+    document.getElementById('progress-bar').style.width = progress + "%";
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
     // ... resto del tuo codice (controlli campi, logica active, ecc.)
     let current = parseInt(document.querySelector('.step-content.active').id.split('-')[1]);
     
