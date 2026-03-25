@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v2.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v2.8"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -315,56 +315,47 @@ body {
     }
     .btn-back-top:active { background: rgba(13,110,253,0.1); color: #0d6efd; border-color: #0d6efd; }
 
-/* 💎 UI REFINED: Navigazione fluida e solida */
+/* 🟢 NAVIGAZIONE SOLIDA: Tasti sempre accesi */
     .btn-submit, .btn-step-nav, .btn-back-top {
-        transition: transform 0.1s ease, opacity 0.2s ease !important;
-        outline: none !important;
+        opacity: 1 !important;
+        transition: all 0.2s ease-out !important; /* Animazione di "spegnimento" al rilascio */
+        transform: scale(1) !important;
         box-shadow: none !important;
+        outline: none !important;
         -webkit-tap-highlight-color: transparent;
-        user-select: none;
     }
 
-    /* Invece di cambiare colore, il tasto "affonda" quando premuto (Feedback tattile visivo) */
+    /* Colore fisso AVANTI (Azzurro Wildu) */
+    .btn-submit, .btn-submit:hover, .btn-submit:focus {
+        background-color: #0d6efd !important;
+        border: none !important;
+        color: white !important;
+    }
+
+    /* Colore fisso INDIETRO (Bianco Outline) */
+    .btn-outline-light, .btn-outline-light:hover, .btn-outline-light:focus {
+        background-color: transparent !important;
+        border: 2px solid #f8f9fa !important;
+        color: #f8f9fa !important;
+    }
+
+    /* ⚡ L'EFFETTO "TAP": Si spengono solo al click */
     .btn-submit:active, .btn-step-nav:active, .btn-back-top:active {
-        transform: scale(0.96); /* Effetto pressione */
-        opacity: 0.8;
+        opacity: 0.3 !important; /* Si "spegne" quasi del tutto */
+        transform: scale(0.92) !important; /* Si rimpicciolisce elegantemente */
+        transition: none !important; /* Il calo di luce deve essere immediato */
     }
 
-    /* Impedisce al browser di evidenziare il tasto dopo il tocco */
-    .btn:focus:not(:focus-visible) {
-        outline: none !important;
-        box-shadow: none !important;
-    }
-
-    /* 🌊 Transizione fluida tra gli step */
+    /* 🌊 FIX FLASH NERO: Transizione fluida */
     .step-content {
         display: none;
         opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.3s ease, transform 0.3s ease;
     }
 
     .step-content.active {
         display: block;
         opacity: 1;
-        transform: translateY(0);
-    }
-
-
-    /* 🎨 FIX TOTALE TASTO INDIETRO (Anti-Inversione) */
-    .btn-outline-light:hover, 
-    .btn-outline-light:focus, 
-    .btn-outline-light:active {
-        background-color: transparent !important; /* Non deve mai diventare bianco solido */
-        color: #f8f9fa !important;               /* Il testo deve restare bianco */
-        border-color: #f8f9fa !important;         /* Il bordo deve restare bianco */
-        box-shadow: none !important;
-    }
-
-    /* L'unico momento in cui può cambiare leggermente è quando il dito lo sta schiacciando */
-    .btn-outline-light:active {
-        opacity: 0.5 !important;
-        transform: scale(0.95);
+        transition: opacity 0.3s ease-in;
     }
 
 
@@ -948,7 +939,7 @@ function renderizzaPagineStatiche(configData) {
 }
   
 function goToStep(step) {
-    // 🛡️ 1. LOGICA DI VALIDAZIONE (Deve stare dentro la funzione!)
+    // 🛡️ 1. LOGICA DI VALIDAZIONE (Fedeltà 100% all'originale)
     let currentEl = document.querySelector('.step-content.active');
     if (!currentEl) return;
     let current = parseInt(currentEl.id.split('-')[1]);
@@ -980,25 +971,38 @@ function goToStep(step) {
         }
     }
 
-    // 🌊 2. LOGICA VISIVA (L'animazione "Premium")
+    // 🌊 2. LOGICA VISIVA "PREMIUM" (Spegnimento elegante e cambio step)
+    // Vibrazione immediata al tocco per sensazione meccanica
+    if (window.navigator.vibrate) window.navigator.vibrate(15);
     if (document.activeElement) document.activeElement.blur();
-    if (window.navigator.vibrate) window.navigator.vibrate(10);
 
-    document.querySelectorAll('.step-content').forEach(s => {
-        s.classList.remove('active');
-        s.style.display = 'none';
-    });
+    // Ritardo di 200ms: permette all'occhio di vedere il tasto che si "spegne" (:active nel CSS)
+    setTimeout(() => {
+        const allSteps = document.querySelectorAll('.step-content');
+        const nextStep = document.getElementById('step-' + step);
 
-    const nextStep = document.getElementById('step-' + step);
-    if (nextStep) {
-        nextStep.style.display = 'block';
-        setTimeout(() => { nextStep.classList.add('active'); }, 10);
-    }
+        if (nextStep) {
+            // Nascondiamo il vecchio e prepariamo il nuovo in un colpo solo
+            allSteps.forEach(s => { 
+                s.style.display = 'none'; 
+                s.classList.remove('active'); 
+            });
 
-    const progress = (step / 8 * 100);
-    const pBar = document.getElementById('progress-bar');
-    if (pBar) pBar.style.width = progress + "%";
-    window.scrollTo({top: 0, behavior: 'smooth'});
+            nextStep.style.display = 'block';
+            
+            // Forza il browser a processare il display:block prima di animare l'opacità
+            requestAnimationFrame(() => {
+                nextStep.classList.add('active');
+            });
+
+            // Aggiornamento progresso e scroll fluido
+            const progress = (step / 8 * 100);
+            const pBar = document.getElementById('progress-bar');
+            if (pBar) pBar.style.width = progress + "%";
+            
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+    }, 200); 
 }
 
   // --- GENERATORE MENU A TENDINA ORARI (Solo :00 e :30) ---
