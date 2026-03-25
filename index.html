@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v9.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v1.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -596,7 +596,7 @@ function goToStripe(tipo) {
         <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
         <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
       </div>
-      <button type="button" class="btn btn-back-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+      <button type="button" class="btn btn-back-top" onmousedown="window.scrollTo({top: 0, behavior: 'smooth'})">
         <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
       </button>
     </div>
@@ -630,7 +630,7 @@ function goToStripe(tipo) {
         <div class="section-title">DESCRIZIONE EMOZIONALE *</div>
         <div class="col-12"><textarea id="od_descrizione" class="form-control" rows="5" placeholder="Scrivi qui la descrizione emozionale del tuo evento..."></textarea></div>
       </div>
-      <button type="button" class="btn btn-back-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+      <button type="button" class="btn btn-back-top" onmousedown="window.scrollTo({top: 0, behavior: 'smooth'})">
         <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
       </button>
     </div>
@@ -1087,7 +1087,7 @@ function renderEquipmentSteps() {
             </div>
           </div>
 
-          <button type="button" class="btn btn-back-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+          <button type="button" class="btn btn-back-top" onmousedown="window.scrollTo({top: 0, behavior: 'smooth'})">
             <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
           </button>
 
