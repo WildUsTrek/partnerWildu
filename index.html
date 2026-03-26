@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -759,6 +759,14 @@ function goToStripe(tipo, btnElement) {
          } else {
              coronaEl.innerHTML = '';
          }
+       // 🚀 LOGICA LOGO PERSONALE PARTNER (Cloud -> Locandina)
+     if (data && data.p_logo) {
+         // Se il server ci manda un logo personale, lo mettiamo in tasca per la locandina
+         localStorage.setItem('wildu_partner_personal_logo', data.p_logo);
+     } else {
+         // Se il server non ha nulla, puliamo la cache locale del logo personale
+         localStorage.removeItem('wildu_partner_personal_logo');
+     }
      }
   }
   
@@ -2389,57 +2397,103 @@ async function updateProfile() {
     if (inputTel) inputTel.disabled = false;
   }
 }
+
   
+// 🟢 REFRESH UI LOGO (Cloud State - Coerenza 100%)
 function refreshProfileLogoUI() {
-  const logo = localStorage.getItem('wildu_partner_logo');
+  const logoUrl = localStorage.getItem('wildu_partner_logo'); // Chiave originale conservata
   const img = document.getElementById('profile-logo-img');
   const icon = document.getElementById('profile-logo-icon');
   const status = document.getElementById('profile-logo-status');
   const removeBtn = document.getElementById('profile-logo-remove-btn');
+  const uploadBtn = document.getElementById('btn-upload-logo-cloud');
 
-  if (logo) {
-    img.src = logo; img.style.display = 'block'; icon.style.display = 'none';
-    status.innerText = "✅ Logo attivo"; status.className = "small text-success mb-1 fw-bold";
+  if (logoUrl && logoUrl.trim() !== "" && !logoUrl.includes('icona_trasp')) {
+    img.src = logoUrl; img.style.display = 'block'; icon.style.display = 'none';
+    status.innerText = "✅ Logo Sincronizzato"; status.className = "small text-success mb-2 fw-bold";
     removeBtn.style.display = 'inline-block';
+    if(uploadBtn) uploadBtn.style.display = 'none';
   } else {
     img.src = ""; img.style.display = 'none'; icon.style.display = 'block';
-    status.innerText = "⚠️ Nessun logo salvato"; status.className = "small text-warning mb-1 fw-bold";
+    status.innerText = "⚠️ Nessun logo caricato"; status.className = "small text-warning mb-2 fw-bold";
     removeBtn.style.display = 'none';
+    if(uploadBtn) uploadBtn.style.display = 'inline-block';
   }
 }
 
-function saveProfileLogo(event) {
+// 🟢 UPLOAD LOGO PERSONALE (Ricicla compressImage già esistente)
+async function saveProfileLogo(event) {
   const file = event.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-      const img = new Image();
-      img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const MAX = 300; let w = img.width, h = img.height;
-          if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
-          else if (h > w && h > MAX) { w *= MAX / h; h = MAX; }
-          else if (w === h && w > MAX) { w = MAX; h = MAX; }
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          const base64Logo = canvas.toDataURL('image/png');
-          localStorage.setItem('wildu_partner_logo', base64Logo);
-          refreshProfileLogoUI(); 
-      };
-      img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  event.target.value = ""; 
-}
 
-function removeProfileLogo() {
-  if(confirm("Vuoi davvero rimuovere il tuo logo dalle prossime locandine?")) {
-    localStorage.removeItem('wildu_partner_logo');
+  const btn = document.getElementById('btn-upload-logo-cloud');
+  const status = document.getElementById('profile-logo-status');
+  const originalHtml = btn ? btn.innerHTML : "";
+
+  if(btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...'; }
+  status.innerText = "⏳ Sincronizzazione Cloud...";
+
+  try {
+    const user = firebase.auth().currentUser;
+    const token = await user.getIdToken();
+    const compressedFile = await compressImage(file); // Usa la tua funzione esistente
+
+    const resSign = await fetch(MOTORE_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "GET_CLOUDINARY_SIGNATURE", token: token, tags: 'LOGO_PRIVATE_PARTNER' })
+    });
+    const signatureData = await resSign.json();
+
+    const formData = new FormData();
+    formData.append('file', compressedFile);
+    formData.append('api_key', signatureData.apiKey);
+    formData.append('timestamp', signatureData.timestamp);
+    formData.append('signature', signatureData.signature);
+    formData.append('folder', 'partner_logos');
+    formData.append('tags', signatureData.tags);
+
+    const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', { method: 'POST', body: formData });
+    const cloudRes = await resp.json();
+
+    if (cloudRes.secure_url) {
+      // Notifica al Master (Silenziosa: se fallisce, il logo resta comunque in locale)
+      fetch(MOTORE_API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: cloudRes.secure_url })
+      }).catch(e => console.log("Database non ancora pronto, salvataggio solo locale."));
+
+      localStorage.setItem('wildu_partner_logo', cloudRes.secure_url);
+      alert("✨ Logo salvato! Pronto per le tue locandine.");
+    }
+  } catch (e) {
+    alert("❌ Errore: " + e.message);
+  } finally {
+    if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
     refreshProfileLogoUI();
+    event.target.value = ""; 
   }
 }
 
+// 🟢 RIMOZIONE LOGO (Cloud & Sheet - Coerenza 100%)
+async function removeProfileLogo() {
+  if(!confirm("Vuoi davvero rimuovere il tuo logo professionale?")) return;
+
+  try {
+    const user = firebase.auth().currentUser;
+    const token = await user.getIdToken();
+
+    fetch(MOTORE_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: "" })
+    }).catch(e => console.log("Database non aggiornato, procedo localmente."));
+
+    localStorage.removeItem('wildu_partner_logo');
+    alert("🗑️ Logo rimosso.");
+  } catch(e) { console.warn("Errore durante la rimozione."); }
+  finally { refreshProfileLogoUI(); }
+}
+
+  
 function cancelProposal() {
   if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
     // 1. Pulizia campi (esclusi quelli guida)
@@ -3262,7 +3316,7 @@ window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, cu
 
 function generaLocandina(itemEncoded) {
   window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
-  const logoSalvato = localStorage.getItem('wildu_partner_logo');
+  const logoSalvato = localStorage.getItem('wildu_partner_personal_logo');
   const logoSaltato = sessionStorage.getItem('wildu_skip_logo'); 
   if (!logoSalvato && !logoSaltato) {
       if (confirm("💡 Vuoi inserire il tuo Logo Partner nella locandina?\n\n- Fai 'OK' per caricarlo ora.\n- Fai 'Annulla' per procedere senza logo.")) {
@@ -4050,20 +4104,25 @@ const user = firebase.auth().currentUser;
     <label class="text-primary small fw-bold mb-1">TELEFONO (WHATSAPP)</label>
     <input type="tel" id="edit_p_tel" class="form-control mb-4">
 
-    <label class="text-primary small fw-bold mb-1 mt-2">LOGO PARTNER (Locandine)</label>
-    <div class="d-flex align-items-center mb-4 p-2 rounded-3" style="background: #252525; border: 1px solid #444;">
-      <div id="profile-logo-preview-container" class="me-3" style="width: 60px; height: 60px; background: #161616; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-        <img id="profile-logo-img" style="max-width: 100%; max-height: 100%; display: none;">
-        <i id="profile-logo-icon" class="bi bi-image text-muted fs-3"></i>
+<label class="text-primary small fw-bold mb-1 mt-2">IL TUO LOGO</label>
+    <div class="d-flex align-items-center mb-4 p-3 rounded-4" style="background: rgba(13,110,253,0.05); border: 1px dashed #333;">
+      <div id="profile-logo-preview-container" class="me-3 shadow-sm" style="width: 70px; height: 70px; background: #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #444;">
+        <img id="profile-logo-img" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;">
+        <i id="profile-logo-icon" class="bi bi-person-badge text-muted fs-2"></i>
       </div>
       <div class="flex-grow-1">
-        <p id="profile-logo-status" class="small text-warning mb-1 fw-bold">Nessun logo salvato</p>
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3" onclick="document.getElementById('profile-logo-upload').click()">Carica</button>
-          <button type="button" id="profile-logo-remove-btn" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="display: none;" onclick="removeProfileLogo()">Rimuovi</button>
+        <p id="profile-logo-status" class="small text-muted mb-2 fw-bold">Carica il tuo logo ufficiale</p>
+        <div id="profile-logo-actions" class="d-flex gap-2">
+          <button type="button" id="btn-upload-logo-cloud" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" onclick="document.getElementById('profile-logo-upload').click()">
+            <i class="bi bi-cloud-arrow-up"></i> Carica
+          </button>
+          <button type="button" id="profile-logo-remove-btn" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" style="display: none;" onclick="removeProfileLogo()">
+            <i class="bi bi-trash3"></i> Elimina
+          </button>
         </div>
       </div>
     </div>
+    
     <input type="file" id="profile-logo-upload" accept="image/png, image/jpeg" style="display:none;" onchange="saveProfileLogo(event)">
     
     <button id="btn-update-profile" type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
