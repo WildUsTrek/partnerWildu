@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2545,6 +2545,10 @@ async function saveProfileLogo(event) {
       console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
 
       if (updateData.success) {
+
+        // 🧹 IL FIX: DISTRUGGIAMO LA CACHE IN RAM!
+          sessionStorage.removeItem('wildu_cache_proposte');
+          sessionStorage.removeItem('wildu_cache_time');
           // ⚠️ IL SEGRETO È QUI: NON FACCIAMO NIENTE COL LOCALSTORAGE!
           // Il Base64 è già lì. L'URL di Cloudinary sta nel Master. Tutto è in equilibrio.
           alert("✨ Logo salvato e sincronizzato sul Cloud!");
@@ -2583,6 +2587,10 @@ async function removeProfileLogo() {
       body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: "" })
     });
 
+    // 🧹 IL FIX: DISTRUGGIAMO LA CACHE IN RAM!
+    sessionStorage.removeItem('wildu_cache_proposte');
+    sessionStorage.removeItem('wildu_cache_time');
+    
     // Solo se il fetch va a buon fine (senza errori di rete), svuotiamo il cassetto
     localStorage.removeItem('wildu_partner_logo');
     alert("🗑️ Logo rimosso definitivamente.");
