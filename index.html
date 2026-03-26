@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2421,7 +2421,7 @@ function refreshProfileLogoUI() {
   }
 }
 
-// 🟢 UPLOAD LOGO PERSONALE (Ricicla compressImage già esistente)
+// 🟢 UPLOAD LOGO CON DEBUG LOG (Botte di Ferro)
 async function saveProfileLogo(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -2430,43 +2430,79 @@ async function saveProfileLogo(event) {
   const status = document.getElementById('profile-logo-status');
   const originalHtml = btn ? btn.innerHTML : "";
 
-  if(btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...'; }
-  status.innerText = "⏳ Sincronizzazione Cloud...";
+  if(btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Invio...'; }
+  status.innerText = "⏳ Preparazione invio...";
 
   try {
+    console.log("🚀 [DEBUG LOGO] Inizio processo upload...");
     const user = firebase.auth().currentUser;
     const token = await user.getIdToken();
-    const compressedFile = await compressImage(file); // Usa la tua funzione esistente
+    const compressedFile = await compressImage(file);
+    console.log("📦 [DEBUG LOGO] Immagine compressa con successo.");
 
+    // 1. Richiesta Firma
+    console.log("📡 [DEBUG LOGO] Richiesta firma al Postino...");
     const resSign = await fetch(MOTORE_API_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "GET_CLOUDINARY_SIGNATURE", token: token, tags: 'LOGO_PRIVATE_PARTNER' })
+      body: JSON.stringify({ 
+        action: "GET_CLOUDINARY_SIGNATURE", 
+        token: token, 
+        tags: 'LOGO_PRIVATE_PARTNER' 
+      })
     });
+    
     const signatureData = await resSign.json();
+    console.log("🔑 [DEBUG LOGO] Risposta firma:", signatureData);
 
+    if (!signatureData.success) throw new Error("Firma fallita: " + signatureData.error);
+
+    // 2. Preparazione pacchetto per Cloudinary
     const formData = new FormData();
     formData.append('file', compressedFile);
     formData.append('api_key', signatureData.apiKey);
     formData.append('timestamp', signatureData.timestamp);
     formData.append('signature', signatureData.signature);
-    formData.append('folder', 'partner_logos');
+    
+    // ⚠️ CRUCIALE: Usiamo ESATTAMENTE quello che ha firmato il Postino
+    formData.append('folder', signatureData.folder); 
     formData.append('tags', signatureData.tags);
 
-    const resp = await fetch('https://api.cloudinary.com/v1_1/daiyrgmbb/image/upload', { method: 'POST', body: formData });
+    console.log("📤 [DEBUG LOGO] Invio pacchetto a Cloudinary...");
+
+    // 3. Volo verso Cloudinary
+    const resp = await fetch(`https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`, { 
+      method: 'POST', 
+      body: formData 
+    });
+    
     const cloudRes = await resp.json();
+    console.log("☁️ [DEBUG LOGO] Risposta Cloudinary:", cloudRes);
 
     if (cloudRes.secure_url) {
-      // Notifica al Master (Silenziosa: se fallisce, il logo resta comunque in locale)
-      fetch(MOTORE_API_URL, {
+      console.log("✅ [DEBUG LOGO] URL ricevuto:", cloudRes.secure_url);
+      
+      // 4. Scrittura nel Master (Silenziosa)
+      console.log("💾 [DEBUG LOGO] Notifica al Master Script...");
+      const updateRes = await fetch(MOTORE_API_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: cloudRes.secure_url })
-      }).catch(e => console.log("Database non ancora pronto, salvataggio solo locale."));
+        body: JSON.stringify({ 
+          action: "UPDATE_PERSONAL_LOGO", 
+          token: token, 
+          logoUrl: cloudRes.secure_url 
+        })
+      });
+      const updateData = await updateRes.json();
+      console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
 
       localStorage.setItem('wildu_partner_logo', cloudRes.secure_url);
-      alert("✨ Logo salvato! Pronto per le tue locandine.");
+      alert("✨ Logo salvato e sincronizzato sul Cloud!");
+    } else {
+      throw new Error(cloudRes.error ? cloudRes.error.message : "Errore sconosciuto Cloudinary");
     }
+
   } catch (e) {
-    alert("❌ Errore: " + e.message);
+    console.error("❌ [DEBUG LOGO] ERRORE CRITICO:", e);
+    alert("❌ Errore durante l'operazione: " + e.message);
   } finally {
     if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
     refreshProfileLogoUI();
