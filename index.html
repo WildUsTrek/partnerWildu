@@ -78,6 +78,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // 1. PULIZIA TOTALE MEMORIA (Come volevi tu)
         sessionStorage.clear();
         localStorage.removeItem('wildu_cache_proposte'); 
+        localStorage.removeItem('attesa_novita_stripe'); // 🟢 FIX PARADOSSO: Sblocca subito i bottoni al rientro!
 
         // 2. LOGICA VISIVA DEL BRIDGE CON RITARDO TATTICO
         document.addEventListener("DOMContentLoaded", function() {
@@ -679,13 +680,36 @@ body {
   //window.lastServerSync = 0;DISATTIVATA NON SERVE PIU'
   window.SYNC_COOLDOWN = 45000; // 45s di respiro tra fetch di startup
 
-function goToStripe(tipo) {
+function goToStripe(tipo, btnElement) {
     const user = firebase.auth().currentUser;
     if (!user) return alert("⚠️ Attendi il caricamento dell'utente...");
 
     // 📝 IL BIGLIETTINO: Diciamo all'App che stiamo per aprire Stripe
     localStorage.setItem('attesa_novita_stripe', Date.now().toString());
 
+    // 🛑 CONGELAMENTO E FALLBACK DEI 90 SECONDI
+    if (btnElement) {
+        // Backup: Salviamo testo e classi originali in modo blindato
+        if (!btnElement.dataset.originalText) btnElement.dataset.originalText = btnElement.innerHTML;
+        if (!btnElement.dataset.originalClass) btnElement.dataset.originalClass = btnElement.className;
+
+        btnElement.disabled = true;
+        btnElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Apertura in corso...';
+        btnElement.classList.remove('btn-warning', 'btn-outline-light', 'text-dark');
+        btnElement.classList.add('btn-secondary', 'text-light');
+
+        // ⏱️ IL SALVAGENTE: Se l'utente chiude la scheda Stripe e sparisce,
+        // dopo 90 secondi l'App rigenera il bottone come nuovo!
+        setTimeout(() => {
+            let checkLock = localStorage.getItem('attesa_novita_stripe');
+            // Sblocca solo se il bottone è ancora spento E (il bigliettino non c'è più o sono passati 90s)
+            if (btnElement && btnElement.disabled && (!checkLock || (Date.now() - parseInt(checkLock) >= 90000))) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = btnElement.dataset.originalText;
+                btnElement.className = btnElement.dataset.originalClass; // Ripristina il CSS esatto!
+            }
+        }, 90000); 
+    }
 
     if (tipo === 'CHECKOUT') {
         const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${user.uid}&metadata[client_reference_id]=${user.uid}`;
@@ -694,7 +718,7 @@ function goToStripe(tipo) {
         const portalLink = "https://billing.stripe.com/p/login/test_cNi00b50zboI5Fn3o1dMI00";
         window.open(portalLink, '_blank');
     }
-  }
+}
 
  function aggiornaLimiteDalServer(data) {
      if (data && data.config && data.config.limiteProposte && !isNaN(data.config.limiteProposte)) {
@@ -1275,11 +1299,15 @@ function goToStep(step) {
   }
 
 // --- LOGICA MOSTRA/NASCONDI PREZZO, VERIFICA VIP E BIVIO PERSUASIVO ---
- function togglePrezzoField() {
+function togglePrezzoField() {
     const tipo = document.getElementById('od_tipo_evento').value;
     const boxPrezzo = document.getElementById('box_prezzo');
     const inputPrezzo = document.getElementById('od_prezzo');
     const msg = document.getElementById('payday_status_msg');
+    
+    // 🧠 Calcolo del blocco bottone (90 secondi max)
+    let tempoLock = localStorage.getItem('attesa_novita_stripe');
+    let isLocked = tempoLock && (Date.now() - parseInt(tempoLock) < 90000);
     
     if (tipo === 'PAID') {
         boxPrezzo.style.display = 'block';
@@ -1325,10 +1353,10 @@ function goToStep(step) {
                     </div>
                     <div class="p-3 rounded-3" style="background: rgba(255, 215, 0, 0.05); border: 1px solid #FFD700;">
                         <h6 class="text-warning fw-bold m-0 small">Opzione 2: Sblocca VIP</h6>
-                        <p class="tiny text-light mb-2">Pubblica quello che vuoi, senza vincoli, ora.</p>
-                        <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning p-3 rounded-pill fw-bold text-dark w-100 shadow-sm">
-                        👑 Diventa VIP a ${prezzoVip}€ / mese
-                    </button>
+<p class="tiny text-light mb-2">Pubblica quello che vuoi, senza vincoli, ora.</p>
+    <button type="button" onclick="goToStripe('CHECKOUT', this)" class="btn ${isLocked ? 'btn-secondary text-light' : 'btn-warning text-dark'} p-3 rounded-pill fw-bold w-100 shadow-sm" ${isLocked ? 'disabled' : ''}>
+        ${isLocked ? '<span class="spinner-border spinner-border-sm"></span> Apertura in corso...' : `👑 Diventa VIP a ${prezzoVip}€ / mese`}
+    </button>
                     </div>
                 </div>`;
                 msg.className = "small mt-1 d-block";
@@ -2227,6 +2255,10 @@ function openProfile() {
           }
       } catch(e) { console.warn("Lettura data saltata", e); }
 
+      // 🧠 Calcolo del blocco bottone (90 secondi max)
+      let tempoLock = localStorage.getItem('attesa_novita_stripe');
+      let isLocked = tempoLock && (Date.now() - parseInt(tempoLock) < 90000);
+
       // 4. BIVIO LOGICO: VIP vs STANDARD
       if (isVip) {
           // --- 👑 UTENTE VIP ---
@@ -2246,9 +2278,9 @@ function openProfile() {
               <div class="p-3 rounded-4 text-center border border-secondary" style="background: rgba(255,255,255,0.02);">
                   <p class="small text-light m-0 mb-1">${fraseStato}</p>
                   <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}${stringaDisdetta}</p>
-                  <button type="button" onclick="goToStripe('PORTAL')" class="btn btn-outline-light py-2 rounded-pill fw-bold w-100 shadow-sm text-nowrap" style="font-size: 0.9rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis;">
-                  ⚙️ Gestisci / Disdici Abbonamento
-                  </button>
+<button type="button" onclick="goToStripe('PORTAL', this)" class="btn ${isLocked ? 'btn-secondary text-light' : 'btn-outline-light'} py-2 rounded-pill fw-bold w-100 shadow-sm text-nowrap" style="font-size: 0.9rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis;" ${isLocked ? 'disabled' : ''}>
+        ${isLocked ? '<span class="spinner-border spinner-border-sm"></span> Apertura in corso...' : '⚙️ Gestisci / Disdici Abbonamento'}
+    </button>
               </div>`; 
           }
       } else {
@@ -2264,9 +2296,9 @@ function openProfile() {
               boxAzione.innerHTML = `
               <div class="p-3 rounded-4 text-center" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3);">
                   <p class="small text-light m-0 mb-2">Vuoi pubblicare senza vincoli Open Day?</p>
-                  <button type="button" onclick="goToStripe('CHECKOUT')" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark w-100 shadow-sm">
-                      👑 Diventa VIP a ${prezzoVip}€ / mese
-                  </button>
+<button type="button" onclick="goToStripe('CHECKOUT', this)" class="btn ${isLocked ? 'btn-secondary text-light' : 'btn-warning text-dark'} btn-sm rounded-pill fw-bold w-100 shadow-sm" ${isLocked ? 'disabled' : ''}>
+        ${isLocked ? '<span class="spinner-border spinner-border-sm"></span> Apertura in corso...' : `👑 Diventa VIP a ${prezzoVip}€ / mese`}
+    </button>
               </div>`;
           }
       }
