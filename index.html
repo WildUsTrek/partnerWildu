@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -708,7 +708,7 @@ function goToStripe(tipo, btnElement) {
                 btnElement.innerHTML = btnElement.dataset.originalText;
                 btnElement.className = btnElement.dataset.originalClass; // Ripristina il CSS esatto!
             }
-        }, 90000); 
+        }, 19000); 
     }
 
     if (tipo === 'CHECKOUT') {
@@ -1307,7 +1307,7 @@ function togglePrezzoField() {
     
     // 🧠 Calcolo del blocco bottone (90 secondi max)
     let tempoLock = localStorage.getItem('attesa_novita_stripe');
-    let isLocked = tempoLock && (Date.now() - parseInt(tempoLock) < 90000);
+    let isLocked = tempoLock && (Date.now() - parseInt(tempoLock) < 19000);
     
     if (tipo === 'PAID') {
         boxPrezzo.style.display = 'block';
@@ -2257,7 +2257,7 @@ function openProfile() {
 
       // 🧠 Calcolo del blocco bottone (90 secondi max)
       let tempoLock = localStorage.getItem('attesa_novita_stripe');
-      let isLocked = tempoLock && (Date.now() - parseInt(tempoLock) < 90000);
+      let isLocked = tempoLock && (Date.now() - parseInt(tempoLock) < 19000);
 
       // 4. BIVIO LOGICO: VIP vs STANDARD
       if (isVip) {
@@ -2308,6 +2308,24 @@ function openProfile() {
       if (modal) {
           modal.style.display = 'flex';
           modal.offsetHeight; // Forza il reflow per animazioni CSS
+      }
+
+      // 🩺 BATTITO CARDIACO DI RICONNESSIONE (Sblocca il bottone orfano in diretta)
+      // Puliamo eventuali timer vecchi per evitare cumuli di processi
+      if (window.wilduProfileTimer) clearInterval(window.wilduProfileTimer);
+
+      if (isLocked) {
+          window.wilduProfileTimer = setInterval(() => {
+              const oraAttuale = Date.now();
+              const inizioLock = parseInt(localStorage.getItem('attesa_novita_stripe') || '0');
+              
+              // Se il tempo reale è scaduto (19s) o il bigliettino è stato rimosso (annullamento)
+              if (oraAttuale - inizioLock >= 19000 || !inizioLock) {
+                  clearInterval(window.wilduProfileTimer);
+                  console.log("🔓 Battito Cardiaco: Tempo scaduto, sblocco il profilo.");
+                  openProfile(); // Riesegue la funzione localmente per ridisegnare il tasto giallo
+              }
+          }, 2000); // Check leggero ogni 2 secondo (costo zero)
       }
 
   } catch(e) {
@@ -3786,9 +3804,9 @@ document.addEventListener("visibilitychange", function() {
 
    const now = Date.now();
 
-    // 2. Controllo e Pulizia del Bigliettino (10 minuti di validità)
+    // 2. Controllo e Pulizia del Bigliettino (15 minuti di validità)
     let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
-    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 620000)) {
+    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 940000)) {
         console.log("🗑️ Tempo scaduto (10 min). Disarmo l'Allarme Rosso.");
         localStorage.removeItem('attesa_novita_stripe');
         bigliettinoStripe = null;
