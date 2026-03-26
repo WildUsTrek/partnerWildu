@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -759,17 +759,17 @@ function goToStripe(tipo, btnElement) {
          } else {
              coronaEl.innerHTML = '';
          }
-       // 🚀 LOGICA LOGO PERSONALE PARTNER (Cloud -> Locandina)
-     if (data && data.p_logo) {
-         // Se il server ci manda un logo personale, lo mettiamo in tasca per la locandina
-         localStorage.setItem('wildu_partner_personal_logo', data.p_logo);
+     } // 🟢 Graffa 1: Chiude l'IF di coronaEl
+
+     // 🚀 SINCRONIZZAZIONE LOGO CLOUD -> LOCANDINA
+     if (data && data.p_logo && data.p_logo.trim() !== "") {
+         localStorage.setItem('wildu_partner_logo', data.p_logo);
      } else {
-         // Se il server non ha nulla, puliamo la cache locale del logo personale
-         localStorage.removeItem('wildu_partner_personal_logo');
+         localStorage.removeItem('wildu_partner_logo');
      }
-     }
-  }
-  
+} // 🟢 Graffa 2: Finalmente chiude tutta la funzione aggiornaLimiteDalServer!
+ 
+   
 </script>
 
 
@@ -3316,7 +3316,7 @@ window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, cu
 
 function generaLocandina(itemEncoded) {
   window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
-  const logoSalvato = localStorage.getItem('wildu_partner_personal_logo');
+  const logoSalvato = localStorage.getItem('wildu_partner_logo');
   const logoSaltato = sessionStorage.getItem('wildu_skip_logo'); 
   if (!logoSalvato && !logoSaltato) {
       if (confirm("💡 Vuoi inserire il tuo Logo Partner nella locandina?\n\n- Fai 'OK' per caricarlo ora.\n- Fai 'Annulla' per procedere senza logo.")) {
