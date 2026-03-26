@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2544,14 +2544,21 @@ async function saveProfileLogo(event) {
       const updateData = await updateRes.json();
       console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
 
-      if (updateData.success) {
+       if (updateData.success) {
 
-        // 🧹 IL FIX: DISTRUGGIAMO LA CACHE IN RAM!
-          sessionStorage.removeItem('wildu_cache_proposte');
-          sessionStorage.removeItem('wildu_cache_time');
-          // ⚠️ IL SEGRETO È QUI: NON FACCIAMO NIENTE COL LOCALSTORAGE!
-          // Il Base64 è già lì. L'URL di Cloudinary sta nel Master. Tutto è in equilibrio.
+         
+          // 🗡️ CHIRURGIA: Aggiorniamo la cache in RAM in modo indolore
+          let mem = sessionStorage.getItem('wildu_cache_proposte');
+          if (mem) {
+              let data = JSON.parse(mem);
+              data.p_logo = "UPDATED"; // Basta che non sia vuoto
+              sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+          }
+          sessionStorage.removeItem('wildu_skip_logo'); // Resetta l'avviso
+          
           alert("✨ Logo salvato e sincronizzato sul Cloud!");
+
+         
       } else {
           throw new Error("Il Master Script ha rifiutato il salvataggio: " + updateData.error);
       }
@@ -2587,9 +2594,15 @@ async function removeProfileLogo() {
       body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: "" })
     });
 
-    // 🧹 IL FIX: DISTRUGGIAMO LA CACHE IN RAM!
-    sessionStorage.removeItem('wildu_cache_proposte');
-    sessionStorage.removeItem('wildu_cache_time');
+    // 🗡️ CHIRURGIA: Aggiorniamo la cache in RAM senza distruggerla
+    let mem = sessionStorage.getItem('wildu_cache_proposte');
+    if (mem) {
+        let data = JSON.parse(mem);
+        data.p_logo = ""; // Diciamo alla RAM che il logo non c'è più
+        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+    }
+    // 🟢 RESET AVVISO: Dimentichiamo che avevi scelto di saltare il logo!
+    sessionStorage.removeItem('wildu_skip_logo');
     
     // Solo se il fetch va a buon fine (senza errori di rete), svuotiamo il cassetto
     localStorage.removeItem('wildu_partner_logo');
