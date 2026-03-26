@@ -2481,7 +2481,7 @@ async function saveProfileLogo(event) {
     if (cloudRes.secure_url) {
       console.log("✅ [DEBUG LOGO] URL ricevuto:", cloudRes.secure_url);
       
-      // 4. Scrittura nel Master (Silenziosa)
+     // 4. Scrittura nel Master (Sincronizzazione reale)
       console.log("💾 [DEBUG LOGO] Notifica al Master Script...");
       const updateRes = await fetch(MOTORE_API_URL, {
         method: "POST",
@@ -2494,8 +2494,14 @@ async function saveProfileLogo(event) {
       const updateData = await updateRes.json();
       console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
 
-      localStorage.setItem('wildu_partner_logo', cloudRes.secure_url);
-      alert("✨ Logo salvato e sincronizzato sul Cloud!");
+      // 🟢 ORA DECIDIAMO IN BASE ALLA RISPOSTA DEL MASTER
+      if (updateData.success) {
+          localStorage.setItem('wildu_partner_logo', cloudRes.secure_url);
+          alert("✨ Logo salvato e sincronizzato sul Cloud!");
+      } else {
+          // 🔴 IL MASTER HA DETTO NO: Lanciamo l'allarme!
+          throw new Error("Il Master Script ha rifiutato il salvataggio: " + updateData.error);
+      }
     } else {
       throw new Error(cloudRes.error ? cloudRes.error.message : "Errore sconosciuto Cloudinary");
     }
@@ -2508,7 +2514,7 @@ async function saveProfileLogo(event) {
     refreshProfileLogoUI();
     event.target.value = ""; 
   }
-}
+} // <-- Fine definitiva della funzione saveProfileLogo
 
 // 🟢 RIMOZIONE LOGO (Cloud & Sheet - Coerenza 100%)
 async function removeProfileLogo() {
