@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2374,8 +2374,15 @@ function openProfile() {
   }
 }
 
-function closeProfile() { document.getElementById('edit-profile-overlay').style.display = 'none'; }
-
+function closeProfile() { 
+    // 🛑 MURO ANTI-FUGA: Se stiamo parlando con Google, la porta è bloccata!
+    if (window.isProfileLocked) {
+        console.warn("Chiusura bloccata: Operazione in corso.");
+        return; 
+    }
+    document.getElementById('edit-profile-overlay').style.display = 'none'; 
+}
+  
 // 🟢 AGGIORNA PROFILO: Sincronizzazione totale Firebase -> App UI -> Google Sheets
 async function updateProfile() {
   const user = auth.currentUser;
@@ -2394,6 +2401,9 @@ async function updateProfile() {
   }
   if (inputNome) inputNome.disabled = true;
   if (inputTel) inputTel.disabled = true;
+
+  window.isProfileLocked = true;
+  document.querySelector('#edit-profile-overlay .btn-close').style.display = 'none';
 
   try {
     // 1. Aggiorna Firebase (Il database "veloce")
@@ -2427,6 +2437,8 @@ async function updateProfile() {
     }
     if (inputNome) inputNome.disabled = false;
     if (inputTel) inputTel.disabled = false;
+    window.isProfileLocked = false;
+    document.querySelector('#edit-profile-overlay .btn-close').style.display = 'block';
   }
 }
 
@@ -2476,6 +2488,8 @@ async function saveProfileLogo(event) {
 
   if(btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Invio...'; }
   status.innerText = "⏳ Preparazione invio...";
+  window.isProfileLocked = true;
+  document.querySelector('#edit-profile-overlay .btn-close').style.display = 'none';
 
   try {
     console.log("🚀 [DEBUG LOGO] Inizio processo upload...");
@@ -2572,7 +2586,9 @@ async function saveProfileLogo(event) {
   } finally {
     if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
     refreshProfileLogoUI(); // Ripulita finale
-    event.target.value = ""; 
+    event.target.value = "";
+    window.isProfileLocked = false;
+    document.querySelector('#edit-profile-overlay .btn-close').style.display = 'block';
   }
 }
 
@@ -2583,6 +2599,8 @@ async function removeProfileLogo() {
   const removeBtn = document.getElementById('profile-logo-remove-btn');
   const originalHtml = removeBtn ? removeBtn.innerHTML : "";
   if(removeBtn) { removeBtn.disabled = true; removeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...'; }
+  window.isProfileLocked = true;
+  document.querySelector('#edit-profile-overlay .btn-close').style.display = 'none';
 
   try {
     const user = firebase.auth().currentUser;
@@ -2617,7 +2635,9 @@ async function removeProfileLogo() {
     alert("⚠️ Errore: non è stato possibile rimuovere il logo dal database. " + e.message);
   } finally { 
     if(removeBtn) { removeBtn.disabled = false; removeBtn.innerHTML = originalHtml; }
-    refreshProfileLogoUI(); 
+    refreshProfileLogoUI();
+    window.isProfileLocked = false;
+    document.querySelector('#edit-profile-overlay .btn-close').style.display = 'block';
   }
 }
 
@@ -3546,7 +3566,7 @@ function handleLocandinaSelect(event) {
             img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(1)`;
             
             if (loader) loader.style.display = 'none';
-            new bootstrap.Modal(document.getElementById('modalCropLocandina')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCropLocandina')).show();
             document.getElementById('locandina-upload').value = ""; 
         };
         
@@ -3766,7 +3786,7 @@ async function generaLocandinaFinale() {
       const btnNative = document.getElementById('btn-share-native');
       if (btnNative) btnNative.style.display = (navigator.share !== undefined) ? 'block' : 'none';
 
-      new bootstrap.Modal(document.getElementById('modalSceltaLocandina')).show();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSceltaLocandina')).show();
 
   } catch (e) { alert("🚨 Errore locandina:\n\n" + e.message); console.error(e); }
 }
