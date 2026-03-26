@@ -2499,15 +2499,17 @@ function gestisciLimiteProposte(data) {
 }
 
 async function checkProposalLimitAtStartup(uid) {
-    const btnNuova = document.getElementById('btn-nuova-proposta');
-    const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
-    const loader = document.getElementById('loader');
-    const now = Date.now();
+    const btnNuova = document.getElementById('btn-nuova-proposta');
+    const desc = btnNuova ? btnNuova.querySelector('.menu-desc') : null;
+    const loader = document.getElementById('loader');
+    const now = Date.now();
 
-    // 🛡️ 1. VERIFICA STRIPE (Delega totale al tuo Ninja)
-    let isStripeLocked = localStorage.getItem('attesa_novita_stripe') !== null;
+    // 🛡️ 1. VERIFICA STRIPE (Quarantena Visiva disaccoppiata dal Ninja)
+    // Il bigliettino vive 10 minuti per i Ninja, ma lo schermo nero blocca l'App solo per i primi 7 secondi!
+    let tempoLockStripe = parseInt(localStorage.getItem('attesa_novita_stripe') || '0');
+    let isStripeLocked = tempoLockStripe > 0 && (now - tempoLockStripe < 7000);
 
-    // 🧠 1.5 RILEVATORE DI PARADOSSI (Self-Healing Timer)
+    // 🧠 1.5 RILEVATORE DI PARADOSSI (Self-Healing Timer)
     // Se il timer esiste ma la cache è stata piallata (es. da inserimento proposta o reset), distruggi il timer!
     const cooldownGlobale = sessionStorage.getItem('wildu_global_cooldown');
     const memoriaAttuale = sessionStorage.getItem('wildu_cache_proposte');
@@ -3782,17 +3784,17 @@ document.addEventListener("visibilitychange", function() {
     const siamoSulProfilo = (profileOverlay && profileOverlay.style.display === 'flex');
     if (!siamoSulProfilo) return;
 
-    const now = Date.now();
+   const now = Date.now();
 
-    // 2. Controllo e Pulizia del Bigliettino (19 minuti di validità)
-    let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
-    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 620000)) {
-        console.log("🗑️ Tempo scaduto (19 min). Disarmo l'Allarme Rosso.");
-        localStorage.removeItem('attesa_novita_stripe');
-        bigliettinoStripe = null;
-    }
+    // 2. Controllo e Pulizia del Bigliettino (10 minuti di validità)
+    let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
+    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 620000)) {
+        console.log("🗑️ Tempo scaduto (10 min). Disarmo l'Allarme Rosso.");
+        localStorage.removeItem('attesa_novita_stripe');
+        bigliettinoStripe = null;
+    }
 
-    // 3. SCUDO DINAMICO: 3s se stiamo aspettando un pagamento, 60s altrimenti
+    // 3. SCUDO DINAMICO: 3s se stiamo aspettando un pagamento, 60s altrimenti
     const isRumoroso = (bigliettinoStripe !== null);
     const cooldownLimit = isRumoroso ? 3000 : 60000;
 
@@ -3848,10 +3850,10 @@ document.addEventListener("visibilitychange", function() {
                     gestisciLimiteProposte(data);
                     renderizzaPagineStatiche(data.config); // 🎨 INNESTO: Il Ninja aggiorna l'estetica
 
-                    if (isRumoroso) {
-                        // VITTORIA! È cambiato qualcosa mentre eravamo in Allarme Rosso
-                        localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
-                        if (typeof closeProfile === "function") closeProfile(); 
+                        if (isRumoroso) {
+                        // VITTORIA! È cambiato qualcosa mentre eravamo in Allarme Rosso
+                        localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
+                        if (typeof closeProfile === "function") closeProfile();
                         
                         // 🎯 LOGICA MESSAGGI DINAMICI
                         let messaggio = "Modifica registrata con successo!";
