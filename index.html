@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2588,29 +2588,33 @@ async function removeProfileLogo() {
     const user = firebase.auth().currentUser;
     const token = await user.getIdToken();
 
-    // 🟢 AGGIUNTO AWAIT: Ora il telefono aspetta che il Master confermi l'eliminazione!
-    await fetch(MOTORE_API_URL, {
+    // 🟢 ASPETTIAMO IL SERVER E LEGGIAMO LA RISPOSTA!
+    const res = await fetch(MOTORE_API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: "" })
     });
+    
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || "Rifiutato dal Server");
 
     // 🗡️ CHIRURGIA: Aggiorniamo la cache in RAM senza distruggerla
     let mem = sessionStorage.getItem('wildu_cache_proposte');
     if (mem) {
-        let data = JSON.parse(mem);
-        data.p_logo = ""; // Diciamo alla RAM che il logo non c'è più
-        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+        let cacheData = JSON.parse(mem);
+        cacheData.p_logo = ""; // Diciamo alla RAM che il logo non c'è più
+        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
     }
-    // 🟢 RESET AVVISO: Dimentichiamo che avevi scelto di saltare il logo!
+    
+    // 🟢 RESET AVVISO
     sessionStorage.removeItem('wildu_skip_logo');
     
-    // Solo se il fetch va a buon fine (senza errori di rete), svuotiamo il cassetto
+    // Solo se il fetch va a buon fine, svuotiamo il cassetto
     localStorage.removeItem('wildu_partner_logo');
     alert("🗑️ Logo rimosso definitivamente.");
     
   } catch(e) { 
     console.warn("Errore durante la rimozione:", e); 
-    alert("⚠️ Errore di rete. Il Master non ha risposto. Riprova più tardi.");
+    alert("⚠️ Errore: non è stato possibile rimuovere il logo dal database. " + e.message);
   } finally { 
     if(removeBtn) { removeBtn.disabled = false; removeBtn.innerHTML = originalHtml; }
     refreshProfileLogoUI(); 
@@ -3439,27 +3443,28 @@ window.currentLocandinaItem = null;
 window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
 
 function generaLocandina(itemEncoded) {
+  // 🧹 SVUOTAMENTO GASTRICO: Elimina foto precedenti per evitare i bug avanti-indietro
+  const cropImg = document.getElementById('loc-crop-img');
+  if (cropImg) cropImg.removeAttribute('src');
+  document.getElementById('locandina-upload').value = "";
+
   window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
   const logoSalvato = localStorage.getItem('wildu_partner_logo');
   const logoSaltato = sessionStorage.getItem('wildu_skip_logo'); 
   
   if (!logoSalvato && !logoSaltato) {
-      // 💡 Nuovo bivio pulito: Avvisa e suggerisce, ma non mischia le funzioni
       const scelta = confirm("💡 Non hai ancora configurato il tuo Logo Partner!\n\nTi consigliamo di andare prima nella sezione 'Profilo' per caricarlo, così apparirà in automatico in alto a destra.\n\nVuoi procedere comunque SENZA logo per questo evento?");
-      
       if (scelta) { 
-          // L'utente accetta di procedere senza logo
           sessionStorage.setItem('wildu_skip_logo', 'true'); 
           document.getElementById('locandina-upload').click();
       } else {
-          // L'utente annulla per andare a caricare il logo. Fermiamo tutto.
           return; 
       }
   } else {
-      // Ha il logo (o ha già scelto di saltare in questa sessione), procedi fluido
       document.getElementById('locandina-upload').click();
   }
 }
+  
 function handleLogoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -3619,15 +3624,14 @@ async function generaLocandinaFinale() {
 
       ctx.textAlign = "center"; let cursorY = 180; 
       
-const logoBase64 = localStorage.getItem('wildu_partner_logo');
-      if (logoBase64 && !logoBase64.includes('icona_trasp')) { 
+// 🛡️ IL MURO DEL LOGO: Leggiamo la tua scelta!
+      const logoBase64 = localStorage.getItem('wildu_partner_logo');
+      const saltoLogo = sessionStorage.getItem('wildu_skip_logo') === 'true';
+
+      if (logoBase64 && !saltoLogo && !logoBase64.includes('icona_trasp')) { 
           const logoImg = await new Promise((resolve) => { 
               const img = new Image(); 
-              
-              // 🛡️ SCUDO DI TRANSIZIONE: Se in memoria hai ancora il vecchio link Cloudinary, lo tratta in modo sicuro.
-              // Se invece è il nuovo Base64, lo legge all'istante.
               if (logoBase64.startsWith('http')) img.crossOrigin = "Anonymous"; 
-              
               img.onload = () => resolve(img); 
               img.onerror = () => resolve(null); 
               img.src = logoBase64; 
@@ -3636,11 +3640,10 @@ const logoBase64 = localStorage.getItem('wildu_partner_logo');
           if (logoImg) {
               const maxLogoSize = 250; let lw = logoImg.width; let lh = logoImg.height;
               if (lh > maxLogoSize) { lw *= maxLogoSize / lh; lh = maxLogoSize; }
-              if (lw > maxLogoSize) { lh *= maxLogoSize / lw; lw = maxLogoSize; }
-              
+              if (lw > maxLogoSize) { lh *= maxLogoSize / lw; lh = maxLogoSize; }
               ctx.save(); 
-              ctx.globalAlpha = 0.95; // 🟢 ADDIO FANTASMA! Opacità al 95%
-              ctx.shadowColor = "rgba(0,0,0,0.5)"; // 🟢 Leggera ombra per far risaltare il logo su fondi chiari
+              ctx.globalAlpha = 0.95; 
+              ctx.shadowColor = "rgba(0,0,0,0.5)"; 
               ctx.shadowBlur = 10;
               ctx.drawImage(logoImg, W - lw - 40, 40, lw, lh); 
               ctx.restore();
@@ -3748,7 +3751,7 @@ const logoBase64 = localStorage.getItem('wildu_partner_logo');
         ctx.fillText(techStr.join("    |    "), W/2, currentDrawY); ctx.shadowColor = "transparent";
       }
 
-      // PREPARAZIONE DATI PER IL MODALE "ANTI-NONNO"
+// 🧹 GESTIONE MODALE PULITA: Usiamo il modale statico HTML!
       window.tempLocandinaDataUrl = canvas.toDataURL('image/jpeg', 0.95);
       window.tempLocandinaFileName = 'Locandina_' + (item.titolo || "Evento").replace(/[^a-zA-Z0-9]/g,'_') + '.jpg';
       window.tempLocandinaTitle = item.titolo || "Evento";
@@ -3756,47 +3759,19 @@ const logoBase64 = localStorage.getItem('wildu_partner_logo');
       const cropModalEl = document.getElementById('modalCropLocandina');
       if(cropModalEl) { const modalInstance = bootstrap.Modal.getInstance(cropModalEl); if(modalInstance) modalInstance.hide(); }
 
-      var oldMod = document.getElementById('modalSceltaLocandina'); if(oldMod) oldMod.remove();
+      // Iniettiamo la foto nel modale statico
+      document.getElementById('final-locandina-preview').src = window.tempLocandinaDataUrl;
       
-      // Controllo se il telefono supporta il "Salva in Galleria / Condividi" nativo
-      var hasShare = (navigator.share !== undefined) ? '' : 'display:none;';
-      
-      var htmlModale = `
-      <div class="modal fade" id="modalSceltaLocandina" tabindex="-1" data-bs-backdrop="static">
-          <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-              <div class="modal-content bg-dark text-white border-success border-2 rounded-4 shadow-lg">
-                  <div class="modal-header border-secondary p-3">
-                      <h5 class="modal-title fw-bold text-success m-0"><i class="bi bi-check-circle-fill"></i> Locandina Pronta!</h5>
-                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body text-center p-4">
-                      <img src="${window.tempLocandinaDataUrl}" class="img-fluid rounded-3 shadow-lg mb-4" style="max-height: 45vh; border: 2px solid #333;">
-                      
-                      <p class="small text-warning fw-bold mb-3"><i class="bi bi-info-circle"></i> Scegli come salvarla:</p>
-                      
-                      <div class="d-grid gap-2">
-                          <button class="btn btn-info text-white rounded-pill fw-bold py-3 shadow-sm" style="${hasShare}" onclick="salvaLocandinaNativa()">
-                              <i class="bi bi-share"></i> Condividi / Salva in Galleria
-                          </button>
-                          
-                          <button class="btn btn-outline-light rounded-pill fw-bold py-3 shadow-sm" onclick="scaricaLocandinaFile()">
-                              <i class="bi bi-download"></i> Scarica come File Normale
-                          </button>
-                      </div>
-                      
-                      <div class="mt-4 pt-3 border-top border-secondary text-start bg-black p-3 rounded-3" style="background: rgba(0,0,0,0.3);">
-                          <p class="text-light small m-0">💡 <b>Metodo infallibile:</b> Tieni premuto il dito a lungo sulla foto qui sopra e seleziona <b>"Salva immagine"</b> o <b>"Aggiungi a Foto"</b>.</p>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </div>`;
-      
-      document.body.insertAdjacentHTML('beforeend', htmlModale);
+      // Controlliamo il bottone nativo
+      const btnNative = document.getElementById('btn-share-native');
+      if (btnNative) btnNative.style.display = (navigator.share !== undefined) ? 'block' : 'none';
+
       new bootstrap.Modal(document.getElementById('modalSceltaLocandina')).show();
-      
+
   } catch (e) { alert("🚨 Errore locandina:\n\n" + e.message); console.error(e); }
 }
+
+
   
 function logout() {
   if(confirm("Vuoi davvero uscire dall'account?")) {
@@ -4324,6 +4299,35 @@ const user = firebase.auth().currentUser;
 
 <canvas id="poster-canvas" style="display:none;"></canvas>
 
+<div class="modal fade" id="modalSceltaLocandina" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-white border-success border-2 rounded-4 shadow-lg">
+            <div class="modal-header border-secondary p-3">
+                <h5 class="modal-title fw-bold text-success m-0"><i class="bi bi-check-circle-fill"></i> Locandina Pronta!</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <img id="final-locandina-preview" src="" class="img-fluid rounded-3 shadow-lg mb-4" style="max-height: 45vh; border: 2px solid #333;">
+                
+                <p class="small text-warning fw-bold mb-3"><i class="bi bi-info-circle"></i> Scegli come salvarla:</p>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-info text-white rounded-pill fw-bold py-3 shadow-sm" id="btn-share-native" onclick="salvaLocandinaNativa()">
+                        <i class="bi bi-share"></i> Condividi / Salva in Galleria
+                    </button>
+                    
+                    <button class="btn btn-outline-light rounded-pill fw-bold py-3 shadow-sm" onclick="scaricaLocandinaFile()">
+                        <i class="bi bi-download"></i> Scarica come File Normale
+                    </button>
+                </div>
+                
+                <div class="mt-4 pt-3 border-top border-secondary text-start bg-black p-3 rounded-3" style="background: rgba(0,0,0,0.3);">
+                    <p class="text-light small m-0">💡 <b>Metodo infallibile:</b> Tieni premuto il dito a lungo sulla foto qui sopra e seleziona <b>"Salva immagine"</b> o <b>"Aggiungi a Foto"</b>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="modalShareInstructions" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
