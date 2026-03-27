@@ -19,7 +19,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -764,10 +764,13 @@ function goToStripe(tipo, btnElement) {
          }
      } // 🟢 Graffa 1: Chiude l'IF di coronaEl
 
-    // 🚀 SINCRONIZZAZIONE INTELLIGENTE LOGO (Salva il Base64!)
-     if (data && data.p_logo && data.p_logo.trim() !== "") {
+// 🚀 SINCRONIZZAZIONE INTELLIGENTE LOGO (Salva il Base64 e Scudo Ninja)
+     const localUrl = localStorage.getItem('wildu_partner_logo_url');
+     
+     if (localUrl === 'UPLOADING...') {
+         // 🛑 CANTIERE IN CORSO: Upload in corso, il Ninja non tocca il tuo amato Base64!
+     } else if (data && data.p_logo && data.p_logo.trim() !== "") {
          const serverUrl = data.p_logo.trim();
-         const localUrl = localStorage.getItem('wildu_partner_logo_url');
          
          // 🛡️ IL MURO: Se l'URL del server è diverso da quello che il telefono "conosce",
          // significa che hai cambiato logo da un ALTRO dispositivo o pulito la cache. Solo in questo caso sovrascrive.
@@ -2515,8 +2518,9 @@ async function saveProfileLogo(event) {
     const logoData = await compressLogo(file);
     const compressedFile = logoData.fileObj;
     
-    // 🟢 2. SALVATAGGIO OFFLINE IMMEDIATO: Mettiamo il Base64 nel cassetto
+// 🟢 2. SALVATAGGIO OFFLINE IMMEDIATO E SCUDO ANTI-NINJA
     localStorage.setItem('wildu_partner_logo', logoData.base64);
+    localStorage.setItem('wildu_partner_logo_url', 'UPLOADING...'); // 🛡️ Cartello lavori in corso!
     refreshProfileLogoUI(); // Mostra subito l'anteprima nel profilo!
     
     console.log("📦 [DEBUG LOGO] Immagine PNG compressa e Base64 salvato in locale.");
