@@ -19,7 +19,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2337,7 +2337,7 @@ function openProfile() {
                   <p class="small text-light m-0 mb-1">${fraseStato}</p>
                   <p class="small text-warning fw-bold m-0 mb-3">Scadenza: ${testoScadenza}${stringaDisdetta}</p>
 <button type="button" onclick="goToStripe('PORTAL', this)" class="btn ${isLocked ? 'btn-secondary text-light' : 'btn-outline-light'} py-2 rounded-pill fw-bold w-100 shadow-sm text-nowrap" style="font-size: 0.9rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis;" ${isLocked ? 'disabled' : ''}>
-        ${isLocked ? '<span class="spinner-border spinner-border-sm"></span> Apertura in corso...' : '⚙️ Gestisci / Disdici Abbonamento'}
+        ${isLocked ? '<span class="spinner-border spinner-border-sm"></span> Aggiorno status...' : '⚙️ Gestisci / Disdici Abbonamento'}
     </button>
               </div>`; 
           }
@@ -2406,12 +2406,16 @@ async function updateProfile() {
   
   if (!nuovoNome || !nuovoTel) return alert("⚠️ Inserisci tutti i campi!");
 
-  // 🛡️ SCUDO ANTI-PANICO: Blocchiamo bottone E CAMPI di testo all'istante
+  // 🛡️ SCUDO ANTI-PANICO: Blocchiamo bottone, CAMPI di testo e LOGOUT all'istante
   const btn = document.getElementById('btn-update-profile');
+  const btnLogout = document.querySelector('button[onclick="logout()"]'); // 🔒 Prende il tasto Esci
+  
   if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
   }
+  if (btnLogout) btnLogout.disabled = true; // Blocca il Logout
+  
   if (inputNome) inputNome.disabled = true;
   if (inputTel) inputTel.disabled = true;
 
@@ -2449,9 +2453,9 @@ async function updateProfile() {
     }
     if (inputNome) inputNome.disabled = false;
     if (inputTel) inputTel.disabled = false;
+    if (btnLogout) btnLogout.disabled = false; // 🔓 Sblocca il Logout
   }
 }
-
   
 // 🟢 REFRESH UI LOGO (Gestisce anche la rotellina di Upload)
 function refreshProfileLogoUI() {
@@ -2513,12 +2517,14 @@ async function saveProfileLogo(event) {
 
   const btnUpload = document.getElementById('btn-upload-logo-cloud');
   const btnUpdate = document.getElementById('btn-update-profile'); // Prende il tasto aggiorna dati
+  const btnLogout = document.querySelector('button[onclick="logout()"]'); // 🔒 Prende il tasto Esci
   const status = document.getElementById('profile-logo-status');
   const originalHtml = btnUpload ? btnUpload.innerHTML : "";
 
   // Blocchiamo i tasti operativi, ma LASCIAMO LIBERA LA "X" per uscire
   if(btnUpload) { btnUpload.disabled = true; btnUpload.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Invio...'; }
   if(btnUpdate) btnUpdate.disabled = true; 
+  if(btnLogout) btnLogout.disabled = true; // Blocca il Logout
   status.innerText = "⏳ Preparazione invio...";
 
   // 🚨 MEMORIA PER IL ROLLBACK: Salviamo lo stato attuale prima di iniziare
@@ -2614,10 +2620,11 @@ async function saveProfileLogo(event) {
     else localStorage.removeItem('wildu_partner_logo_url');
     
     alert("❌ Errore durante il caricamento. Il logo non è stato salvato.\nDettaglio: " + e.message);
-  } finally {
+   } finally {
     // Sblocchiamo tutto, sia che sia andata bene, sia che ci sia stato il Rollback
     if(btnUpload) { btnUpload.disabled = false; btnUpload.innerHTML = originalHtml; }
     if(btnUpdate) btnUpdate.disabled = false;
+    if(btnLogout) btnLogout.disabled = false; // 🔓 Sblocca il Logout
     refreshProfileLogoUI(); // Spegne la rotellina e mostra il risultato finale
     event.target.value = ""; 
   }
@@ -2629,10 +2636,12 @@ async function removeProfileLogo() {
 
   const removeBtn = document.getElementById('profile-logo-remove-btn');
   const btnUpdate = document.getElementById('btn-update-profile'); // 🔒 Intercettiamo l'altro tasto
+  const btnLogout = document.querySelector('button[onclick="logout()"]'); // 🔒 Prende il tasto Esci
   const originalHtml = removeBtn ? removeBtn.innerHTML : "";
   
   if(removeBtn) { removeBtn.disabled = true; removeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...'; }
   if(btnUpdate) btnUpdate.disabled = true; // 🔒 Disabilitiamo l'aggiornamento dati durante l'eliminazione
+  if(btnLogout) btnLogout.disabled = true; // 🔒 Blocca il Logout
 
   // 🚪 LA PORTA RESTA APERTA: L'utente può chiudere il profilo se si stufa di aspettare!
 
@@ -2671,6 +2680,7 @@ async function removeProfileLogo() {
   } finally { 
     if(removeBtn) { removeBtn.disabled = false; removeBtn.innerHTML = originalHtml; }
     if(btnUpdate) btnUpdate.disabled = false; // 🔓 Sblocchiamo il tasto aggiorna dati
+    if(btnLogout) btnLogout.disabled = false; // 🔓 Sblocca il Logout
     refreshProfileLogoUI();
   }
 }
@@ -4023,7 +4033,47 @@ function scaricaLocandinaFile() {
     link.click();
 }
 
+// =========================================================
+// 🛸 MOTORE FISICO: DRAG & DROP BADGE OFFLINE
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const offBadge = document.getElementById('wildu-offline-badge');
+    if (!offBadge) return;
+    
+    let isDragging = false, currentX = 0, currentY = 0, initialX, initialY;
 
+    const dragStart = (e) => {
+        if (e.target === offBadge || offBadge.contains(e.target)) {
+            initialX = (e.type === "touchstart" ? e.touches[0].clientX : e.clientX) - currentX;
+            initialY = (e.type === "touchstart" ? e.touches[0].clientY : e.clientY) - currentY;
+            isDragging = true;
+            offBadge.style.cursor = 'grabbing';
+        }
+    };
+
+    const dragMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault(); // Impedisce lo scroll della pagina se si trascina il badge
+        currentX = (e.type === "touchmove" ? e.touches[0].clientX : e.clientX) - initialX;
+        currentY = (e.type === "touchmove" ? e.touches[0].clientY : e.clientY) - initialY;
+        offBadge.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+    };
+
+    const dragEnd = () => {
+        isDragging = false;
+        offBadge.style.cursor = 'grab';
+    };
+
+    // Sensori per Touch (Smartphone)
+    offBadge.addEventListener("touchstart", dragStart, { passive: false });
+    document.addEventListener("touchmove", dragMove, { passive: false });
+    document.addEventListener("touchend", dragEnd);
+
+    // Sensori per Mouse (PC)
+    offBadge.addEventListener("mousedown", dragStart);
+    document.addEventListener("mousemove", dragMove);
+    document.addEventListener("mouseup", dragEnd);
+});
 
 // =========================================================
 // 🥷 ON-FOCUS: Segugio a Tempo (19 min) + Ronda Silenziosa (60s)
@@ -4615,6 +4665,7 @@ window.addEventListener('load', function() {
         const btnInviaModulo = document.getElementById('final_submit_btn');
         const btnAggiornaProfilo = document.getElementById('btn-update-profile');
         const navBar = document.querySelector('.util-nav');
+        const badgeOffline = document.getElementById('wildu-offline-badge'); // 🟢 Aggancio al nuovo badge fluttuante
         
         // 1. RILEVAMENTO DEGLI STATI DI CARICAMENTO (Il cuore del fix)
         // Controlliamo se ci sono spinner attivi prima di prendere decisioni
@@ -4635,6 +4686,12 @@ window.addEventListener('load', function() {
                 btnAggiornaProfilo.disabled = true;
                 btnAggiornaProfilo.innerHTML = "🚫 OFFLINE";
             }
+
+            // 🟢 ACCENDIAMO IL BADGE FLUTTUANTE 
+            if (badgeOffline) {
+                badgeOffline.style.opacity = '1';
+                badgeOffline.style.pointerEvents = 'auto'; // Diventa trascinabile col dito
+            }
             
             Swal.fire({
                 toast: true, position: 'top', icon: 'error', title: 'Connessione Persa', text: 'Funzioni di salvataggio in pausa.', showConfirmButton: false, timer: 3000
@@ -4652,6 +4709,15 @@ window.addEventListener('load', function() {
             if (btnAggiornaProfilo && !isProfileLoading && !isAppLoading) {
                 btnAggiornaProfilo.disabled = false;
                 btnAggiornaProfilo.innerHTML = "AGGIORNA DATI";
+            }
+
+            // 🟢 SPEGNIAMO IL BADGE E LO RESETTIAMO
+            if (badgeOffline && badgeOffline.style.opacity === '1') {
+                badgeOffline.style.opacity = '0';
+                badgeOffline.style.pointerEvents = 'none'; // Lo disattiva
+                
+                // Rimette il badge al suo posto dolcemente, pronto per il prossimo blackout
+                setTimeout(() => { badgeOffline.style.transform = `translate3d(0px, 0px, 0)`; }, 500);
             }
 
             Swal.fire({
@@ -4680,6 +4746,15 @@ window.addEventListener('load', function() {
             <button id="install-tut-next" type="button" class="btn btn-primary rounded-pill w-50 fw-bold" onclick="nextInstallStep()">Avanti <i class="bi bi-arrow-right"></i></button>
             <button id="install-tut-finish" type="button" class="btn btn-success rounded-pill w-50 fw-bold d-none" onclick="closeInstallTutorial()"><i class="bi bi-check-lg"></i> Fatto</button>
         </div>
+    </div>
+</div>
+
+
+<div id="wildu-offline-badge" style="position: fixed; top: 25px; right: 20px; background: rgba(220, 53, 69, 0.95); color: white; padding: 12px 18px; border-radius: 16px; font-weight: bold; font-size: 0.85rem; z-index: 10600; display: flex; align-items: center; gap: 12px; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; cursor: grab; backdrop-filter: blur(5px); border: 1px solid #ff4d4d; box-shadow: 0 10px 30px rgba(0,0,0,0.5); touch-action: none; user-select: none;">
+    <i class="bi bi-wifi-off fs-4"></i>
+    <div style="line-height: 1.2;">
+        <span class="d-block text-uppercase" style="letter-spacing: 0.5px;">Sei Offline</span>
+        <span style="font-size: 0.7rem; font-weight: normal; opacity: 0.9;">In attesa di rete...</span>
     </div>
 </div>
   
