@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v4.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -3981,7 +3981,19 @@ function forceSync() {
         keysToRemove.forEach(k => localStorage.removeItem(k));
         
         alert("✅ Autorizzazione confermata. Pulizia cache in corso...");
-        location.reload(); 
+        // 🔥 FORZA DOWNLOAD NUOVA VERSIONE (bypass totale cache)
+        // 🧨 DISTRUGGE SERVICE WORKER + BYPASS CACHE
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+        
+        setTimeout(() => {
+            location.href = location.pathname + "?v=" + Date.now();
+        }, 300);
+    });
+} else {
+    location.href = location.pathname + "?v=" + Date.now();
+}
     } else {
         alert("❌ PIN errato. Operazione annullata.");
     }
