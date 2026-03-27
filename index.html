@@ -19,7 +19,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -1479,19 +1479,31 @@ function renderEquipmentSteps() {
 async function autoFetchRegion() {
     const l = document.getElementById('od_luogo_nome').value.trim();
     const s = document.getElementById('od_regione');
-    if(!l || s.value !== "") return; 
+    
+    // 🛑 GUARDIA OFFLINE: Se non c'è rete, o è già compilato, ci fermiamo
+    if(!l || s.value !== "" || !navigator.onLine) return; 
+    
     s.classList.add('auto-calculating');
     
-    // 🛡️ GENERA TOKEN SICURO
-    const user = firebase.auth().currentUser;
-    const safeToken = user ? await user.getIdToken() : "GUEST";
+    try {
+        // 🛡️ GENERA TOKEN SICURO
+        const user = firebase.auth().currentUser;
+        const safeToken = user ? await user.getIdToken() : "GUEST";
 
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', token: safeToken, luogo: l }) })
-    .then(r => r.json()).then(d => {
-      s.classList.remove('auto-calculating');
-      if(d.regione) s.value = d.regione;
-    });
-  }
+        // Usiamo await invece di .then() per poter catturare gli errori di rete in basso!
+        const r = await fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getRegion', token: safeToken, luogo: l }) });
+        const d = await r.json();
+        
+        // Se tutto va bene, togliamo il giallo e scriviamo la regione
+        s.classList.remove('auto-calculating');
+        if(d.regione) s.value = d.regione;
+        
+    } catch (e) {
+        // 🛟 IL SALVAGENTE: Se cade la rete a metà chiamata, togliamo l'animazione gialla senza bloccare l'app
+        s.classList.remove('auto-calculating');
+        console.warn("Rilevamento regione interrotto per problemi di rete.");
+    }
+}
 
   function formatToItalianDate(dateStr) {
       if (!dateStr) return "";
@@ -4076,27 +4088,33 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================
-// 🥷 ON-FOCUS: Segugio a Tempo (19 min) + Ronda Silenziosa (60s)
+// 🥷 ON-FOCUS: Segugio a Tempo + Ronda Silenziosa (Architect Compliant)
 // =========================================================
 document.addEventListener("visibilitychange", function() {
   if (document.visibilityState === 'visible') {
     
+    // 🛑 DIRETTIVA ARCHITETTO: Guardia Offline. Se non c'è rete, il Ninja non parte.
+    if (!navigator.onLine) {
+        console.log("🥷 Ninja in letargo: Dispositivo Offline.");
+        return; 
+    }
+
     // 1. Lavora SOLO se sei nel Profilo
     const profileOverlay = document.getElementById('edit-profile-overlay');
     const siamoSulProfilo = (profileOverlay && profileOverlay.style.display === 'flex');
     if (!siamoSulProfilo) return;
 
-   const now = Date.now();
+    const now = Date.now();
 
-    // 2. Controllo e Pulizia del Bigliettino (15 minuti di validità)
-    let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
-    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 940000)) {
-        console.log("🗑️ Tempo scaduto (10 min). Disarmo l'Allarme Rosso.");
-        localStorage.removeItem('attesa_novita_stripe');
-        bigliettinoStripe = null;
-    }
+    // 2. Controllo e Pulizia del Bigliettino (15 minuti di validità)
+    let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
+    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 940000)) {
+        console.log("🗑️ Tempo scaduto (15 min). Disarmo l'Allarme Rosso.");
+        localStorage.removeItem('attesa_novita_stripe');
+        bigliettinoStripe = null;
+    }
 
-    // 3. SCUDO DINAMICO: 3s se stiamo aspettando un pagamento, 60s altrimenti
+    // 3. SCUDO DINAMICO: 3s se stiamo aspettando un pagamento, 60s altrimenti
     const isRumoroso = (bigliettinoStripe !== null);
     const cooldownLimit = isRumoroso ? 3000 : 60000;
 
@@ -4109,83 +4127,87 @@ document.addEventListener("visibilitychange", function() {
     else console.log("🥷 Ronda Silenziosa (60s). Controllo passivo.");
 
     // 4. Esecuzione (Ritardo anti-amnesia Firebase)
-    setTimeout(async () => {
-        const user = auth.currentUser;
-        if (!user) return; 
+    setTimeout(async () => {
+        const user = auth.currentUser;
+        if (!user) return; 
 
-        const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-        const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+        const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+        const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-        // 🛡️ RACE CONDITION GUARD E TOKEN SICURO
-        const myFetchId = ++window.wilduFetchCounter;
-        const safeToken = await user.getIdToken();
+        // 🛡️ RACE CONDITION GUARD
+        const myFetchId = ++window.wilduFetchCounter;
+        
+        // 🛡️ BLOCCO TRY/CATCH SALVAVITA
+        try {
+            const safeToken = await user.getIdToken();
 
-        fetch(MOTORE_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
-        })
+            fetch(MOTORE_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
+            })
+            .then(r => r.json())
+            .then(data => {
+                // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
+                if (myFetchId !== window.wilduFetchCounter) return;
 
-          
-        .then(r => r.json())
-        .then(data => {
-            // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
-            if (myFetchId !== window.wilduFetchCounter) return;
+                if (data && !data.error) {
+                    const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
+                    let isCambiato = false;
 
-            if (data && !data.error) {
-                const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
-                let isCambiato = false;
-
-                if (memVecchia) {
-                    const cacheObj = JSON.parse(memVecchia);
-                    if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus || cacheObj.scadenzaVip !== data.scadenzaVip) {
+                    if (memVecchia) {
+                        const cacheObj = JSON.parse(memVecchia);
+                        if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus || cacheObj.scadenzaVip !== data.scadenzaVip) {
+                            isCambiato = true;
+                        }
+                    } else {
                         isCambiato = true;
                     }
-                } else {
-                    isCambiato = true;
-                }
 
-                // 5. LA REAZIONE
-                if (isCambiato) {
-                    sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-                    sessionStorage.setItem('wildu_cache_time', Date.now().toString());
-                    aggiornaLimiteDalServer(data);
-                    gestisciLimiteProposte(data);
-                    renderizzaPagineStatiche(data.config); // 🎨 INNESTO: Il Ninja aggiorna l'estetica
+                    // 5. LA REAZIONE (Identica all'originale)
+                    if (isCambiato) {
+                        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+                        sessionStorage.setItem('wildu_cache_time', Date.now().toString());
+                        aggiornaLimiteDalServer(data);
+                        gestisciLimiteProposte(data);
+                        renderizzaPagineStatiche(data.config); // 🎨 INNESTO: Il Ninja aggiorna l'estetica
 
                         if (isRumoroso) {
-                        // VITTORIA! È cambiato qualcosa mentre eravamo in Allarme Rosso
-                        localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
-                        if (typeof closeProfile === "function") closeProfile();
-                        
-                        // 🎯 LOGICA MESSAGGI DINAMICI
-                        let messaggio = "Modifica registrata con successo!";
-                        
-                        if (data.vipStatus === 'VIP') {
-                            messaggio = "Il pagamento è confermato! Stiamo sbloccando i tuoi vantaggi...";
-                        } else if (data.vipStatus === 'VIP_CANCELED') {
-                            messaggio = "Abbonamento disdetto, usufruirai comunque dei servizi VIP fino alla data di termine.";
-                        } else if (data.vipStatus === 'STANDARD') {
-                            messaggio = "Il tuo account è tornato in versione Standard.";
+                            // VITTORIA! È cambiato qualcosa mentre eravamo in Allarme Rosso
+                            localStorage.removeItem('attesa_novita_stripe'); // Bruciamo il bigliettino per sempre
+                            if (typeof closeProfile === "function") closeProfile();
+                            
+                            // 🎯 LOGICA MESSAGGI DINAMICI
+                            let messaggio = "Modifica registrata con successo!";
+                            
+                            if (data.vipStatus === 'VIP') {
+                                messaggio = "Il pagamento è confermato! Stiamo sbloccando i tuoi vantaggi...";
+                            } else if (data.vipStatus === 'VIP_CANCELED') {
+                                messaggio = "Abbonamento disdetto, usufruirai comunque dei servizi VIP fino alla data di termine.";
+                            } else if (data.vipStatus === 'STANDARD') {
+                                messaggio = "Il tuo account è tornato in versione Standard.";
+                            }
+                            
+                            Swal.fire({
+                                title: '✨ Operazione Riuscita!',
+                                text: messaggio,
+                                icon: 'success',
+                                confirmButtonText: 'Ottimo, entra!',
+                                allowOutsideClick: false
+                            }).then(() => {
+                                window.location.reload(); 
+                            });
+                        } else {
+                            // 🥷 SILENZIO: Era solo un aggiornamento passivo
+                            if (typeof openProfile === "function") openProfile(); 
                         }
-                        
-                        Swal.fire({
-                            title: '✨ Operazione Riuscita!',
-                            text: messaggio,
-                            icon: 'success',
-                            confirmButtonText: 'Ottimo, entra!',
-                            allowOutsideClick: false
-                        }).then(() => {
-                            window.location.reload(); 
-                        });
-                    } else {
-                        // 🥷 SILENZIO: Era solo un aggiornamento passivo
-                        if (typeof openProfile === "function") openProfile(); 
-                    }
-                } 
-                // Se non è cambiato nulla, il bigliettino RESTA IN TASCA e proverà al prossimo focus.
-            }
-        })
-        .catch(e => console.error("Errore On-Focus:", e));
+                    } 
+                }
+            })
+            .catch(e => console.error("Errore On-Focus:", e));
+
+        } catch(tokenError) {
+            console.warn("🥷 Ninja bloccato: Impossibile generare Token Auth (connessione instabile).");
+        }
     }, 500); 
   }
 });
@@ -4195,15 +4217,19 @@ document.addEventListener("visibilitychange", function() {
 // 🥷 NINJA GUARDIANO (Protegge le porte Profilo e Modulo)
 // =========================================================
 async function controllaSicurezzaNinja() {
-    // 1. Lo Scudo: Manteniamo i 60 secondi in comune con l'altro Ninja!
-    const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
-    if (Date.now() - ultimoControllo < 60000) return; 
-    
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-    
-    sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
-    console.log("🥷 Ninja Guardiano: Controllo i permessi di nascosto...");
+    // 🛑 DIRETTIVA ARCHITETTO: Se non c'è rete, inutile controllare i permessi.
+    if (!navigator.onLine) return; 
+
+    // 1. Lo Scudo: Manteniamo i 60 secondi in comune con l'altro Ninja!
+    const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
+    if (Date.now() - ultimoControllo < 60000) return; 
+    
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    sessionStorage.setItem('wildu_ultimo_check_silenzioso', Date.now().toString());
+    console.log("🥷 Ninja Guardiano: Controllo i permessi di nascosto...");
+// ... [IL RESTO DELLA FUNZIONE RIMANE IDENTICO] ...
     
     const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
     const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
