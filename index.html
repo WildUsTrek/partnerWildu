@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -922,7 +922,8 @@ function goToStripe(tipo, btnElement) {
     <span class="wildu-version-text text-info fw-bold" style="user-select: none; -webkit-user-select: none; cursor: pointer; padding: 10px 5px; margin: -10px -5px;" onmousedown="startSyncTimer()" onmouseup="cancelSyncTimer()" onmouseleave="cancelSyncTimer()" ontouchstart="startSyncTimer()" ontouchend="cancelSyncTimer()" ontouchcancel="cancelSyncTimer()"></span> 
    <br> || Wildu srl tour operator || <br>
     P.iva 02536770502<br>
-    il tuo Tour Operator, la nostra community
+    il tuo Tour Operator, la nostra community<br><br>
+    L'app ha bisogno di rete per lavorare.
   </p>
 </div>
 
@@ -4641,7 +4642,7 @@ const user = firebase.auth().currentUser;
                     
                     <div class="callout-box">
                         <p class="m-0 small text-light">• <b>Pre-compila :</b><br> Sfondo e info (date, orari, km...) già pronti.</p>
-                        <p class="m-0 small text-light mt-1">• <b>Condividi :</b><br> Tutto pronto per WhatsApp con 1 click.</p>
+                        <p class="m-0 small text-light mt-1">• <b>Condividi :</b><br> Tutto pronto per WhatsApp con 1 click.<br>Si possono condividere solo eventi approvati</p>
                     </div>
                 </div>
 
