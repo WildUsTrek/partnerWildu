@@ -4796,11 +4796,13 @@ window.addEventListener('load', function() {
                 btnAggiornaProfilo.innerHTML = "AGGIORNA DATI";
             }
 
-            // 🟢 SPEGNIAMO IL BADGE E LO RESETTIAMO
+            // 🟢 SPEGNIAMO IL BADGE E UCCIDIAMO IL TIMER
+            if (window.offlineBadgeTimer) clearTimeout(window.offlineBadgeTimer);
+            
             if (badgeOffline && badgeOffline.style.opacity === '1') {
                 badgeOffline.style.opacity = '0';
-                badgeOffline.style.pointerEvents = 'none'; // Lo disattiva
-               
+                badgeOffline.style.pointerEvents = 'none';
+                // 🧲 RIGA ELIMINATA: Non resettiamo la posizione, così il badge ricorderà dove l'utente l'ha trascinato!
             }
 
             Swal.fire({
