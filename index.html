@@ -19,7 +19,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -2393,11 +2393,6 @@ function openProfile() {
 }
 
 function closeProfile() { 
-    // 🛑 MURO ANTI-FUGA: Se stiamo parlando con Google, la porta è bloccata!
-    if (window.isProfileLocked) {
-        console.warn("Chiusura bloccata: Operazione in corso.");
-        return; 
-    }
     document.getElementById('edit-profile-overlay').style.display = 'none'; 
 }
   
@@ -2420,8 +2415,7 @@ async function updateProfile() {
   if (inputNome) inputNome.disabled = true;
   if (inputTel) inputTel.disabled = true;
 
-  window.isProfileLocked = true;
-  document.querySelector('#edit-profile-overlay .btn-close').style.display = 'none';
+
 
   try {
     // 1. Aggiorna Firebase (Il database "veloce")
@@ -2455,85 +2449,103 @@ async function updateProfile() {
     }
     if (inputNome) inputNome.disabled = false;
     if (inputTel) inputTel.disabled = false;
-    window.isProfileLocked = false;
-    document.querySelector('#edit-profile-overlay .btn-close').style.display = 'block';
   }
 }
 
   
-// 🟢 REFRESH UI LOGO (Anti-Cache 404)
+// 🟢 REFRESH UI LOGO (Gestisce anche la rotellina di Upload)
 function refreshProfileLogoUI() {
   const baseLogoUrl = localStorage.getItem('wildu_partner_logo');
+  const statusUrl = localStorage.getItem('wildu_partner_logo_url');
   const img = document.getElementById('profile-logo-img');
   const icon = document.getElementById('profile-logo-icon');
   const status = document.getElementById('profile-logo-status');
   const removeBtn = document.getElementById('profile-logo-remove-btn');
   const uploadBtn = document.getElementById('btn-upload-logo-cloud');
 
-  if (baseLogoUrl && baseLogoUrl.trim() !== "" && !baseLogoUrl.includes('icona_trasp')) {
-    // 🧨 TRUCCO ANTI-PIGRIZIA: Costringe il browser a bypassare il 404
-    let displayUrl = baseLogoUrl;
-    if (displayUrl.startsWith('http')) {
-        displayUrl += (displayUrl.includes('?') ? '&' : '?') + 'nocache=' + new Date().getTime();
-    }
-    
-    img.src = displayUrl; 
-    img.style.display = 'block'; 
-    icon.style.display = 'none';
-    status.innerText = "✅ Logo Sincronizzato"; 
-    status.className = "small text-success mb-2 fw-bold";
-    removeBtn.style.display = 'inline-block';
-    if(uploadBtn) uploadBtn.style.display = 'none';
+  if (statusUrl === 'UPLOADING...') {
+      // ⏳ STATO 1: IN CARICAMENTO (Trasforma l'icona in rotellina)
+      img.style.display = 'none';
+      icon.className = "spinner-border text-primary";
+      icon.style.width = "2rem"; icon.style.height = "2rem";
+      icon.style.display = 'block';
+      status.innerText = "⏳ Sincronizzazione server..."; 
+      status.className = "small text-primary mb-2 fw-bold";
+      removeBtn.style.display = 'none';
+      if(uploadBtn) uploadBtn.style.display = 'none';
+      
+  } else if (baseLogoUrl && baseLogoUrl.trim() !== "" && !baseLogoUrl.includes('icona_trasp')) {
+      // ✅ STATO 2: LOGO PRESENTE E SALVATO (Stampa la foto)
+      let displayUrl = baseLogoUrl;
+      if (displayUrl.startsWith('http')) {
+          displayUrl += (displayUrl.includes('?') ? '&' : '?') + 'nocache=' + new Date().getTime();
+      }
+      img.src = displayUrl; 
+      img.style.display = 'block'; 
+      icon.style.display = 'none';
+      // Ferma la rotellina e ripristina l'icona dormiente (per il futuro)
+      icon.className = "bi bi-person-badge text-muted fs-2"; 
+      icon.style.width = ""; icon.style.height = "";
+      status.innerText = "✅ Logo Sincronizzato"; 
+      status.className = "small text-success mb-2 fw-bold";
+      removeBtn.style.display = 'inline-block';
+      if(uploadBtn) uploadBtn.style.display = 'none';
+      
   } else {
-    img.src = ""; 
-    img.style.display = 'none'; 
-    icon.style.display = 'block';
-    status.innerText = "⚠️ Nessun logo caricato"; 
-    status.className = "small text-warning mb-2 fw-bold";
-    removeBtn.style.display = 'none';
-    if(uploadBtn) uploadBtn.style.display = 'inline-block';
+      // ⚠️ STATO 3: NESSUN LOGO O CARICAMENTO FALLITO (Rollback visivo)
+      img.src = ""; 
+      img.style.display = 'none'; 
+      // Ferma la rotellina e ripristina l'icona grigia di base
+      icon.className = "bi bi-person-badge text-muted fs-2";
+      icon.style.width = ""; icon.style.height = "";
+      icon.style.display = 'block';
+      status.innerText = "⚠️ Nessun logo caricato"; 
+      status.className = "small text-warning mb-2 fw-bold";
+      removeBtn.style.display = 'none';
+      if(uploadBtn) uploadBtn.style.display = 'inline-block';
   }
 }
 
-// 🟢 UPLOAD LOGO CON DEBUG LOG (Botte di Ferro - Base64 Offline)
+// 🟢 UPLOAD LOGO (Con Protocollo Rollback e Scudo)
 async function saveProfileLogo(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const btn = document.getElementById('btn-upload-logo-cloud');
+  const btnUpload = document.getElementById('btn-upload-logo-cloud');
+  const btnUpdate = document.getElementById('btn-update-profile'); // Prende il tasto aggiorna dati
   const status = document.getElementById('profile-logo-status');
-  const originalHtml = btn ? btn.innerHTML : "";
+  const originalHtml = btnUpload ? btnUpload.innerHTML : "";
 
-  if(btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Invio...'; }
+  // Blocchiamo i tasti operativi, ma LASCIAMO LIBERA LA "X" per uscire
+  if(btnUpload) { btnUpload.disabled = true; btnUpload.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Invio...'; }
+  if(btnUpdate) btnUpdate.disabled = true; 
   status.innerText = "⏳ Preparazione invio...";
-  window.isProfileLocked = true;
-  document.querySelector('#edit-profile-overlay .btn-close').style.display = 'none';
+
+  // 🚨 MEMORIA PER IL ROLLBACK: Salviamo lo stato attuale prima di iniziare
+  const oldBase64 = localStorage.getItem('wildu_partner_logo');
+  const oldUrl = localStorage.getItem('wildu_partner_logo_url');
 
   try {
     console.log("🚀 [DEBUG LOGO] Inizio processo upload...");
     const user = firebase.auth().currentUser;
     const token = await user.getIdToken();
     
-    // 1. Usiamo il nuovo compressore PNG
+    // 1. Usiamo il compressore PNG
     const logoData = await compressLogo(file);
     const compressedFile = logoData.fileObj;
     
-// 🟢 2. SALVATAGGIO OFFLINE IMMEDIATO E SCUDO ANTI-NINJA
-    localStorage.setItem('wildu_partner_logo', logoData.base64);
-    localStorage.setItem('wildu_partner_logo_url', 'UPLOADING...'); // 🛡️ Cartello lavori in corso!
-    refreshProfileLogoUI(); // Mostra subito l'anteprima nel profilo!
+    // 🛡️ ALZIAMO LO SCUDO E MOSTRIAMO LA ROTELLINA
+    localStorage.setItem('wildu_partner_logo', logoData.base64); // Mettiamo il nuovo Base64...
+    localStorage.setItem('wildu_partner_logo_url', 'UPLOADING...'); // ...Ma mettiamo il cartello per far girare la rotella!
+    refreshProfileLogoUI(); // Attiva visivamente la rotellina
     
-    console.log("📦 [DEBUG LOGO] Immagine PNG compressa e Base64 salvato in locale.");
+    console.log("📦 [DEBUG LOGO] Immagine compressa e cartello UPLOADING piazzato.");
 
     // 3. Richiesta Firma
     console.log("📡 [DEBUG LOGO] Richiesta firma al Postino...");
     const resSign = await fetch(MOTORE_API_URL, {
       method: "POST",
-      body: JSON.stringify({ 
-        action: "GET_CLOUDINARY_SIGNATURE", 
-        token: token, 
-        tags: 'LOGO_PRIVATE_PARTNER' 
-      })
+      body: JSON.stringify({ action: "GET_CLOUDINARY_SIGNATURE", token: token, tags: 'LOGO_PRIVATE_PARTNER' })
     });
     
     const signatureData = await resSign.json();
@@ -2545,7 +2557,7 @@ async function saveProfileLogo(event) {
     const formData = new FormData();
     formData.append('file', compressedFile);
     formData.append('api_key', signatureData.apiKey);
-    formData.append('timestamp', String(signatureData.timestamp)); // 🟢 Sicurezza stringa per Cloudinary
+    formData.append('timestamp', String(signatureData.timestamp));
     formData.append('signature', signatureData.signature);
     formData.append('folder', signatureData.folder); 
     formData.append('tags', signatureData.tags);
@@ -2554,77 +2566,75 @@ async function saveProfileLogo(event) {
 
     // 5. Volo verso Cloudinary
     const resp = await fetch(`https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`, { 
-      method: 'POST', 
-      body: formData 
+      method: 'POST', body: formData 
     });
     
     const cloudRes = await resp.json();
     console.log("☁️ [DEBUG LOGO] Risposta Cloudinary:", cloudRes);
 
-    if (cloudRes.secure_url) {
-      console.log("✅ [DEBUG LOGO] URL ricevuto:", cloudRes.secure_url);
+    if (!cloudRes.secure_url) throw new Error(cloudRes.error ? cloudRes.error.message : "Errore Cloudinary");
+
+    console.log("✅ [DEBUG LOGO] URL ricevuto:", cloudRes.secure_url);
       
-      // 6. Scrittura nel Master (Per backup sul Database)
-      console.log("💾 [DEBUG LOGO] Notifica al Master Script...");
-      const updateRes = await fetch(MOTORE_API_URL, {
-        method: "POST",
-        body: JSON.stringify({ 
-          action: "UPDATE_PERSONAL_LOGO", 
-          token: token, 
-          logoUrl: cloudRes.secure_url 
-        })
-      });
-      const updateData = await updateRes.json();
-      console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
+    // 6. Scrittura nel Master (Per backup sul Database)
+    console.log("💾 [DEBUG LOGO] Notifica al Master Script...");
+    const updateRes = await fetch(MOTORE_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: cloudRes.secure_url })
+    });
+    const updateData = await updateRes.json();
+    console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
 
-       if (updateData.success) {
+    if (!updateData.success) throw new Error("Rifiutato dal Server: " + updateData.error);
 
-         
-          // 🗡️ CHIRURGIA: Aggiorniamo la cache in RAM con il VERO LINK
-          let mem = sessionStorage.getItem('wildu_cache_proposte');
-          if (mem) {
-              let data = JSON.parse(mem);
-              data.p_logo = cloudRes.secure_url; 
-              sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-          }
-          
-          // 🟢 RESET AVVISO
-          sessionStorage.removeItem('wildu_skip_logo'); 
-          
-          // 🛡️ SIGILLO DELL'IMMORTALITÀ: Diciamo al telefono qual è l'URL Cloudinary associato al tuo Base64
-          localStorage.setItem('wildu_partner_logo_url', cloudRes.secure_url);
-
-          alert("✨ Logo salvato e sincronizzato sul Cloud!");
-
-         
-      } else {
-          throw new Error("Il Master Script ha rifiutato il salvataggio: " + updateData.error);
-      }
-    } else {
-      throw new Error(cloudRes.error ? cloudRes.error.message : "Errore sconosciuto Cloudinary");
+    // ✅ SUCCESSO! SALVATAGGIO DEFINITIVO
+    // Aggiorniamo la cache RAM
+    let mem = sessionStorage.getItem('wildu_cache_proposte');
+    if (mem) {
+        let data = JSON.parse(mem);
+        data.p_logo = cloudRes.secure_url; 
+        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
     }
+    
+    sessionStorage.removeItem('wildu_skip_logo'); 
+    
+    // Togliamo il cartello UPLOADING e mettiamo il VERO link
+    localStorage.setItem('wildu_partner_logo_url', cloudRes.secure_url);
+
+    alert("✨ Logo salvato e sincronizzato sul Cloud!");
 
   } catch (e) {
     console.error("❌ [DEBUG LOGO] ERRORE CRITICO:", e);
-    alert("❌ Errore durante l'operazione: " + e.message);
+    
+    // 🚨 PROTOCOLLO ROLLBACK: L'upload è fallito. Ripristiniamo il cassetto ESATTAMENTE come l'abbiamo trovato
+    if (oldBase64) localStorage.setItem('wildu_partner_logo', oldBase64);
+    else localStorage.removeItem('wildu_partner_logo');
+    
+    if (oldUrl) localStorage.setItem('wildu_partner_logo_url', oldUrl);
+    else localStorage.removeItem('wildu_partner_logo_url');
+    
+    alert("❌ Errore durante il caricamento. Il logo non è stato salvato.\nDettaglio: " + e.message);
   } finally {
-    if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
-    refreshProfileLogoUI(); // Ripulita finale
-    event.target.value = "";
-    window.isProfileLocked = false;
-    document.querySelector('#edit-profile-overlay .btn-close').style.display = 'block';
+    // Sblocchiamo tutto, sia che sia andata bene, sia che ci sia stato il Rollback
+    if(btnUpload) { btnUpload.disabled = false; btnUpload.innerHTML = originalHtml; }
+    if(btnUpdate) btnUpdate.disabled = false;
+    refreshProfileLogoUI(); // Spegne la rotellina e mostra il risultato finale
+    event.target.value = ""; 
   }
 }
 
-// 🟢 RIMOZIONE LOGO (Cloud & Sheet - Coerenza 100% Sincrona)
+// 🟢 RIMOZIONE LOGO (Con blocco tasti operativi, ma porta libera)
 async function removeProfileLogo() {
   if(!confirm("Vuoi davvero rimuovere il tuo logo professionale?")) return;
 
   const removeBtn = document.getElementById('profile-logo-remove-btn');
+  const btnUpdate = document.getElementById('btn-update-profile'); // 🔒 Intercettiamo l'altro tasto
   const originalHtml = removeBtn ? removeBtn.innerHTML : "";
+  
   if(removeBtn) { removeBtn.disabled = true; removeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...'; }
-  window.isProfileLocked = true;
-  document.querySelector('#edit-profile-overlay .btn-close').style.display = 'none';
+  if(btnUpdate) btnUpdate.disabled = true; // 🔒 Disabilitiamo l'aggiornamento dati durante l'eliminazione
+
+  // 🚪 LA PORTA RESTA APERTA: L'utente può chiudere il profilo se si stufa di aspettare!
 
   try {
     const user = firebase.auth().currentUser;
@@ -2647,7 +2657,7 @@ async function removeProfileLogo() {
         sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
     }
     
-   // 🟢 RESET AVVISO E MEMORIE
+    // 🟢 RESET AVVISO E MEMORIE
     sessionStorage.removeItem('wildu_skip_logo');
     
     // Solo se il fetch va a buon fine, svuotiamo entrambi i cassetti
@@ -2660,9 +2670,8 @@ async function removeProfileLogo() {
     alert("⚠️ Errore: non è stato possibile rimuovere il logo dal database. " + e.message);
   } finally { 
     if(removeBtn) { removeBtn.disabled = false; removeBtn.innerHTML = originalHtml; }
+    if(btnUpdate) btnUpdate.disabled = false; // 🔓 Sblocchiamo il tasto aggiorna dati
     refreshProfileLogoUI();
-    window.isProfileLocked = false;
-    document.querySelector('#edit-profile-overlay .btn-close').style.display = 'block';
   }
 }
 
