@@ -1,6 +1,7 @@
 {
+  "id": "/partnerWildu/",
   "name": "Wildu Partner Hub",
-  "short_name": "Wildu Partner",
+  "short_name": "Wildu",
   "start_url": "/partnerWildu/index.html",
   "scope": "/partnerWildu/",
   "display": "standalone",
@@ -11,24 +12,26 @@
     {
       "src": "/partnerWildu/icon-192-white.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/partnerWildu/icon-512-white.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/partnerWildu/icon-192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     },
     {
       "src": "/partnerWildu/icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }
