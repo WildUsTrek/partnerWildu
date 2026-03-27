@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v4.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -1808,11 +1808,11 @@ function showInstallInfo() {
                 new bootstrap.Modal(document.getElementById('installModal')).show();
             }
         });
-    } else {
+} else {
         // CASO B: iPhone o Firefox (2 Bottoni)
         Swal.fire({
             title: 'Salva l\'App',
-            text: 'Vuoi la guida rapida testuale o il tutorial visivo passo-passo?',
+            html: 'Vuoi la guida rapida testuale o il tutorial visivo passo-passo?<br><br><div class="text-primary small fw-bold mt-2 p-2 rounded" style="background: rgba(13,110,253,0.1); border: 1px dashed #0d6efd;"><i class="bi bi-browser-safari"></i> Su iPhone è vivamente consigliato usare Safari</div>',
             icon: 'info',
             showCancelButton: true,
             confirmButtonText: '<i class="bi bi-play-circle-fill"></i> Tutorial Animato',
@@ -1860,11 +1860,11 @@ function apriCinema() {
 
 // 3. I COPIONI DEL TEATRINO (Director's Cut - Scorrimenti Lunghi e Reali)
 const theaterScripts = {
-    // 🍎 iOS SAFARI
+   // 🍎 iOS SAFARI
     "Mobile_iOS_Safari": [
         { 
             title: "Passo 1: Tocca Condividi", 
-            text: "Cerca l'icona **Condividi** (il quadrato con la freccia ⬆️) nella barra in basso.", 
+            text: "<span class='text-primary fw-bold mb-2 d-block' style='font-size: 0.85rem;'><i class='bi bi-browser-safari'></i> Consigliato salvataggio tramite Safari</span>Cerca l'icona **Condividi** (il quadrato con la freccia ⬆️) nella barra in basso.", 
             html: `<div class="mock-browser"><div class="mock-content"><div class="text-muted opacity-50 fw-bold fs-4">WILDU</div></div><div class="mock-bar mock-bar-bottom px-4"><i class="bi bi-chevron-left text-muted"></i><i class="bi bi-chevron-right text-muted"></i><div class="blink-target p-2 position-relative"><i class="bi bi-box-arrow-up text-primary fs-4"></i><div class="mock-hand" style="right:-10px; bottom:-20px;">👆</div></div><i class="bi bi-book text-muted"></i><i class="bi bi-copy text-muted"></i></div></div>` 
         },
         { 
@@ -4397,7 +4397,12 @@ const user = firebase.auth().currentUser;
       <div class="modal-body text-center p-4">
         <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-file-text"></i> Istruzioni Rapide</h5>
         <div class="text-start bg-light p-3 rounded-3 small mb-4 border border-secondary">
-          <p class="mb-2"><strong>📱 Su iPhone (Safari):</strong><br>1. Tocca l'icona <b>Condividi</b> in basso (quadrato con freccia).<br>2. Scorri il menu e tocca <strong>"Aggiungi alla schermata Home"</strong>.</p>
+          
+          <div class="p-2 mb-2 rounded-2 text-center" style="background: rgba(13,110,253,0.1); border: 1px dashed #0d6efd;">
+             <span class="text-primary fw-bold" style="font-size: 0.75rem; text-transform: uppercase;"><i class="bi bi-browser-safari fs-6 me-1"></i> Vivamente consigliato salvataggio tramite Safari</span>
+          </div>
+
+          <p class="mb-2"><strong>📱 Su iPhone:</strong><br>1. Tocca l'icona <b>Condividi</b> in basso (quadrato con freccia).<br>2. Scorri il menu e tocca <strong>"Aggiungi alla schermata Home"</strong>.</p>
           <hr class="my-2">
           <p class="mb-0"><strong>🤖 Su Android (Chrome):</strong><br>1. Tocca i <b>Tre Puntini (⋮)</b> in alto a destra.<br>2. Scorri e tocca <strong>"Installa App"</strong> o "Aggiungi a schermata Home".</p>
         </div>
