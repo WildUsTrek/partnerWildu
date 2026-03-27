@@ -4767,10 +4767,15 @@ window.addEventListener('load', function() {
                 btnAggiornaProfilo.innerHTML = "🚫 OFFLINE";
             }
 
-            // 🟢 ACCENDIAMO IL BADGE FLUTTUANTE 
+            // 🟢 ACCENDIAMO IL BADGE FLUTTUANTE CON RITARDO (3.5s)
             if (badgeOffline) {
-                badgeOffline.style.opacity = '1';
-                badgeOffline.style.pointerEvents = 'auto'; // Diventa trascinabile col dito
+                if (window.offlineBadgeTimer) clearTimeout(window.offlineBadgeTimer);
+                window.offlineBadgeTimer = setTimeout(() => {
+                    if (!navigator.onLine) {
+                        badgeOffline.style.opacity = '1';
+                        badgeOffline.style.pointerEvents = 'auto';
+                    }
+                }, 3500);
             }
             
             Swal.fire({
