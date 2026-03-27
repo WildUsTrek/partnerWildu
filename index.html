@@ -19,8 +19,62 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI!
+  const APP_VERSION = "v4.7"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
+
+// =========================================================
+  // 🧠 SISTEMA NERVOSO CENTRALE (Logger Globale Intelligente)
+  // =========================================================
+  const WILDU_DEBUG = true; // 🔴 Metti a 'false' prima di pubblicare per silenziare tutto e risparmiare RAM ------------->>>>>>>>>>>
+  
+  (function() {
+      const originalLog = console.log;
+      const originalWarn = console.warn;
+      const originalInfo = console.info;
+      const originalError = console.error;
+      
+      // La Guardia del Logger: Controlla l'interruttore e la rete
+      function canLog() {
+          return WILDU_DEBUG && navigator.onLine;
+      }
+
+      // Genera il timestamp al millisecondo per tracciare l'ordine esatto degli eventi
+      function getTimestamp() {
+          const now = new Date();
+          return `[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}.${now.getMilliseconds().toString().padStart(3,'0')}]`;
+      }
+
+      // 🟢 Intercettiamo i Log normali (Si spengono offline)
+      console.log = function(...args) {
+          if (!canLog()) return;
+          originalLog.apply(console, [`%c${getTimestamp()} 🟢 WILDU:`, 'color: #198754; font-weight: bold;', ...args]);
+      };
+
+      // 🔵 Intercettiamo le Info (Si spengono offline)
+      console.info = function(...args) {
+          if (!canLog()) return;
+          originalInfo.apply(console, [`%c${getTimestamp()} 🔵 INFO:`, 'color: #0dcaf0; font-weight: bold;', ...args]);
+      };
+
+      // 🟠 Intercettiamo i Warning (Si spengono offline)
+      console.warn = function(...args) {
+          if (!canLog()) return;
+          originalWarn.apply(console, [`%c${getTimestamp()} 🟠 WARN:`, 'color: #ffc107; font-weight: bold;', ...args]);
+      };
+
+      // 🚨 Intercettiamo i CRASH (Non si spengono MAI, sfondano il blocco offline)
+      console.error = function(...args) {
+          // Anche se DEBUG è false o siamo offline, se c'è un crash VOGLIAMO SAPERLO!
+          originalError.apply(console, [`%c${getTimestamp()} 🚨 CRASH:`, 'color: #dc3545; font-weight: bold; font-size: 1.1em;', ...args]);
+      };
+      
+      // Piccolo messaggio di benvenuto del sistema nervoso
+      if (WILDU_DEBUG) {
+          originalLog.apply(console, [`%c🚀 WILDU DEBUG MODE ATTIVO (Versione ${APP_VERSION})`, 'background: #000; color: #0dcaf0; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 1.2em;']);
+      }
+  })();
+
+  
 document.addEventListener("DOMContentLoaded", function() {
 
   if ('serviceWorker' in navigator) {
@@ -4741,9 +4795,7 @@ window.addEventListener('load', function() {
             if (badgeOffline && badgeOffline.style.opacity === '1') {
                 badgeOffline.style.opacity = '0';
                 badgeOffline.style.pointerEvents = 'none'; // Lo disattiva
-                
-                // Rimette il badge al suo posto dolcemente, pronto per il prossimo blackout
-                setTimeout(() => { badgeOffline.style.transform = `translate3d(0px, 0px, 0)`; }, 500);
+               
             }
 
             Swal.fire({
