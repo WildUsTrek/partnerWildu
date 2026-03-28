@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.2"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v3.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -4858,22 +4858,34 @@ async function updateProfileBackend() {
 
   // 🛡️ SCUDO ANTI-PANICO E UI FEEDBACK: Blocchiamo la UI istantaneamente
   const btnUpdate = document.getElementById('btn-update-profile');
-  const btnLogout = document.querySelector('button[onclick="logout()"]'); // 🔒 Prende il tasto Esci
-  const btnUploadLogo = document.getElementById('btn-upload-logo-cloud'); // 🔒 Prende il tasto Carica
+  const btnLogout = document.querySelector('button[onclick="logout()"]');
+  const btnUploadLogo = document.getElementById('btn-upload-logo-cloud');
   const originalBtnText = btnUpdate ? btnUpdate.innerHTML : "AGGIORNA DATI";
 
   if (btnUpdate) {
       btnUpdate.disabled = true;
+      // 🟢 FORZATURA VISIVA: Questo assicura che il DOM prepari la rotellina
       btnUpdate.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
   }
+  
   if (btnLogout) btnLogout.disabled = true;
   if (btnUploadLogo) btnUploadLogo.disabled = true;
   if (inputNome) inputNome.disabled = true;
   if (inputTel) inputTel.disabled = true;
 
+  // ⏱️ Un piccolo respiro di 50 millisecondi per far dipingere la rotellina al browser prima dei calcoli pesanti
+  await new Promise(resolve => setTimeout(resolve, 50));
+
   try {
+    // 🚀 1. AGGIORNA FIREBASE (Il database veloce - Questo impedisce il ritorno dei dati vecchi al riavvio!)
+    await db.collection("users_partners").doc(user.uid).update({
+      nome_cognome: nome,
+      whatsapp: tel
+    });
+
     const token = await user.getIdToken();
 
+    // 🚀 2. AGGIORNA MASTER (Google Sheets)
     const res = await fetch(MOTORE_API_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -4888,21 +4900,24 @@ async function updateProfileBackend() {
 
     if (!data.success) throw new Error(data.error);
 
-    // ✅ AGGIORNA UI LOCALE
+    // ✅ 3. AGGIORNA UI LOCALE E VARIABILI LAVORO
     document.getElementById('g_nome').value = nome;
     document.getElementById('g_tel').value = tel;
 
-    // 🧹 RESET CACHE FRONTEND (Forza il prossimo getUserData a non leggere dati vecchi dalla sessionStorage)
+    // 🧹 4. RESET CACHE FRONTEND
     sessionStorage.removeItem('wildu_cache_proposte');
     sessionStorage.removeItem('wildu_cache_time');
 
+    // 🔄 5. RE-FETCH SILENZIOSO PER POPOLARE LA NUOVA CACHE (Bussa al server a cache invalidata)
+    await checkProposalLimitAtStartup(user.uid);
+
     alert("✅ Profilo e Database aggiornati con successo!");
-    if (typeof closeProfile === "function") closeProfile(); // Chiude la modale se tutto va a buon fine
+    if (typeof closeProfile === "function") closeProfile();
 
   } catch (e) {
     alert("Errore durante l'aggiornamento: " + e.message);
   } finally {
-    // 🔓 SBLOCCO FINALE: Riapriamo tutto, sia in caso di successo che di errore
+    // 🔓 SBLOCCO FINALE
     if (btnUpdate) {
         btnUpdate.disabled = false;
         btnUpdate.innerHTML = originalBtnText;
