@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v3.5"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -2473,67 +2473,92 @@ function openProfile() {
 function closeProfile() { 
     document.getElementById('edit-profile-overlay').style.display = 'none'; 
 }
-  
-// 🟢 AGGIORNA PROFILO: Sincronizzazione totale Firebase -> App UI -> Google Sheets
-async function updateProfile() {
+
+
+async function updateProfileBackend() {
   const user = auth.currentUser;
   const inputNome = document.getElementById('edit_p_nome');
   const inputTel = document.getElementById('edit_p_tel');
-  const nuovoNome = inputNome.value.trim();
-  const nuovoTel = inputTel.value.trim();
-  
-  if (!nuovoNome || !nuovoTel) return alert("⚠️ Inserisci tutti i campi!");
+  const nome = inputNome.value.trim();
+  const tel = inputTel.value.trim();
 
-  // 🛡️ SCUDO ANTI-PANICO: Blocchiamo bottone, CAMPI di testo e LOGOUT all'istante
-  const btn = document.getElementById('btn-update-profile');
-  const btnLogout = document.querySelector('button[onclick="logout()"]'); // 🔒 Prende il tasto Esci
-  
-  if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
+  if (!nome || !tel) {
+    alert("⚠️ Compila tutti i campi");
+    return;
   }
-  if (btnLogout) btnLogout.disabled = true; // Blocca il Logout
+
+  // 🛡️ SCUDO ANTI-PANICO E UI FEEDBACK: Blocchiamo la UI istantaneamente
+  const btnUpdate = document.getElementById('btn-update-profile');
+  const btnLogout = document.querySelector('button[onclick="logout()"]');
+  const btnUploadLogo = document.getElementById('btn-upload-logo-cloud');
+  const originalBtnText = btnUpdate ? btnUpdate.innerHTML : "AGGIORNA DATI";
+
+  if (btnUpdate) {
+      btnUpdate.disabled = true;
+      // 🟢 FORZATURA VISIVA: Questo assicura che il DOM prepari la rotellina
+      btnUpdate.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
+  }
   
+  if (btnLogout) btnLogout.disabled = true;
+  if (btnUploadLogo) btnUploadLogo.disabled = true;
   if (inputNome) inputNome.disabled = true;
   if (inputTel) inputTel.disabled = true;
 
-
+  // ⏱️ Un piccolo respiro di 50 millisecondi per far dipingere la rotellina al browser prima dei calcoli pesanti
+  await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
-    // 1. Aggiorna Firebase (Il database "veloce")
-    await db.collection("users_partners").doc(user.uid).update({ 
-      nome_cognome: nuovoNome, 
-      whatsapp: nuovoTel 
+    // 🚀 1. AGGIORNA FIREBASE (Il database veloce - Questo impedisce il ritorno dei dati vecchi al riavvio!)
+    await db.collection("users_partners").doc(user.uid).update({
+      nome_cognome: nome,
+      whatsapp: tel
     });
 
-    // ✅ 2. AGGIORNA CAMPI LAVORO: Fondamentale per i futuri moduli proposta!
-    document.getElementById('g_nome').value = nuovoNome;
-    document.getElementById('g_tel').value = nuovoTel;
+    const token = await user.getIdToken();
 
-    // 🧹 3. RESET CACHE: Forza l'app a scordarsi i vecchi limiti
-    sessionStorage.removeItem('wildu_cache_proposte');
-    sessionStorage.removeItem('wildu_cache_time');
+    // 🚀 2. AGGIORNA MASTER (Google Sheets)
+    const res = await fetch(MOTORE_API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "UPDATE_USER_PROFILE",
+        token: token,
+        nome: nome,
+        tel: tel
+      })
+    });
 
-    // 🚀 4. AGGIORNAMENTO MASTER SCRIPT (Google Sheets)
-    await checkProposalLimitAtStartup(user.uid);
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error);
+
+    // ✅ 3. AGGIORNA UI LOCALE E VARIABILI LAVORO
+    document.getElementById('g_nome').value = nome;
+    document.getElementById('g_tel').value = tel;
+
+    // ⛔ OTTIMIZZAZIONE: Rimosso il reset cache e il re-fetch forzato.
+    // L'app ha già aggiornato Firebase e i campi locali. Risparmiamo il carico al Master.
 
     alert("✅ Profilo e Database aggiornati con successo!");
-    closeProfile();
-    
-  } catch (e) { 
-    console.error("Errore aggiornamento profilo:", e);
-    alert("Errore nell'aggiornamento: " + e.message); 
+    if (typeof closeProfile === "function") closeProfile();
+
+  } catch (e) {
+    alert("Errore durante l'aggiornamento: " + e.message);
   } finally {
-    // 🔓 SBLOCCO FINALE: Riapriamo tutto a operazione conclusa (con successo o errore)
-    if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = 'AGGIORNA DATI';
+    // 🔓 SBLOCCO FINALE: Riapriamo tutto, sia in caso di successo che di errore
+    if (btnUpdate) {
+        btnUpdate.disabled = false;
+        btnUpdate.innerHTML = originalBtnText;
     }
+    if (btnLogout) btnLogout.disabled = false;
+    if (btnUploadLogo) btnUploadLogo.disabled = false;
     if (inputNome) inputNome.disabled = false;
     if (inputTel) inputTel.disabled = false;
-    if (btnLogout) btnLogout.disabled = false; // 🔓 Sblocca il Logout
+    
+    // 🛟 SALVAGENTE: Assicuriamoci che il loader principale non resti MAI incantato
+    const mainLoader = document.getElementById('loader');
+    if (mainLoader) mainLoader.style.display = 'none';
   }
-}
+}  
   
 // 🟢 REFRESH UI LOGO (Gestisce anche la rotellina di Upload)
 function refreshProfileLogoUI() {
@@ -4844,95 +4869,6 @@ window.addEventListener('load', function() {
     window.addEventListener('offline', gestisciStatoRete);
     gestisciStatoRete(); 
 });
-
-async function updateProfileBackend() {
-  const user = auth.currentUser;
-  const inputNome = document.getElementById('edit_p_nome');
-  const inputTel = document.getElementById('edit_p_tel');
-  const nome = inputNome.value.trim();
-  const tel = inputTel.value.trim();
-
-  if (!nome || !tel) {
-    alert("⚠️ Compila tutti i campi");
-    return;
-  }
-
-  // 🛡️ SCUDO ANTI-PANICO E UI FEEDBACK: Blocchiamo la UI istantaneamente
-  const btnUpdate = document.getElementById('btn-update-profile');
-  const btnLogout = document.querySelector('button[onclick="logout()"]');
-  const btnUploadLogo = document.getElementById('btn-upload-logo-cloud');
-  const originalBtnText = btnUpdate ? btnUpdate.innerHTML : "AGGIORNA DATI";
-
-  if (btnUpdate) {
-      btnUpdate.disabled = true;
-      // 🟢 FORZATURA VISIVA: Questo assicura che il DOM prepari la rotellina
-      btnUpdate.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
-  }
-  
-  if (btnLogout) btnLogout.disabled = true;
-  if (btnUploadLogo) btnUploadLogo.disabled = true;
-  if (inputNome) inputNome.disabled = true;
-  if (inputTel) inputTel.disabled = true;
-
-  // ⏱️ Un piccolo respiro di 50 millisecondi per far dipingere la rotellina al browser prima dei calcoli pesanti
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  try {
-    // 🚀 1. AGGIORNA FIREBASE (Il database veloce - Questo impedisce il ritorno dei dati vecchi al riavvio!)
-    await db.collection("users_partners").doc(user.uid).update({
-      nome_cognome: nome,
-      whatsapp: tel
-    });
-
-    const token = await user.getIdToken();
-
-    // 🚀 2. AGGIORNA MASTER (Google Sheets)
-    const res = await fetch(MOTORE_API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "UPDATE_USER_PROFILE",
-        token: token,
-        nome: nome,
-        tel: tel
-      })
-    });
-
-    const data = await res.json();
-
-    if (!data.success) throw new Error(data.error);
-
-    // ✅ 3. AGGIORNA UI LOCALE E VARIABILI LAVORO
-    document.getElementById('g_nome').value = nome;
-    document.getElementById('g_tel').value = tel;
-
-    // 🧹 4. RESET CACHE FRONTEND
-    sessionStorage.removeItem('wildu_cache_proposte');
-    sessionStorage.removeItem('wildu_cache_time');
-
-    // 🔄 5. RE-FETCH SILENZIOSO PER POPOLARE LA NUOVA CACHE (Bussa al server a cache invalidata)
-    await checkProposalLimitAtStartup(user.uid);
-
-    alert("✅ Profilo e Database aggiornati con successo!");
-    if (typeof closeProfile === "function") closeProfile();
-
-  } catch (e) {
-    alert("Errore durante l'aggiornamento: " + e.message);
-  } finally {
-    // 🔓 SBLOCCO FINALE: Riapriamo tutto, sia in caso di successo che di errore
-    if (btnUpdate) {
-        btnUpdate.disabled = false;
-        btnUpdate.innerHTML = originalBtnText;
-    }
-    if (btnLogout) btnLogout.disabled = false;
-    if (btnUploadLogo) btnUploadLogo.disabled = false;
-    if (inputNome) inputNome.disabled = false;
-    if (inputTel) inputTel.disabled = false;
-    
-    // 🛟 SALVAGENTE: Assicuriamoci che il loader principale non resti MAI incantato
-    const mainLoader = document.getElementById('loader');
-    if (mainLoader) mainLoader.style.display = 'none';
-  }
-}
   
 </script>
 
