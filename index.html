@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v4.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v3.9"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -4463,7 +4463,7 @@ const user = firebase.auth().currentUser;
     
     <input type="file" id="profile-logo-upload" accept="image/png, image/jpeg" style="display:none;" onchange="saveProfileLogo(event)">
     
-    <button id="btn-update-profile" type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfile()">AGGIORNA DATI</button>
+    <button id="btn-update-profile" type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfileBackend()">AGGIORNA DATI</button>
     
     <div class="mt-4 pt-3 border-top border-secondary text-center">
       <button type="button" class="btn btn-outline-danger w-100 p-3 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
@@ -4843,6 +4843,44 @@ window.addEventListener('load', function() {
     window.addEventListener('offline', gestisciStatoRete);
     gestisciStatoRete(); 
 });
+
+async function updateProfileBackend() {
+  const user = auth.currentUser;
+  const nome = document.getElementById('edit_p_nome').value.trim();
+  const tel = document.getElementById('edit_p_tel').value.trim();
+
+  if (!nome || !tel) {
+    alert("⚠️ Compila tutti i campi");
+    return;
+  }
+
+  try {
+    const token = await user.getIdToken();
+
+    const res = await fetch(MOTORE_API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "UPDATE_PROFILE", // 👈 QUESTA È LA NUOVA
+        token: token,
+        nome: nome,
+        tel: tel
+      })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error);
+
+    // aggiorna UI locale
+    document.getElementById('g_nome').value = nome;
+    document.getElementById('g_tel').value = tel;
+
+    alert("✅ Profilo aggiornato lato server!");
+
+  } catch (e) {
+    alert("Errore: " + e.message);
+  }
+}
   
 </script>
 
