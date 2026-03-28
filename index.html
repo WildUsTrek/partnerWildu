@@ -2508,11 +2508,11 @@ async function updateProfileBackend() {
   await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
-    // 🚀 1. AGGIORNA FIREBASE (Il database veloce - Questo impedisce il ritorno dei dati vecchi al riavvio!)
-    await db.collection("users_partners").doc(user.uid).update({
+    // 🚀 1. AGGIORNA FIREBASE (Il database veloce - Anti-Crash)
+    await db.collection("users_partners").doc(user.uid).set({
       nome_cognome: nome,
       whatsapp: tel
-    });
+    }, { merge: true });
 
     const token = await user.getIdToken();
 
@@ -2733,57 +2733,70 @@ async function saveProfileLogo(event) {
   }
 }
 
-// 🟢 RIMOZIONE LOGO (Con blocco tasti operativi, ma porta libera)
+// 🟢 RIMOZIONE LOGO (Con vera distruzione su Cloudinary)
 async function removeProfileLogo() {
   if(!confirm("Vuoi davvero rimuovere il tuo logo professionale?")) return;
 
   const removeBtn = document.getElementById('profile-logo-remove-btn');
-  const btnUpdate = document.getElementById('btn-update-profile'); // 🔒 Intercettiamo l'altro tasto
-  const btnLogout = document.querySelector('button[onclick="logout()"]'); // 🔒 Prende il tasto Esci
+  const btnUpdate = document.getElementById('btn-update-profile'); 
+  const btnLogout = document.querySelector('button[onclick="logout()"]'); 
   const originalHtml = removeBtn ? removeBtn.innerHTML : "";
   
   if(removeBtn) { removeBtn.disabled = true; removeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...'; }
-  if(btnUpdate) btnUpdate.disabled = true; // 🔒 Disabilitiamo l'aggiornamento dati durante l'eliminazione
-  if(btnLogout) btnLogout.disabled = true; // 🔒 Blocca il Logout
-
-  // 🚪 LA PORTA RESTA APERTA: L'utente può chiudere il profilo se si stufa di aspettare!
+  if(btnUpdate) btnUpdate.disabled = true; 
+  if(btnLogout) btnLogout.disabled = true; 
 
   try {
     const user = firebase.auth().currentUser;
     const token = await user.getIdToken();
 
-    // 🟢 ASPETTIAMO IL SERVER E LEGGIAMO LA RISPOSTA!
+    // 🕵️‍♂️ ESTRAZIONE PUBLIC_ID DALL'URL
+    const oldUrl = localStorage.getItem('wildu_partner_logo_url') || "";
+    let publicIdToDestroy = "";
+    if (oldUrl.includes('cloudinary')) {
+        const parts = oldUrl.split('/');
+        const filename = parts.pop().split('.')[0]; 
+        const folder = parts.pop(); 
+        if (!folder.startsWith('v') && folder !== 'upload') {
+             publicIdToDestroy = folder + '/' + filename; // Es. PARTNER/xyz123
+        } else {
+             publicIdToDestroy = filename;
+        }
+    }
+
+    // 🟢 CHIAMIAMO LA NUOVA AZIONE DEDICATA AL LOGO
     const res = await fetch(MOTORE_API_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: "" })
+      body: JSON.stringify({ 
+          action: "DELETE_LOGO", 
+          token: token, 
+          public_id: publicIdToDestroy // Passiamo l'ID da distruggere!
+      })
     });
     
     const data = await res.json();
     if (!data.success) throw new Error(data.error || "Rifiutato dal Server");
 
-    // 🗡️ CHIRURGIA: Aggiorniamo la cache in RAM senza distruggerla
+    // 🗡️ CHIRURGIA RAM
     let mem = sessionStorage.getItem('wildu_cache_proposte');
     if (mem) {
         let cacheData = JSON.parse(mem);
-        cacheData.p_logo = ""; // Diciamo alla RAM che il logo non c'è più
+        cacheData.p_logo = ""; 
         sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
     }
     
-    // 🟢 RESET AVVISO E MEMORIE
     sessionStorage.removeItem('wildu_skip_logo');
-    
-    // Solo se il fetch va a buon fine, svuotiamo entrambi i cassetti
     localStorage.removeItem('wildu_partner_logo');
-    localStorage.removeItem('wildu_partner_logo_url'); // 🧹 Uccidiamo anche il riferimento URL
-    alert("🗑️ Logo rimosso definitivamente.");
+    localStorage.removeItem('wildu_partner_logo_url'); 
+    alert("🗑️ Logo rimosso definitivamente dal Cloud e dal Profilo.");
     
   } catch(e) { 
     console.warn("Errore durante la rimozione:", e); 
-    alert("⚠️ Errore: non è stato possibile rimuovere il logo dal database. " + e.message);
+    alert("⚠️ Errore: non è stato possibile rimuovere il logo. " + e.message);
   } finally { 
     if(removeBtn) { removeBtn.disabled = false; removeBtn.innerHTML = originalHtml; }
-    if(btnUpdate) btnUpdate.disabled = false; // 🔓 Sblocchiamo il tasto aggiorna dati
-    if(btnLogout) btnLogout.disabled = false; // 🔓 Sblocca il Logout
+    if(btnUpdate) btnUpdate.disabled = false; 
+    if(btnLogout) btnLogout.disabled = false; 
     refreshProfileLogoUI();
   }
 }
