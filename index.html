@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.3"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v3.4"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -743,9 +743,9 @@ body {
   const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
   let MAX_PROPOSTE_ATTIVE = 3;
 
-  // --- MOTORE CACHE-FIRST E SICUREZZA (Wildu 2.0) ---
+// --- MOTORE CACHE-FIRST E SICUREZZA (Wildu 2.0) ---
   window.wilduFetchCounter = 0;
-  //window.lastServerSync = 0;DISATTIVATA NON SERVE PIU'
+  window.wilduNinjaCounter = 0; // 🥷 Contatore isolato per le ronde di background
   window.SYNC_COOLDOWN = 45000; // 45s di respiro tra fetch di startup
 
 function goToStripe(tipo, btnElement) {
@@ -4212,8 +4212,8 @@ document.addEventListener("visibilitychange", function() {
         const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
         const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-        // 🛡️ RACE CONDITION GUARD
-        const myFetchId = ++window.wilduFetchCounter;
+        // 🛡️ RACE CONDITION GUARD ISOLATA
+        const myNinjaId = ++window.wilduNinjaCounter;
         
         // 🛡️ BLOCCO TRY/CATCH SALVAVITA
         try {
@@ -4225,8 +4225,8 @@ document.addEventListener("visibilitychange", function() {
             })
             .then(r => r.json())
             .then(data => {
-                // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
-                if (myFetchId !== window.wilduFetchCounter) return;
+                // 🛡️ SCUDO: Se un fetch Ninja più recente è partito, ignoro questa risposta vecchia
+                if (myNinjaId !== window.wilduNinjaCounter) return;
 
                 if (data && !data.error) {
                     const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
@@ -4313,18 +4313,18 @@ async function controllaSicurezzaNinja() {
     const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
     
     // 🛡️ RACE CONDITION GUARD E TOKEN SICURO
-    const myFetchId = ++window.wilduFetchCounter;
-    const safeToken = await user.getIdToken();
+    const myNinjaId = ++window.wilduNinjaCounter;
+    const safeToken = await user.getIdToken();
 
-    fetch(MOTORE_API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
-    })
+    fetch(MOTORE_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
+    })
       
-    .then(r => r.json())
-    .then(data => {
-        // 🛡️ SCUDO: Se un fetch più recente è partito, ignoro questa risposta vecchia
-        if (myFetchId !== window.wilduFetchCounter) return;
+    .then(r => r.json())
+    .then(data => {
+        // 🛡️ SCUDO: Se un fetch Ninja più recente è partito, ignoro questa risposta vecchia
+        if (myNinjaId !== window.wilduNinjaCounter) return;
 
         if (data && !data.error) {
             const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
@@ -4918,7 +4918,7 @@ async function updateProfileBackend() {
   } catch (e) {
     alert("Errore durante l'aggiornamento: " + e.message);
   } finally {
-    // 🔓 SBLOCCO FINALE
+    // 🔓 SBLOCCO FINALE: Riapriamo tutto, sia in caso di successo che di errore
     if (btnUpdate) {
         btnUpdate.disabled = false;
         btnUpdate.innerHTML = originalBtnText;
@@ -4927,6 +4927,10 @@ async function updateProfileBackend() {
     if (btnUploadLogo) btnUploadLogo.disabled = false;
     if (inputNome) inputNome.disabled = false;
     if (inputTel) inputTel.disabled = false;
+    
+    // 🛟 SALVAGENTE: Assicuriamoci che il loader principale non resti MAI incantato
+    const mainLoader = document.getElementById('loader');
+    if (mainLoader) mainLoader.style.display = 'none';
   }
 }
   
