@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.6"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+  const APP_VERSION = "v3.8"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
@@ -740,7 +740,11 @@ body {
 </div>
 
 <script>
-  const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
+
+  //SCEGLI LA TUA VERSIONE BACKEND - BIVIO BACKEND - SWITCH - VAI SU GAS O CLOUD
+  
+  //const MOTORE_API_URL = "https://script.google.com/macros/s/AKfycbwFi51ubZmKRe9krW4GnCm9NOLWRODyaTuIUWh3hf7wlBNBCNAtedXNtFGHbIZE8oQ5hQ/exec";
+  const MOTORE_API_URL = "https://wildu-gateway-959006418837.europe-west1.run.app/api/gateway";
   let MAX_PROPOSTE_ATTIVE = 3;
 
 // --- MOTORE CACHE-FIRST E SICUREZZA (Wildu 2.0) ---
