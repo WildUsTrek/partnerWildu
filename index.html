@@ -1348,8 +1348,8 @@ function goToStep(step) {
 
             // ⏱️ DOGANA TEMPORALE A: Data di Fine precedente alla Data di Inizio
             if (dataFineRaw) {
-                const dIn = new Date(dataInizioRaw); dIn.setHours(0, 0, 0, 0);
-                const dOut = new Date(dataFineRaw); dOut.setHours(0, 0, 0, 0);
+                const dIn = createSafeLocalDate(dataInizioRaw);
+                const dOut = createSafeLocalDate(dataFineRaw);
                 
                 if (dOut < dIn) {
                     document.getElementById('od_data_fine').classList.add('border-danger');
@@ -1374,7 +1374,7 @@ function goToStep(step) {
             }
 
             // 2. Controllo dei 7 giorni minimi di anticipo
-            const selDate = new Date(dataInizioRaw); selDate.setHours(0, 0, 0, 0);
+            const selDate = createSafeLocalDate(dataInizioRaw);
             const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
             const dataMinima = new Date(oggi); dataMinima.setDate(oggi.getDate() + 7);
 
@@ -1706,7 +1706,7 @@ function checkDuplicatoInTempoReale() {
     if (dataRaw) {
         const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
         const dataMinima = new Date(oggi); dataMinima.setDate(oggi.getDate() + 7);
-        const selDate = new Date(dataRaw); selDate.setHours(0, 0, 0, 0);
+        const selDate = createSafeLocalDate(dataRaw);
 
         if (selDate < dataMinima) {
             const gg = String(dataMinima.getDate()).padStart(2, '0');
@@ -1774,7 +1774,6 @@ function checkDuplicatoInTempoReale() {
     }
 }
 
-
   
   function formatToItalianDate(dateStr) {
       if (!dateStr) return "";
@@ -1782,6 +1781,16 @@ function checkDuplicatoInTempoReale() {
       return `${p[2]}/${p[1]}/${p[0]}`; 
   }
 
+
+  // 🛡️ SCUDO ANTI-TIMEZONE BUG: Forza la lettura della data nel fuso orario locale
+function createSafeLocalDate(dateString) {
+    if (!dateString) return null;
+    const parts = dateString.split('-'); // Divide "2026-05-15" in ["2026", "05", "15"]
+    // new Date(Anno, Mese (0-11), Giorno, Ore, Minuti, Secondi, Millisecondi)
+    return new Date(parts[0], parseInt(parts[1]) - 1, parts[2], 0, 0, 0, 0); 
+}
+  
+  
   async function sendToWildu() {
   // PRE-FLIGHT CHECK: Controllo di Sicurezza con oggetto Auth corretto
   const user = typeof auth !== 'undefined' ? auth.currentUser : null;
