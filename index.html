@@ -1801,7 +1801,10 @@ function createSafeLocalDate(dateString) {
   const user = typeof auth !== 'undefined' ? auth.currentUser : null;
   if (!user) return alert("⚠️ Rilevata disconnessione. Ricarica la pagina.");
 
-const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  // 🟢 FIX CRITICO: Dichiariamo SUBITO la chiave utente, prima di qualsiasi calcolo!
+  const currentUserKey = user.uid;
+
+  const memoria = sessionStorage.getItem('wildu_cache_proposte');
   let datiCache = null;
   if (memoria) {
     try {
@@ -1877,7 +1880,6 @@ if (!user) {
   return;
 }
 
-const currentUserKey = user.uid;
 
 let fotoUrl = selectedGalleryUrl;
 
