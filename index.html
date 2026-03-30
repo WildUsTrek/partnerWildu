@@ -888,10 +888,10 @@ function goToStripe(tipo, btnElement) {
     <span id="contatore-proposte" class="badge bg-dark border border-secondary text-info px-3 py-2 rounded-pill shadow-sm" style="font-size: 0.8rem; display: none;">⏳ Caricamento slot...</span>
   </div>
 
-  <div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form'); goToStep(0);">
+<div id="btn-nuova-proposta" class="menu-card shadow-sm" onclick="showPage('form'); goToStep(0);" style="opacity: 0.4; pointer-events: none;">
     <span class="menu-icon">🗓️</span>
     <div class="menu-title">Nuova Proposta</div>
-    <div class="menu-desc">guidato in pochi passi per configurare l'evento.</div>
+    <div class="menu-desc text-info fw-bold"><span class="spinner-border spinner-border-sm"></span> Verifica slot...</div>
   </div>
 
   <div class="row g-2 mb-4">
@@ -4711,7 +4711,6 @@ const user = firebase.auth().currentUser;
       return;
     }
 
-  // alert("Immagine eliminata"); // Replace blocking alert with toast if preferred, or keep it. Let's use Swal for consistency if sweetalert is loaded, else alert.
     if (typeof Swal !== 'undefined') {
        Swal.fire({
            toast: true, position: 'top', icon: 'success', title: 'Immagine eliminata', showConfirmButton: false, timer: 2000
@@ -4720,7 +4719,12 @@ const user = firebase.auth().currentUser;
        alert("Immagine eliminata");
     }
 
-    // Add a slight delay to allow Cloudinary's cache to clear before reloading
+    // 🧟‍♂️ FIX ZOMBIE: Aggiungiamo l'ID alla lista nera PRIMA di ricaricare la galleria!
+    let deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]');
+    deletedList.push(window.selectedPublicId);
+    sessionStorage.setItem('wildu_deleted_images', JSON.stringify(deletedList));
+
+    // Ricarichiamo la galleria (ora il filtro anti-fantasma bloccherà lo zombie)
     setTimeout(() => {
         loadGallery('mie');
     }, 500); 
