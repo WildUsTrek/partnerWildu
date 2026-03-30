@@ -1620,8 +1620,8 @@ async function autoFetchRegion() {
 
 
 
-  // =========================================================
-// 🟢 SENSORE DUPLICATI IN TEMPO REALE (Zero Chiamate Firebase)
+// =========================================================
+// 🟢 SENSORE MULTIPLO IN TEMPO REALE (Zero Chiamate Firebase)
 // =========================================================
 function checkDuplicatoInTempoReale() {
     const titoloInput = document.getElementById('od_titolo');
@@ -1639,46 +1639,67 @@ function checkDuplicatoInTempoReale() {
     titoloInput.classList.remove('border-danger', 'border-warning');
     dataInput.classList.remove('border-danger', 'border-warning');
 
-    // Il controllo parte solo se entrambi i campi sono compilati
+    // 1. ⏱️ CONTROLLO DATA TROPPO VICINA (Si attiva appena seleziona il giorno)
+    if (dataRaw) {
+        const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+        const dataMinima = new Date(oggi); dataMinima.setDate(oggi.getDate() + 7);
+        const selDate = new Date(dataRaw); selDate.setHours(0, 0, 0, 0);
+
+        if (selDate < dataMinima) {
+            const gg = String(dataMinima.getDate()).padStart(2, '0');
+            const mm = String(dataMinima.getMonth() + 1).padStart(2, '0');
+            const aaaa = dataMinima.getFullYear();
+
+            dataInput.classList.add('border-danger');
+            warnDiv.style.display = 'block';
+            warnDiv.innerHTML = `
+                <div class="p-2 rounded text-white small fw-bold shadow-sm mb-2" style="background: rgba(220, 53, 69, 0.9); border: 1px solid #dc3545;">
+                    <i class="bi bi-calendar-x-fill"></i> DATA NON VALIDA: L'evento è troppo vicino.<br>Devi scegliere una data successiva al ${gg}/${mm}/${aaaa}.
+                </div>`;
+        }
+    }
+
+    // Se manca uno dei due campi, ci fermiamo qui (il controllo data ha già fatto il suo lavoro)
     if (!titolo || !dataRaw) return;
 
     const user = typeof auth !== 'undefined' ? auth.currentUser : null;
     if (!user) return;
 
-    // 1. Calcoliamo la "Targa" esattamente come fa il Backend
+    // 2. 🪪 CONTROLLO DUPLICATI (La "Targa")
     const slug = titolo.replace(/\s+/g, '_').replace(/[^\w]/gi, '').toLowerCase();
-    const dataItaliana = formatToItalianDate(dataRaw); // Es: 15/05/2026
-    const dataFormattata = dataItaliana.replace(/\//g, '-'); // Es: 15-05-2026
+    const dataItaliana = formatToItalianDate(dataRaw);
+    const dataFormattata = dataItaliana.replace(/\//g, '-');
     const docId = `${slug}_${dataFormattata}_${user.uid.substring(0,6)}`;
 
-    // 2. Cerchiamo nel cassetto della memoria locale
     const memoria = sessionStorage.getItem('wildu_cache_proposte');
     if (memoria) {
         try {
             const cache = JSON.parse(memoria);
             const allEvents = (cache.pending || []).concat(cache.accepted || []);
             
-            // Trovato!
+            // Trovato un duplicato!
             const match = allEvents.find(p => p.tempId === docId || p.idEvento === docId);
 
             if (match) {
                 warnDiv.style.display = 'block';
-                // Controlliamo se è Accepted o Pending
                 const isAccepted = cache.accepted && cache.accepted.some(p => p === match);
 
                 if (isAccepted) {
                     // 🔴 MURO DI CEMENTO
                     titoloInput.classList.add('border-danger');
                     dataInput.classList.add('border-danger');
-                    warnDiv.innerHTML = `
+                    
+                    // Usiamo "+=" così se ha sbagliato sia data che titolo, vede DUE avvisi rossi!
+                    warnDiv.innerHTML += `
                         <div class="p-2 rounded text-white small fw-bold shadow-sm" style="background: rgba(220, 53, 69, 0.9); border: 1px solid #dc3545;">
-                            <i class="bi bi-x-octagon-fill"></i> ATTENZIONE: Questo evento è già pubblicato!<br>Non potrai sovrascriverlo. Se è un secondo turno, cambia leggermente il titolo (es. "Gruppo Pomeriggio").
+                            <i class="bi bi-x-octagon-fill"></i> ATTENZIONE: Questo evento è già pubblicato!<br>Non potrai sovrascriverlo. Se è un secondo turno, cambia leggermente il titolo.
                         </div>`;
                 } else {
                     // 🟡 AVVISO CORTESIA
                     titoloInput.classList.add('border-warning');
                     dataInput.classList.add('border-warning');
-                    warnDiv.innerHTML = `
+                    
+                    warnDiv.innerHTML += `
                         <div class="p-2 rounded text-dark small fw-bold shadow-sm" style="background: rgba(255, 193, 7, 0.9); border: 1px solid #ffc107;">
                             <i class="bi bi-exclamation-triangle-fill"></i> NOTA: Hai già una bozza identica in revisione.<br>Se prosegui, aggiornerai quella esistente invece di crearne una nuova.
                         </div>`;
