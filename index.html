@@ -980,15 +980,24 @@ function goToStripe(tipo, btnElement) {
                 </p>
             </div>
         </div>
-      
+
+        
         
         <div class="section-title">DETTAGLI TEMPORALI</div>
-        <div class="col-12"><label>Titolo Evento *</label><input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso"></div>
+        
+        <div id="live_duplicate_warning" class="col-12 mb-2" style="display: none;"></div>
+
+        <div class="col-12">
+            <label>Titolo Evento *</label>
+            <input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso" oninput="checkDuplicatoInTempoReale()">
+        </div>
         <div class="col-6">
-    <label>Data Inizio *</label>
-    <input type="date" id="od_data_inizio" class="form-control border-primary">
-    <p class="tiny text-muted m-0 mt-1">Scegli una data ad almeno 7 giorni da oggi.</p>
- </div>
+            <label>Data Inizio *</label>
+            <input type="date" id="od_data_inizio" class="form-control border-primary" onchange="checkDuplicatoInTempoReale()">
+            <p class="tiny text-muted m-0 mt-1">Scegli una data ad almeno 7 giorni da oggi.</p>
+        </div>
+
+        
         <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
         <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
         <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
@@ -1575,6 +1584,80 @@ async function autoFetchRegion() {
     }
 }
 
+
+
+  // =========================================================
+// 🟢 SENSORE DUPLICATI IN TEMPO REALE (Zero Chiamate Firebase)
+// =========================================================
+function checkDuplicatoInTempoReale() {
+    const titoloInput = document.getElementById('od_titolo');
+    const dataInput = document.getElementById('od_data_inizio');
+    const warnDiv = document.getElementById('live_duplicate_warning');
+    
+    if (!titoloInput || !dataInput || !warnDiv) return;
+
+    const titolo = titoloInput.value.trim();
+    const dataRaw = dataInput.value;
+
+    // Reset stile iniziale
+    warnDiv.style.display = 'none';
+    warnDiv.innerHTML = '';
+    titoloInput.classList.remove('border-danger', 'border-warning');
+    dataInput.classList.remove('border-danger', 'border-warning');
+
+    // Il controllo parte solo se entrambi i campi sono compilati
+    if (!titolo || !dataRaw) return;
+
+    const user = typeof auth !== 'undefined' ? auth.currentUser : null;
+    if (!user) return;
+
+    // 1. Calcoliamo la "Targa" esattamente come fa il Backend
+    const slug = titolo.replace(/\s+/g, '_').replace(/[^\w]/gi, '').toLowerCase();
+    const dataItaliana = formatToItalianDate(dataRaw); // Es: 15/05/2026
+    const dataFormattata = dataItaliana.replace(/\//g, '-'); // Es: 15-05-2026
+    const docId = `${slug}_${dataFormattata}_${user.uid.substring(0,6)}`;
+
+    // 2. Cerchiamo nel cassetto della memoria locale
+    const memoria = sessionStorage.getItem('wildu_cache_proposte');
+    if (memoria) {
+        try {
+            const cache = JSON.parse(memoria);
+            const allEvents = (cache.pending || []).concat(cache.accepted || []);
+            
+            // Trovato!
+            const match = allEvents.find(p => p.tempId === docId || p.idEvento === docId);
+
+            if (match) {
+                warnDiv.style.display = 'block';
+                // Controlliamo se è Accepted o Pending
+                const isAccepted = cache.accepted && cache.accepted.some(p => p === match);
+
+                if (isAccepted) {
+                    // 🔴 MURO DI CEMENTO
+                    titoloInput.classList.add('border-danger');
+                    dataInput.classList.add('border-danger');
+                    warnDiv.innerHTML = `
+                        <div class="p-2 rounded text-white small fw-bold shadow-sm" style="background: rgba(220, 53, 69, 0.9); border: 1px solid #dc3545;">
+                            <i class="bi bi-x-octagon-fill"></i> ATTENZIONE: Questo evento è già pubblicato!<br>Non potrai sovrascriverlo. Se è un secondo turno, cambia leggermente il titolo (es. "Gruppo Pomeriggio").
+                        </div>`;
+                } else {
+                    // 🟡 AVVISO CORTESIA
+                    titoloInput.classList.add('border-warning');
+                    dataInput.classList.add('border-warning');
+                    warnDiv.innerHTML = `
+                        <div class="p-2 rounded text-dark small fw-bold shadow-sm" style="background: rgba(255, 193, 7, 0.9); border: 1px solid #ffc107;">
+                            <i class="bi bi-exclamation-triangle-fill"></i> NOTA: Hai già una bozza identica in revisione.<br>Se prosegui, aggiornerai quella esistente invece di crearne una nuova.
+                        </div>`;
+                }
+            }
+        } catch(e) {
+            console.error("Errore sensore duplicati:", e);
+        }
+    }
+}
+
+
+  
   function formatToItalianDate(dateStr) {
       if (!dateStr) return "";
       const p = dateStr.split('-');
