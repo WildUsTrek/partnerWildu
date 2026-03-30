@@ -3264,7 +3264,8 @@ async function checkProposalLimitAtStartup(uid) {
     } finally {
         // 🔓 5. SBLOCCO FINALE
         if (myFetchId === window.wilduFetchCounter) {
-            if (btnNuova) { btnNuova.style.pointerEvents = "auto"; btnNuova.style.opacity = "1"; }
+            // IL TRADITORE È STATO ELIMINATO DA QUI. 
+            // (Ora ci pensa in esclusiva gestisciLimiteProposte() a sbloccare il tasto se ci sono slot)
             if (!isStripeLocked && loader) loader.style.display = 'none';
         }
     }
