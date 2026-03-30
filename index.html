@@ -30,7 +30,25 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-  const APP_VERSION = "v3.1"; // 🟢 CAMBIA LA VERSIONE SOLO QUI! --------------------------------->>>>>>>>>
+
+  let APP_VERSION = "v?"; // fallback temporaneo, poi viene sovrascritta da version.json
+
+  const APP_VERSION_READY = (async () => {
+    try {
+      const res = await fetch("/partnerWildu/version.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("version.json non disponibile");
+
+      const data = await res.json();
+      const raw = String(data?.version || "").trim();
+
+      if (raw) {
+        APP_VERSION = raw.startsWith("v") ? raw : ("v" + raw);
+      }
+    } catch (err) {
+      console.warn("WILDU: impossibile leggere version.json, uso fallback", err);
+    }
+  })();
+
   // 🟢 INIEZIONE AUTOMATICA DELLA VERSIONE IN TUTTA L'APP
 
 // =========================================================
