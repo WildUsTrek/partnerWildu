@@ -1327,6 +1327,40 @@ function goToStep(step) {
                 alert(`Evento troppo vicino da proporre, scegli almeno data oltre ${gg}/${mm}/${aaaa}`);
                 return;
             }
+
+            // 🛑 BARRIERA ANTI-DUPLICATO (Prima di passare al Passo 2)
+            const titolo = document.getElementById('od_titolo').value.trim();
+            const dataRaw = document.getElementById('od_data_inizio').value;
+            const user = typeof auth !== 'undefined' ? auth.currentUser : null;
+
+            if (titolo && dataRaw && user) {
+                const slug = titolo.replace(/\s+/g, '_').replace(/[^\w]/gi, '').toLowerCase();
+                const dataItaliana = formatToItalianDate(dataRaw);
+                const dataFormattata = dataItaliana.replace(/\//g, '-');
+                const docId = `${slug}_${dataFormattata}_${user.uid.substring(0,6)}`;
+
+                const memoria = sessionStorage.getItem('wildu_cache_proposte');
+                if (memoria) {
+                    try {
+                        const cache = JSON.parse(memoria);
+                        const allEvents = (cache.pending || []).concat(cache.accepted || []);
+                        const match = allEvents.find(p => p.tempId === docId || p.idEvento === docId);
+
+                        if (match) {
+                            const isAccepted = cache.accepted && cache.accepted.some(p => p === match);
+                            if (isAccepted) {
+                                // MURO DI CEMENTO
+                                alert("🛑 BLOCCO: Hai già un evento PUBBLICATO con questo stesso Titolo e Data.\nNon puoi sovrascriverlo. Se è un secondo turno, modifica leggermente il titolo (es. 'Gruppo Pomeriggio').");
+                                return; // ⛔ FERMA TUTTO, NON PASSA AL PASSO 2
+                            } else {
+                                // AVVISO BOZZA
+                                const conferma = confirm("⚠️ ATTENZIONE: Hai già una BOZZA in revisione con questo Titolo e Data.\n\nSe prosegui, alla fine andrai a SOVRASCRIVERE la bozza esistente.\nVuoi procedere comunque?");
+                                if (!conferma) return; // ⛔ SE DICE ANNULLA, NON PASSA AL PASSO 2
+                            }
+                        }
+                    } catch(e) { console.error(e); }
+                }
+            }
         }
         if (current === 2) if (!checkFields(['od_luogo_nome', 'od_regione', 'od_luogo_link', 'od_km', 'od_dislivello', 'od_descrizione'])) return;
         if (current >= 3 && current <= 7) {
@@ -3720,7 +3754,7 @@ function riproponiEvento(itemEncoded) {
   }
   togglePrezzoField(); 
 
-  // Reset e ricaricamento Attrezzatura (JSON loop originale)
+// Reset e ricaricamento Attrezzatura (JSON loop originale)
   document.querySelectorAll('.od-eq').forEach(cb => cb.checked = false);
   document.querySelectorAll('.note-input').forEach(n => n.value = "");
   try {
@@ -3737,6 +3771,11 @@ function riproponiEvento(itemEncoded) {
   // Navigazione
   showPage('form'); 
   goToStep(1);
+
+  // 🟢 FORZATURA DEL SENSORE: Accendiamo il semaforo visivo dopo aver pre-compilato i dati
+  if (typeof checkDuplicatoInTempoReale === 'function') {
+      checkDuplicatoInTempoReale();
+  }
 }
 
 async function annullaProposta(itemEncoded) {
