@@ -947,7 +947,12 @@ function goToStripe(tipo, btnElement) {
 <div id="step-0" class="step-content active">
     <span class="step-header" tabindex="-1">Introduzione: Regole d'Ingaggio</span>
     <div class="card shadow-lg p-4">
-      <div class="row g-3 mb-4">
+      
+      <div class="mb-4 pb-3 border-bottom border-secondary">
+        <button type="button" class="btn btn-submit text-white w-100" onclick="goToStep(1)">Avanti: Dettagli Evento →</button>
+      </div>
+
+      <div class="row g-3">
         <div class="col-md-6"><label>Nome e Cognome Guida</label><input type="text" id="g_nome" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
         <div class="col-md-6"><label>WhatsApp</label><input type="text" id="g_tel" class="form-control text-secondary" style="background-color: #161616; border-color: #2a2a2a; cursor: not-allowed;" readonly></div>
         <div class="col-12 mt-1"><p class="text-warning m-0" style="font-size: 0.7rem; line-height: 1.2;"><i class="bi bi-lock-fill"></i> Dati collegati al tuo account. Per modificarli, esci dal modulo e vai in <b>Profilo</b>.</p></div>
@@ -965,8 +970,21 @@ function goToStripe(tipo, btnElement) {
             <input type="number" id="od_prezzo" class="form-control border-warning" placeholder="Es. 15" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
             <p class="text-muted small mt-1" id="payday_status_msg"></p>
         </div>
+
+        <div class="col-12 mt-3 mb-1">
+            <label class="form-label fw-bold small text-light"><i class="bi bi-person-plus-fill text-warning"></i> Posti Massimi Disponibili</label>
+            <div class="input-group mb-2">
+                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-people"></i></span>
+                <input type="number" class="form-control bg-dark text-white border-secondary" id="propPostiMax" min="1" placeholder="Es. 15 (Lascia vuoto se illimitato)">
+            </div>
+            <div class="p-2 rounded-3" style="background: rgba(13, 110, 253, 0.1); border: 1px dashed rgba(13, 110, 253, 0.4);">
+                <p class="m-0 small text-info" style="line-height: 1.3;">
+                    <i class="bi bi-info-circle-fill"></i> <b>Come funziona:</b> Il limite <u>non blocca</u> le prenotazioni. Chi si iscrive oltre questa soglia verrà avvisato che il suo posto <b>non è garantito</b> (Lista d'attesa).
+                </p>
+            </div>
+        </div>
+
       </div>
-      <button type="button" class="btn btn-submit text-white w-100 py-3" onclick="goToStep(1)">Avanti: Dettagli Evento →</button>
     </div>
  </div>
 
@@ -979,46 +997,31 @@ function goToStripe(tipo, btnElement) {
       </div>
       <div class="row g-3">
         
-        <div class="col-12 mb-2 mt-0">
-            <label class="form-label fw-bold small text-light"><i class="bi bi-person-plus-fill text-warning"></i> Posti Massimi Disponibili</label>
-            <div class="input-group mb-2">
-                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-people"></i></span>
-                <input type="number" class="form-control bg-dark text-white border-secondary" id="propPostiMax" min="1" placeholder="Es. 15 (Lascia vuoto se illimitato)">
-            </div>
-            <div class="p-2 rounded-3" style="background: rgba(13, 110, 253, 0.1); border: 1px dashed rgba(13, 110, 253, 0.4);">
-                <p class="m-0 small text-info" style="line-height: 1.3;">
-                    <i class="bi bi-info-circle-fill"></i> <b>Come funziona:</b> Il limite <u>non blocca</u> le prenotazioni. Chi si iscrive oltre questa soglia verrà avvisato dall'App che il suo posto <b>non è garantito</b> (Lista d'attesa).
-                </p>
-            </div>
-        </div>
-
-        
-        
-        <div class="section-title">DETTAGLI TEMPORALI</div>
-        
-        <div id="live_duplicate_warning" class="col-12 mb-2" style="display: none;"></div>
+        <div class="section-title mt-0">DETTAGLI TEMPORALI</div>
 
         <div class="col-12">
             <label>Titolo Evento *</label>
             <input type="text" id="od_titolo" class="form-control border-primary" placeholder="Es. Tramonto sul Gran Sasso" oninput="checkDuplicatoInTempoReale()">
         </div>
         <div class="col-6">
-            <label>Data Inizio *</label>
+            <label>Data Inizio* (Obbligatoria)</label>
             <input type="date" id="od_data_inizio" class="form-control border-primary" onchange="checkDuplicatoInTempoReale()">
             <p class="tiny text-muted m-0 mt-1">Scegli una data ad almeno 7 giorni da oggi.</p>
         </div>
-
         
         <div class="col-6"><label>Data Fine (Opzionale)</label><input type="date" id="od_data_fine" class="form-control"></div>
-        <div class="col-6"><label>Orario Inizio *</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
+        <div class="col-6"><label>Orario Inizio*</label><select id="od_orario_inizio" class="form-select border-primary"></select></div>
         <div class="col-6"><label>Orario Fine *</label><select id="od_orario_fine" class="form-select"></select></div>
+
+        <div id="live_duplicate_warning" class="col-12 mt-3" style="display: none;"></div>
+
       </div>
-      <button type="button" class="btn btn-back-top" ontouchstart="if(window.navigator.vibrate) window.navigator.vibrate(10); document.activeElement.blur(); window.scrollTo({top: 0, behavior: 'smooth'}); return false;">
+      <button type="button" class="btn btn-back-top mt-3" ontouchstart="if(window.navigator.vibrate) window.navigator.vibrate(10); document.activeElement.blur(); window.scrollTo({top: 0, behavior: 'smooth'}); return false;">
         <i class="bi bi-arrow-up"></i> TORNA IN ALTO E CLICCA AVANTI
       </button>
     </div>
-  </div>
-
+ </div>
+  
   <div id="step-2" class="step-content">
     <span class="step-header" tabindex="-1">Passo 2 di 8: Luogo e Tecnica</span>
     <div class="card shadow-lg p-4">
@@ -1766,7 +1769,7 @@ function checkDuplicatoInTempoReale() {
                     
                     warnDiv.innerHTML += `
                         <div class="p-2 rounded text-dark small fw-bold shadow-sm" style="background: rgba(255, 193, 7, 0.9); border: 1px solid #ffc107;">
-                            <i class="bi bi-exclamation-triangle-fill"></i> NOTA: Hai già una bozza identica in revisione.<br>Se prosegui, aggiornerai quella esistente invece di crearne una nuova.
+                            <i class="bi bi-exclamation-triangle-fill"></i> NOTA: Hai 1 bozza identica in revisione. Cambia titolo o data altrimenti modificherai quella già esistente.
                         </div>`;
                 }
             }
