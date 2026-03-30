@@ -4482,9 +4482,19 @@ const user = firebase.auth().currentUser;
       return;
     }
 
-    alert("Immagine eliminata");
+  // alert("Immagine eliminata"); // Replace blocking alert with toast if preferred, or keep it. Let's use Swal for consistency if sweetalert is loaded, else alert.
+    if (typeof Swal !== 'undefined') {
+       Swal.fire({
+           toast: true, position: 'top', icon: 'success', title: 'Immagine eliminata', showConfirmButton: false, timer: 2000
+       });
+    } else {
+       alert("Immagine eliminata");
+    }
 
-    loadGallery('mie');
+    // Add a slight delay to allow Cloudinary's cache to clear before reloading
+    setTimeout(() => {
+        loadGallery('mie');
+    }, 500); 
 
     window.selectedPublicId = null;
 
