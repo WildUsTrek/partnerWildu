@@ -1321,9 +1321,17 @@ function goToStep(step) {
     let current = parseInt(currentEl.id.split('-')[1]);
 
     if (step > current) {
-        // 🟢 Controllo Step 0
+        // 🟢 Controllo Step 0 (Con validazione Dinamica Prezzo!)
         if (current === 0) {
-            if (!checkFields(['g_nome', 'g_tel'])) return;
+            const tipoEvento = document.getElementById('od_tipo_evento').value;
+            let campiDaControllare = ['g_nome', 'g_tel', 'od_tipo_evento'];
+            
+            // Seleziona PAY-DAY? Aggiungiamo il prezzo alla lista dei campi obbligatori!
+            if (tipoEvento === 'PAID') {
+                campiDaControllare.push('od_prezzo');
+            }
+            
+            if (!checkFields(campiDaControllare)) return;
         }
         // 🔵 Controllo Step 1 (Alleggerito)
         if (current === 1) {
