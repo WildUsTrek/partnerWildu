@@ -2242,8 +2242,16 @@ async function loadGallery(tipo) {
     if (!res.ok) { container.innerHTML = `<p class="text-muted small mt-4">Nessuna foto trovata.</p>`; return; }
     let data = await res.json();
     if (!data.resources || data.resources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
+    
+    // 🥷 FILTRO ANTI-FANTASMA: Escludiamo le foto appena eliminate
+    let deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]');
+    let validResources = data.resources.filter(img => !deletedList.includes(img.public_id));
+
+    if (validResources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
+
     let html = '<div class="d-flex flex-wrap gap-2 justify-content-center">';
-    data.resources.forEach(img => {
+    validResources.forEach(img => {
+      
       let imgUrl = `https://res.cloudinary.com/daiyrgmbb/image/upload/w_800,c_limit,q_auto,f_auto/v${img.version}/${img.public_id}.${img.format}`;
       html += `
 <div style="position: relative; display:inline-block;">
