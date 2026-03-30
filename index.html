@@ -1333,14 +1333,53 @@ function goToStep(step) {
             
             if (!checkFields(campiDaControllare)) return;
         }
-        // 🔵 Controllo Step 1 (Alleggerito)
+
+
+      
+      // 🔵 Controllo Step 1 (Alleggerito ma Blindato sui Paradossi Temporali)
         if (current === 1) {
             if (!checkFields(['od_titolo', 'od_data_inizio', 'od_orario_inizio', 'od_orario_fine'])) return;
             
-            const dataInserita = document.getElementById('od_data_inizio').value;
-          
+            // 1. Estrazione dati temporali
+            const dataInizioRaw = document.getElementById('od_data_inizio').value;
+            const dataFineRaw = document.getElementById('od_data_fine').value;
+            const oraInizio = document.getElementById('od_orario_inizio').value;
+            const oraFine = document.getElementById('od_orario_fine').value;
+
+            // ⏱️ DOGANA TEMPORALE A: Data di Fine precedente alla Data di Inizio
+            if (dataFineRaw) {
+                const dIn = new Date(dataInizioRaw); dIn.setHours(0, 0, 0, 0);
+                const dOut = new Date(dataFineRaw); dOut.setHours(0, 0, 0, 0);
+                
+                if (dOut < dIn) {
+                    document.getElementById('od_data_fine').classList.add('border-danger');
+                    alert("⏳ ERRORE TEMPORALE: La Data di Fine non può precedere la Data di Inizio.");
+                    return;
+                } else {
+                    document.getElementById('od_data_fine').classList.remove('border-danger');
+                }
+            }
+
+            // ⏱️ DOGANA TEMPORALE B: Evento di un solo giorno (Orario Invertito)
+            // Si attiva se la data di fine è VUOTA, oppure se è IDENTICA alla data di inizio
+            if (!dataFineRaw || dataInizioRaw === dataFineRaw) {
+                // Confronto stringhe sicuro grazie allo zero iniziale (es. "09:00" vs "18:00")
+                if (oraFine <= oraInizio) {
+                    document.getElementById('od_orario_fine').classList.add('border-danger');
+                    alert("⏳ ERRORE ORARIO: Per gli eventi di un singolo giorno, l'Orario di Fine deve essere successivo all'Orario di Inizio.");
+                    return;
+                } else {
+                    document.getElementById('od_orario_fine').classList.remove('border-danger');
+                }
+            }
+
+            // 2. Controllo dei 7 giorni minimi di anticipo
+            const selDate = new Date(dataInizioRaw); selDate.setHours(0, 0, 0, 0);
             const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
             const dataMinima = new Date(oggi); dataMinima.setDate(oggi.getDate() + 7);
+
+
+          
             const selDate = new Date(dataInserita); selDate.setHours(0, 0, 0, 0);
 
             if (selDate < dataMinima) {
