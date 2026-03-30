@@ -1586,10 +1586,11 @@ async function autoFetchRegion() {
   const user = typeof auth !== 'undefined' ? auth.currentUser : null;
   if (!user) return alert("⚠️ Rilevata disconnessione. Ricarica la pagina.");
 
-  const memoria = sessionStorage.getItem('wildu_cache_proposte');
+const memoria = sessionStorage.getItem('wildu_cache_proposte');
+  let datiCache = null;
   if (memoria) {
     try {
-        const datiCache = JSON.parse(memoria);
+        datiCache = JSON.parse(memoria);
         aggiornaLimiteDalServer(datiCache);
         const totaleAttive = datiCache.pending ? datiCache.pending.length : 0;
         if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
@@ -1599,10 +1600,61 @@ async function autoFetchRegion() {
     } catch(e) {}
   }
 
-  const loader = document.getElementById('loader');
+  // --- PRE-FLIGHT INTEGRITY CHECK (The "Muro di Cemento") ---
+  const titoloRaw = document.getElementById('od_titolo').value.trim();
+  const dataInizioRaw = document.getElementById('od_data_inizio').value;
+  
+  if (titoloRaw && dataInizioRaw && datiCache) {
+      // 1. Calculate the deterministic ID exactly as the backend does
+      const slug = titoloRaw.replace(/\s+/g, '_').replace(/[^\w]/gi, '').toLowerCase();
+      const dataItaliana = formatToItalianDate(dataInizioRaw);
+      const dataFormattata = dataItaliana.replace(/\//g, '-'); 
+      const calculatedId = `${slug}_${dataFormattata}_${currentUserKey.substring(0,6)}`;
 
-    
-loader.style.display = 'flex';
+      // 2. Search for existing proposals
+      const allProposals = (datiCache.pending || []).concat(datiCache.accepted || []);
+      const existingEvent = allProposals.find(p => p.tempId === calculatedId || p.idEvento === calculatedId);
+
+      if (existingEvent) {
+          // Determine local UI status based on where we found it
+          const localStatus = datiCache.accepted && datiCache.accepted.some(p => p === existingEvent) ? 'ACCEPTED' : 'PENDING';
+
+          if (localStatus === 'ACCEPTED') {
+              Swal.fire({
+                  icon: 'error',
+                  title: 'Modifica Non Consentita',
+                  text: 'Questo evento è già stato PUBBLICATO. Non puoi sovrascriverlo da qui. Se devi cambiare data o prezzo, contatta l\'assistenza per evitare problemi con gli iscritti.',
+                  confirmButtonColor: '#d33'
+              });
+              return; // Halt submission
+          } else if (localStatus === 'PENDING' && !window.wilduForceUpdateConfirmed) {
+              // Pause and ask for confirmation
+              Swal.fire({
+                  icon: 'warning',
+                  title: 'Bozza Esistente',
+                  text: 'Hai già una proposta in revisione con questo titolo e questa data. Vuoi aggiornarla con i nuovi dati?',
+                  showCancelButton: true,
+                  confirmButtonText: 'Sì, Aggiorna',
+                  cancelButtonText: 'Annulla',
+                  confirmButtonColor: '#0d6efd',
+                  cancelButtonColor: '#6c757d'
+              }).then((result) => {
+                  if (result.isConfirmed) {
+                      window.wilduForceUpdateConfirmed = true; // Set flag
+                      sendToWildu(); // Retry submission
+                  }
+              });
+              return; // Halt this iteration while waiting for user
+          }
+      }
+  }
+  
+  // Reset the flag for future submissions
+  window.wilduForceUpdateConfirmed = false;
+  // --- END INTEGRITY CHECK ---
+
+  const loader = document.getElementById('loader');
+  loader.style.display = 'flex';
 
 if (!user) {
   alert("Sessione non pronta, riprova");
