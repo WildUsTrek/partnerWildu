@@ -3234,19 +3234,24 @@ async function checkProposalLimitAtStartup(uid) {
         const currentUser = firebase.auth().currentUser;
         const safeToken = currentUser ? await currentUser.getIdToken() : "GUEST";
 
-       // 🧠 SCUDO ANTI-AMNESIA: Controlla se abbiamo lo storico aperto in background
-        const wantHistory = sessionStorage.getItem('wildu_history_loaded') ? "?history=true" : "";
-        const response = await fetch(MOTORE_API_URL + wantHistory, { 
-            method: 'POST', 
-            body: JSON.stringify({ action: "getUserData", token: safeToken, uid: uid, nome: nomeG, tel: telG }) 
-        });
-        
-        if (myFetchId !== window.wilduFetchCounter) return;
+        // 🧠 SCUDO ANTI-AMNESIA DISINNESCATO: Chiediamo solo i futuri per risparmiare letture!
+       const response = await fetch(MOTORE_API_URL, { 
+           method: 'POST', 
+           body: JSON.stringify({ action: "getUserData", token: safeToken, uid: uid, nome: nomeG, tel: telG }) 
+       });
+       
+       if (myFetchId !== window.wilduFetchCounter) return;
 
-        if (response.ok) {
-            const data = await response.json();
-            if (!data.error) {
-                sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+       if (response.ok) {
+           let data = await response.json(); // 🎯 'let' invece di 'const' per poterla mutare
+           if (!data.error) {
+               
+               // ⚙️ INNESTO ANTI-PARADOSSO: Uniamo i dati freschi (futuri) col frigorifero (storico)
+               if (sessionStorage.getItem('wildu_history_loaded')) {
+                   data = mergeFuturesWithFridge(data, uid);
+               }
+
+               sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
                 sessionStorage.setItem('wildu_cache_time', Date.now().toString());
                 
                 aggiornaLimiteDalServer(data); 
@@ -4592,9 +4597,8 @@ document.addEventListener("visibilitychange", function() {
         try {
             const safeToken = await user.getIdToken();
 
-            // 🧠 SCUDO ANTI-AMNESIA: La Ronda protegge lo storico
-            const wantHistory = sessionStorage.getItem('wildu_history_loaded') ? "?history=true" : "";
-            fetch(MOTORE_API_URL + wantHistory, {
+            // 🧠 SCUDO ANTI-AMNESIA DISINNESCATO: Ronda ultra-leggera solo sui futuri
+            fetch(MOTORE_API_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
             })
@@ -4604,6 +4608,11 @@ document.addEventListener("visibilitychange", function() {
                 if (myNinjaId !== window.wilduNinjaCounter) return;
 
                 if (data && !data.error) {
+                    // ⚙️ INNESTO ANTI-PARADOSSO: Fusione a Freddo in background
+                    if (sessionStorage.getItem('wildu_history_loaded')) {
+                        data = mergeFuturesWithFridge(data, user.uid);
+                    }
+
                     const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
                     let isCambiato = false;
 
@@ -4691,9 +4700,8 @@ async function controllaSicurezzaNinja() {
     const myNinjaId = ++window.wilduNinjaCounter;
     const safeToken = await user.getIdToken();
 
-    // 🧠 SCUDO ANTI-AMNESIA: Il Ninja protegge lo storico
-    const wantHistory = sessionStorage.getItem('wildu_history_loaded') ? "?history=true" : "";
-    fetch(MOTORE_API_URL + wantHistory, {
+    // 🧠 SCUDO ANTI-AMNESIA DISINNESCATO: Controllo super-leggero dei permessi sui futuri
+    fetch(MOTORE_API_URL, {
         method: 'POST',
         body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
     })
@@ -4703,8 +4711,13 @@ async function controllaSicurezzaNinja() {
         // 🛡️ SCUDO: Se un fetch Ninja più recente è partito, ignoro questa risposta vecchia
         if (myNinjaId !== window.wilduNinjaCounter) return;
 
-        if (data && !data.error) {
-            const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
+        if (data && !data.error) {
+            // ⚙️ INNESTO ANTI-PARADOSSO: Fusione a Freddo dei permessi per non sbiancare lo schermo
+            if (sessionStorage.getItem('wildu_history_loaded')) {
+                data = mergeFuturesWithFridge(data, user.uid);
+            }
+
+            const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
             let isCambiato = false;
             if (memVecchia) {
                 const cacheObj = JSON.parse(memVecchia);
