@@ -3087,10 +3087,14 @@ async function removeProfileLogo() {
   
 function cancelProposal() {
   if (confirm("Sei sicuro? Perderai i dati inseriti in questo modulo.")) {
-    // 1. Pulizia campi (esclusi quelli guida)
+    // 1. Pulizia campi di testo e select (esclusi quelli guida)
     document.querySelectorAll('#form-view .form-control, #form-view .form-select').forEach(i => { 
         if (i.id !== 'g_nome' && i.id !== 'g_tel') i.value = ""; 
     }); 
+    
+    // 🧹 FIX AMNESIA ATTREZZATURA: Spegniamo tutte le spunte e svuotiamo le note!
+    document.querySelectorAll('.od-eq').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.note-input').forEach(n => n.value = "");
     
     // 2. RESET TOTALE DEGLI STEP (Risolve il bug della pagina bianca)
     document.querySelectorAll('.step-content').forEach(s => {
