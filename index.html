@@ -1794,6 +1794,74 @@ function createSafeLocalDate(dateString) {
     // new Date(Anno, Mese (0-11), Giorno, Ore, Minuti, Secondi, Millisecondi)
     return new Date(parts[0], parseInt(parts[1]) - 1, parts[2], 0, 0, 0, 0); 
 }
+
+
+  // =========================================================
+// 🧊 FRIGORIFERO INTELLIGENTE: MOTORE ANTI-PARADOSSO
+// =========================================================
+function getPastEventsFromFridge(uid) {
+    const cacheStr = localStorage.getItem('wildu_past_events_' + uid);
+    const metaStr = localStorage.getItem('wildu_past_meta_' + uid);
+    if (!cacheStr || !metaStr) return null;
+
+    const meta = JSON.parse(metaStr);
+    const now = new Date();
+
+    // ⏰ PARADOSSO 1: Lo Scavalcamento Data (Mezzanotte)
+    const todayStr = now.toISOString().split('T')[0];
+    if (meta.day !== todayStr) {
+        console.log("🧊 Frigorifero Scongelato: Cambio del giorno solare.");
+        return null; // Forza il download per aggiornare chi è passato nel passato!
+    }
+
+    // ⏳ PARADOSSO 2: Il Timeout (8 ore = 28.800.000 millisecondi)
+    if (now.getTime() - meta.timestamp > 28800000) {
+        console.log("🧊 Frigorifero Scongelato: Scadenza 8 ore.");
+        return null;
+    }
+
+    return JSON.parse(cacheStr);
+}
+
+function freezePastEvents(uid, allAcceptedEvents) {
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    const pastsToFreeze = [];
+
+    // Congeliamo solo chi è fisicamente già nel passato
+    (allAcceptedEvents || []).forEach(item => {
+        const parts = item.dataInizio.split('/');
+        const itemDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        itemDate.setHours(0, 0, 0, 0);
+        if (itemDate < oggi) pastsToFreeze.push(item);
+    });
+
+    localStorage.setItem('wildu_past_events_' + uid, JSON.stringify(pastsToFreeze));
+    localStorage.setItem('wildu_past_meta_' + uid, JSON.stringify({
+        day: new Date().toISOString().split('T')[0],
+        timestamp: Date.now()
+    }));
+    console.log(`🧊 Frigorifero Chiuso: ${pastsToFreeze.length} viaggi storici congelati al sicuro.`);
+}
+
+function mergeFuturesWithFridge(dataFromServer, uid) {
+    const pasts = getPastEventsFromFridge(uid);
+    if (!pasts) return dataFromServer; // Frigo vuoto o scaduto, nessun intervento.
+
+    // ⚙️ MOTORE DI FUSIONE A FREDDO: Uniamo i "futuri" del server con i "passati" del frigo
+    const mergedMap = new Map();
+    // 1. Mettiamo i passati congelati
+    pasts.forEach(p => mergedMap.set(p.tempId || p.idEvento, p));
+    // 2. Aggiungiamo i futuri freschi dal server (sovrascrivendo eventuali cloni)
+    (dataFromServer.accepted || []).forEach(p => mergedMap.set(p.tempId || p.idEvento, p));
+
+    dataFromServer.accepted = Array.from(mergedMap.values());
+    return dataFromServer;
+}
+
+
+  
+
   
   
   async function sendToWildu() {
@@ -3668,19 +3736,36 @@ async function setProposalFilter(filter) {
     const btnEl = document.getElementById('f-' + filter.toLowerCase());
     if (btnEl) btnEl.classList.add('active');
 
-    // 🎯 LAZY LOADING: Scarica lo storico solo se clicca Passate e non lo ha già!
+    // 🎯 FRIGORIFERO LOADING: Scarica lo storico solo se manca o è scaduto!
     if (filter === 'PAST' && !sessionStorage.getItem('wildu_history_loaded')) {
         const container = document.getElementById('timeline-proposals');
+        const user = typeof auth !== 'undefined' ? auth.currentUser : null;
+        if (!user) return;
+
+        // 🧠 TENTATIVO 1: Lettura dal Frigorifero Persistente
+        const frozenPasts = getPastEventsFromFridge(user.uid);
+        if (frozenPasts) {
+             console.log("🧊 Lettura da Frigorifero Eseguita: 0 chiamate di rete consumate!");
+             const mem = sessionStorage.getItem('wildu_cache_proposte');
+             let currentData = mem ? JSON.parse(mem) : { pending: [], accepted: [] };
+             
+             currentData = mergeFuturesWithFridge(currentData, user.uid);
+             
+             sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(currentData));
+             sessionStorage.setItem('wildu_history_loaded', 'true');
+             lastProposalsData = currentData;
+             renderProposals(currentData);
+             return; 
+        }
+
+        // 📡 TENTATIVO 2: Frigo vuoto o scaduto, accendiamo la Rete
         if (container) container.innerHTML = `<div class="text-center mt-5"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div><p class="text-muted mt-3 small fw-bold">Discesa in archivio...<br><span class="fw-normal opacity-75">Recupero eventi passati in corso</span></p></div>`;
 
         try {
-            const user = typeof auth !== 'undefined' ? auth.currentUser : null;
-            if (!user) return;
             const safeToken = await user.getIdToken();
             const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
             const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-            // Chiamata al server chiedendo ESPLICITAMENTE lo storico (?history=true)
             const response = await fetch(MOTORE_API_URL + "?history=true", {
                 method: 'POST',
                 body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
@@ -3689,10 +3774,12 @@ async function setProposalFilter(filter) {
             if (response.ok) {
                 const data = await response.json();
                 if (!data.error) {
-                    // Sovrascriviamo la cache con il pacco COMPLETO (Passati + Futuri)
+                    // 🧊 Chiudiamo il bottino appena scaricato nel Frigorifero!
+                    freezePastEvents(user.uid, data.accepted);
+
                     sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
                     sessionStorage.setItem('wildu_cache_time', Date.now().toString());
-                    sessionStorage.setItem('wildu_history_loaded', 'true'); // 📝 POST-IT: STORICO SCARICATO!
+                    sessionStorage.setItem('wildu_history_loaded', 'true'); 
 
                     lastProposalsData = data;
                     renderProposals(data);
