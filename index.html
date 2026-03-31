@@ -1787,82 +1787,100 @@ function checkDuplicatoInTempoReale() {
   }
 
 
-  // 🛡️ SCUDO ANTI-TIMEZONE BUG: Forza la lettura della data nel fuso orario locale
-function createSafeLocalDate(dateString) {
-    if (!dateString) return null;
-    const parts = dateString.split('-'); // Divide "2026-05-15" in ["2026", "05", "15"]
-    // new Date(Anno, Mese (0-11), Giorno, Ore, Minuti, Secondi, Millisecondi)
-    return new Date(parts[0], parseInt(parts[1]) - 1, parts[2], 0, 0, 0, 0); 
+// 🛠️ HELPER CORE & MOTORE FRIGORIFERO PERSISTENTE
+const getLocalDayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+const parseEventDate = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('/')) return null;
+    const p = dateStr.split('/');
+    const day = parseInt(p[0], 10); const month = parseInt(p[1], 10) - 1; const year = parseInt(p[2], 10);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    const d = new Date(year, month, day, 0, 0, 0, 0);
+    if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+    return d;
+};
+
+const getEventKey = (e) => {
+    return e ? (e.idEvento || e.tempId || null) : null;
+};
+
+const clearWilduNamespace = () => {
+    const pfx = 'wildu_';
+    Object.keys(localStorage).forEach(k => { if (k.startsWith(pfx)) localStorage.removeItem(k); });
+    Object.keys(sessionStorage).forEach(k => { if (k.startsWith(pfx)) sessionStorage.removeItem(k); });
+    console.log("🧹 Wildu Namespace resettato chirurgicamente.");
+};
+
+function getSafeCacheProposte() {
+    try {
+        const mem = sessionStorage.getItem('wildu_cache_proposte');
+        return mem ? JSON.parse(mem) : null;
+    } catch(e) { return null; }
 }
 
-
-  // =========================================================
-// 🧊 FRIGORIFERO INTELLIGENTE: MOTORE ANTI-PARADOSSO
-// =========================================================
-function getPastEventsFromFridge(uid) {
-    const cacheStr = localStorage.getItem('wildu_past_events_' + uid);
+function checkFridgeState(uid) {
     const metaStr = localStorage.getItem('wildu_past_meta_' + uid);
-    if (!cacheStr || !metaStr) return null;
-
-    const meta = JSON.parse(metaStr);
-    const now = new Date();
-
-    // ⏰ PARADOSSO 1: Lo Scavalcamento Data (Mezzanotte)
-    const todayStr = now.toISOString().split('T')[0];
-    if (meta.day !== todayStr) {
-        console.log("🧊 Frigorifero Scongelato: Cambio del giorno solare.");
-        return null; // Forza il download per aggiornare chi è passato nel passato!
+    if (!metaStr) return 'UNINITIALIZED';
+    try {
+        const meta = JSON.parse(metaStr);
+        if (meta.v !== 1) throw new Error("Version mismatch");
+        if (meta.day !== getLocalDayStr() || Date.now() - meta.timestamp > 28800000) return 'EXPIRED';
+        const cacheStr = localStorage.getItem('wildu_past_events_' + uid);
+        if (!cacheStr) return 'EXPIRED';
+        return 'VALID';
+    } catch (e) {
+        localStorage.removeItem('wildu_past_meta_' + uid);
+        localStorage.removeItem('wildu_past_events_' + uid);
+        return 'UNINITIALIZED';
     }
+}
 
-    // ⏳ PARADOSSO 2: Il Timeout (8 ore = 28.800.000 millisecondi)
-    if (now.getTime() - meta.timestamp > 28800000) {
-        console.log("🧊 Frigorifero Scongelato: Scadenza 8 ore.");
-        return null;
+function getPastEventsFromFridge(uid) {
+    if (checkFridgeState(uid) === 'VALID') {
+        try { 
+            return JSON.parse(localStorage.getItem('wildu_past_events_' + uid)); 
+        } catch(e) { 
+            console.warn("🧊 Frigo corrotto durante la lettura array, eseguo pulizia.");
+            localStorage.removeItem('wildu_past_events_' + uid);
+            localStorage.removeItem('wildu_past_meta_' + uid);
+            return null; 
+        }
     }
-
-    return JSON.parse(cacheStr);
+    return null;
 }
 
 function freezePastEvents(uid, allAcceptedEvents) {
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
+    const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
     const pastsToFreeze = [];
-
-    // Congeliamo solo chi è fisicamente già nel passato
     (allAcceptedEvents || []).forEach(item => {
-        const parts = item.dataInizio.split('/');
-        const itemDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        itemDate.setHours(0, 0, 0, 0);
-        if (itemDate < oggi) pastsToFreeze.push(item);
+        const itemDate = parseEventDate(item.dataInizio);
+        if (itemDate && itemDate < oggi) pastsToFreeze.push(item);
     });
-
     localStorage.setItem('wildu_past_events_' + uid, JSON.stringify(pastsToFreeze));
-    localStorage.setItem('wildu_past_meta_' + uid, JSON.stringify({
-        day: new Date().toISOString().split('T')[0],
-        timestamp: Date.now()
-    }));
-    console.log(`🧊 Frigorifero Chiuso: ${pastsToFreeze.length} viaggi storici congelati al sicuro.`);
+    localStorage.setItem('wildu_past_meta_' + uid, JSON.stringify({ v: 1, day: getLocalDayStr(), timestamp: Date.now() }));
 }
 
 function mergeFuturesWithFridge(dataFromServer, uid) {
     const pasts = getPastEventsFromFridge(uid);
-    if (!pasts) return dataFromServer; // Frigo vuoto o scaduto, nessun intervento.
-
-    // ⚙️ MOTORE DI FUSIONE A FREDDO: Uniamo i "futuri" del server con i "passati" del frigo
+    if (!pasts) return dataFromServer;
     const mergedMap = new Map();
-    // 1. Mettiamo i passati congelati
-    pasts.forEach(p => mergedMap.set(p.tempId || p.idEvento, p));
-    // 2. Aggiungiamo i futuri freschi dal server (sovrascrivendo eventuali cloni)
-    (dataFromServer.accepted || []).forEach(p => mergedMap.set(p.tempId || p.idEvento, p));
-
+    pasts.forEach(p => { const k = getEventKey(p); if(k) mergedMap.set(k, p); });
+    (dataFromServer.accepted || []).forEach(p => { const k = getEventKey(p); if(k) mergedMap.set(k, p); });
     dataFromServer.accepted = Array.from(mergedMap.values());
     return dataFromServer;
 }
 
+// 🛡️ Mantenuto esclusivamente per retrocompatibilità modulo di inserimento HTML (input type="date")
+function createSafeLocalDate(dateString) {
+    if (!dateString || !dateString.includes('-')) return null;
+    const parts = dateString.split('-');
+    return new Date(parts[0], parseInt(parts[1]) - 1, parts[2], 0, 0, 0, 0); 
+}
 
-  
 
-  
   
   async function sendToWildu() {
   // PRE-FLIGHT CHECK: Controllo di Sicurezza con oggetto Auth corretto
@@ -2024,7 +2042,6 @@ try {
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
         sessionStorage.removeItem('wildu_cache_proposte');
         sessionStorage.removeItem('wildu_cache_time');
-        sessionStorage.removeItem('wildu_history_loaded');
         document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
         alert("🚀 Proposta inviata con successo!"); 
         location.reload(); 
@@ -2529,8 +2546,9 @@ async function loadGallery(tipo) {
     let data = await res.json();
     if (!data.resources || data.resources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
     
-    // 🥷 FILTRO ANTI-FANTASMA: Escludiamo le foto appena eliminate
-    let deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]');
+    // 🥷 FILTRO ANTI-FANTASMA PROTETTO
+    let deletedList = [];
+    try { deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]'); } catch(e) {}
     let validResources = data.resources.filter(img => !deletedList.includes(img.public_id));
 
     if (validResources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
@@ -2674,11 +2692,10 @@ async function saveFirstProfile() {
     document.getElementById('g_nome').value = nome;
     document.getElementById('g_tel').value = tel;
 
-    // 🧹 3. IL SEGRETO: DISTRUGGIAMO LA CACHE DEI FANTASMI!
+// 🧹 3. IL SEGRETO: DISTRUGGIAMO LA CACHE DEI FANTASMI!
     // Così forziamo l'App a bussare al Master e imporgli i nuovi dati
     sessionStorage.removeItem('wildu_cache_proposte');
     sessionStorage.removeItem('wildu_cache_time');
-    sessionStorage.removeItem('wildu_history_loaded');
 
     // 🚀 4. SINCRONIZZAZIONE IMMEDIATA: Ora bussa al Master per davvero
     await checkProposalLimitAtStartup(user.uid);
@@ -3128,10 +3145,9 @@ async function removeProfileLogo() {
     const data = await res.json();
     if (!data.success) throw new Error(data.error || "Rifiutato dal Server");
 
-    // 🗡️ CHIRURGIA RAM
-    let mem = sessionStorage.getItem('wildu_cache_proposte');
-    if (mem) {
-        let cacheData = JSON.parse(mem);
+    // 🗡️ CHIRURGIA RAM PROTETTA
+    let cacheData = getSafeCacheProposte();
+    if (cacheData) {
         cacheData.p_logo = ""; 
         sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
     }
@@ -3302,24 +3318,30 @@ async function checkProposalLimitAtStartup(uid) {
         const currentUser = firebase.auth().currentUser;
         const safeToken = currentUser ? await currentUser.getIdToken() : "GUEST";
 
-        // 🧠 SCUDO ANTI-AMNESIA DISINNESCATO: Chiediamo solo i futuri per risparmiare letture!
-       const response = await fetch(MOTORE_API_URL, { 
-           method: 'POST', 
-           body: JSON.stringify({ action: "getUserData", token: safeToken, uid: uid, nome: nomeG, tel: telG }) 
-       });
-       
-       if (myFetchId !== window.wilduFetchCounter) return;
+        // 🧠 NINJA SELF-HEALING: Calcolo dinamico del payload necessario
+        const fridgeState = checkFridgeState(uid);
+        const needsHistory = (fridgeState === 'EXPIRED');
+        const urlSuffix = needsHistory ? "?history=true" : "";
 
-       if (response.ok) {
-           let data = await response.json(); // 🎯 'let' invece di 'const' per poterla mutare
-           if (!data.error) {
-               
-               // ⚙️ INNESTO ANTI-PARADOSSO: Uniamo i dati freschi (futuri) col frigorifero (storico)
-               if (sessionStorage.getItem('wildu_history_loaded')) {
-                   data = mergeFuturesWithFridge(data, uid);
-               }
+        const response = await fetch(MOTORE_API_URL + urlSuffix, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "getUserData", token: safeToken, uid: uid, nome: nomeG, tel: telG }) 
+        });
+        
+        if (myFetchId !== window.wilduFetchCounter) return;
 
-               sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+        if (response.ok) {
+            let data = await response.json();
+            if (!data.error) {
+                if (needsHistory) {
+                    console.log("🥷 Ninja Startup: Guarigione Frigorifero eseguita.");
+                    freezePastEvents(uid, data.accepted);
+                } else if (checkFridgeState(uid) === 'VALID') {
+                    // Protegge il DOM unendo i passati validi ai dati futuri appena fetchati
+                    data = mergeFuturesWithFridge(data, uid);
+                }
+
+                sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
                 sessionStorage.setItem('wildu_cache_time', Date.now().toString());
                 
                 aggiornaLimiteDalServer(data); 
@@ -3736,60 +3758,51 @@ async function setProposalFilter(filter) {
     const btnEl = document.getElementById('f-' + filter.toLowerCase());
     if (btnEl) btnEl.classList.add('active');
 
-    // 🎯 FRIGORIFERO LOADING: Scarica lo storico solo se manca o è scaduto!
-    if (filter === 'PAST' && !sessionStorage.getItem('wildu_history_loaded')) {
-        const container = document.getElementById('timeline-proposals');
+    // 🎯 STORAGE AWARE LOADING: La rete si attiva solo se il Frigorifero lo ordina
+    if (filter === 'PAST') {
         const user = typeof auth !== 'undefined' ? auth.currentUser : null;
         if (!user) return;
 
-        // 🧠 TENTATIVO 1: Lettura dal Frigorifero Persistente
-        const frozenPasts = getPastEventsFromFridge(user.uid);
-        if (frozenPasts) {
-             console.log("🧊 Lettura da Frigorifero Eseguita: 0 chiamate di rete consumate!");
-             const mem = sessionStorage.getItem('wildu_cache_proposte');
-             let currentData = mem ? JSON.parse(mem) : { pending: [], accepted: [] };
-             
+        const fridgeState = checkFridgeState(user.uid);
+        
+        if (fridgeState === 'VALID') {
+             console.log("🧊 Frigo Valido: bypass rete.");
+             let currentData = getSafeCacheProposte() || { pending: [], accepted: [] };
              currentData = mergeFuturesWithFridge(currentData, user.uid);
-             
              sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(currentData));
-             sessionStorage.setItem('wildu_history_loaded', 'true');
              lastProposalsData = currentData;
-             renderProposals(currentData);
-             return; 
-        }
+             // Lascia fluire l'esecuzione al renderProposals finale
+        } else {
+             // 📡 EXPIRED o UNINITIALIZED: Obbligo di fetch completo
+             const container = document.getElementById('timeline-proposals');
+             if (container) container.innerHTML = `<div class="text-center mt-5"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div><p class="text-muted mt-3 small fw-bold">Discesa in archivio...<br><span class="fw-normal opacity-75">Recupero eventi passati in corso</span></p></div>`;
 
-        // 📡 TENTATIVO 2: Frigo vuoto o scaduto, accendiamo la Rete
-        if (container) container.innerHTML = `<div class="text-center mt-5"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div><p class="text-muted mt-3 small fw-bold">Discesa in archivio...<br><span class="fw-normal opacity-75">Recupero eventi passati in corso</span></p></div>`;
+             try {
+                 const safeToken = await user.getIdToken();
+                 const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+                 const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
 
-        try {
-            const safeToken = await user.getIdToken();
-            const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
-            const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+                 const response = await fetch(MOTORE_API_URL + "?history=true", {
+                     method: 'POST',
+                     body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
+                 });
 
-            const response = await fetch(MOTORE_API_URL + "?history=true", {
-                method: 'POST',
-                body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (!data.error) {
-                    // 🧊 Chiudiamo il bottino appena scaricato nel Frigorifero!
-                    freezePastEvents(user.uid, data.accepted);
-
-                    sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
-                    sessionStorage.setItem('wildu_cache_time', Date.now().toString());
-                    sessionStorage.setItem('wildu_history_loaded', 'true'); 
-
-                    lastProposalsData = data;
-                    renderProposals(data);
-                    return; 
-                }
-            }
-        } catch (e) {
-            console.error("Errore recupero storico:", e);
-            if (container) container.innerHTML = `<p class='text-danger text-center mt-5 small'>Errore di connessione. Riprova.</p>`;
-            return;
+                 if (response.ok) {
+                     const data = await response.json();
+                     if (!data.error) {
+                         freezePastEvents(user.uid, data.accepted);
+                         sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+                         sessionStorage.setItem('wildu_cache_time', Date.now().toString());
+                         lastProposalsData = data;
+                         renderProposals(data);
+                         return; 
+                     }
+                 }
+             } catch (e) {
+                 console.error("Errore recupero storico:", e);
+                 if (container) container.innerHTML = `<p class='text-danger text-center mt-5 small'>Errore di connessione. Riprova.</p>`;
+                 return;
+             }
         }
     }
 
@@ -3819,15 +3832,19 @@ function renderProposals(data) {
     let futureItems = [];
     let pastItems = [];
 
-    rawAll.forEach(item => {
-        // Conversione data italiana dd/mm/yyyy -> oggetto Date
-        const parts = item.dataInizio.split('/');
-        const itemDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        itemDate.setHours(0, 0, 0, 0);
+        rawAll.forEach(item => {
+        const itemDate = parseEventDate(item.dataInizio);
+        
+        if (itemDate === null) {
+            console.error(`🚨 Invariante violata: Evento ${getEventKey(item)} ha data corrotta o nulla.`, item);
+            item._hasDateError = true; // Flag neutrale per eventuale uso UI, non tocca il db status
+            futureItems.push(item); // Forzato tra i futuri per non farlo scomparire e permetterne la correzione
+            return;
+        }
 
         if (itemDate < oggi) pastItems.push(item);
         else futureItems.push(item);
-    });
+      });
 
     // 3. Selezione della lista in base al filtro scelto
     let filteredList = [];
@@ -4036,7 +4053,6 @@ async function annullaProposta(itemEncoded) {
     if(res.success) {
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
-      sessionStorage.removeItem('wildu_history_loaded');
       document.querySelector('#loader h5').innerText = "Proposta ritirata!";
       alert("Proposta eliminata con successo."); location.reload();
     } else {
@@ -4383,18 +4399,8 @@ async function generaLocandinaFinale() {
 function logout() {
   if(confirm("Vuoi davvero uscire dall'account?")) {
     auth.signOut().then(() => { 
-      // ☢️ PULIZIA NUCLEARE TOTALE
-      sessionStorage.clear(); // Distrugge la cache VIP, le proposte e i timer
-      
-      // Elimina dal localStorage TUTTE le chiavi che iniziano per "wildu_"
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-          let key = localStorage.key(i);
-          if (key && key.startsWith('wildu_')) {
-              keysToRemove.push(key);
-          }
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
+      // ☢️ PULIZIA NUCLEARE CHIRURGICA (Isolata su namespace wildu)
+      clearWilduNamespace();
       
       // Ricarica la pagina pulita
       location.replace(window.location.pathname); 
@@ -4684,33 +4690,39 @@ document.addEventListener("visibilitychange", function() {
         try {
             const safeToken = await user.getIdToken();
 
-            // 🧠 SCUDO ANTI-AMNESIA DISINNESCATO: Ronda ultra-leggera solo sui futuri
-            fetch(MOTORE_API_URL, {
+            // 🧠 NINJA BACKGROUND SELF-HEALING: Calcolo dinamico
+            const fridgeState = checkFridgeState(user.uid);
+            const needsHistory = (fridgeState === 'EXPIRED');
+            const urlSuffix = needsHistory ? "?history=true" : "";
+
+            fetch(MOTORE_API_URL + urlSuffix, {
                 method: 'POST',
                 body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
             })
-            .then(r => r.json())
-            .then(data => {
-                // 🛡️ SCUDO: Se un fetch Ninja più recente è partito, ignoro questa risposta vecchia
-                if (myNinjaId !== window.wilduNinjaCounter) return;
+                  
+                .then(r => r.json())
+                .then(data => {
+                    // 🛡️ SCUDO: Se un fetch Ninja più recente è partito, ignoro questa risposta vecchia
+                    if (myNinjaId !== window.wilduNinjaCounter) return;
 
-                if (data && !data.error) {
-                    // ⚙️ INNESTO ANTI-PARADOSSO: Fusione a Freddo in background
-                    if (sessionStorage.getItem('wildu_history_loaded')) {
-                        data = mergeFuturesWithFridge(data, user.uid);
-                    }
+                    if (data && !data.error) {
+                        if (needsHistory) {
+                            console.log("🥷 Ronda Silenziosa: Guarigione Frigorifero eseguita.");
+                            freezePastEvents(user.uid, data.accepted);
+                        } else if (checkFridgeState(user.uid) === 'VALID') {
+                            data = mergeFuturesWithFridge(data, user.uid);
+                        }
 
-                    const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
-                    let isCambiato = false;
+                        const cacheObj = getSafeCacheProposte();
+                        let isCambiato = false;
 
-                    if (memVecchia) {
-                        const cacheObj = JSON.parse(memVecchia);
-                        if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus || cacheObj.scadenzaVip !== data.scadenzaVip) {
+                        if (cacheObj) {
+                            if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus || cacheObj.scadenzaVip !== data.scadenzaVip) {
+                                isCambiato = true;
+                            }
+                        } else {
                             isCambiato = true;
                         }
-                    } else {
-                        isCambiato = true;
-                    }
 
                     // 5. LA REAZIONE (Identica all'originale)
                     if (isCambiato) {
@@ -4787,8 +4799,12 @@ async function controllaSicurezzaNinja() {
     const myNinjaId = ++window.wilduNinjaCounter;
     const safeToken = await user.getIdToken();
 
-    // 🧠 SCUDO ANTI-AMNESIA DISINNESCATO: Controllo super-leggero dei permessi sui futuri
-    fetch(MOTORE_API_URL, {
+    // 🧠 NINJA GUARDIANO SELF-HEALING: Controllo permessi intelligente
+    const fridgeState = checkFridgeState(user.uid);
+    const needsHistory = (fridgeState === 'EXPIRED');
+    const urlSuffix = needsHistory ? "?history=true" : "";
+
+    fetch(MOTORE_API_URL + urlSuffix, {
         method: 'POST',
         body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
     })
@@ -4799,16 +4815,19 @@ async function controllaSicurezzaNinja() {
         if (myNinjaId !== window.wilduNinjaCounter) return;
 
         if (data && !data.error) {
-            // ⚙️ INNESTO ANTI-PARADOSSO: Fusione a Freddo dei permessi per non sbiancare lo schermo
-            if (sessionStorage.getItem('wildu_history_loaded')) {
+            if (needsHistory) {
+                console.log("🥷 Guardiano: Guarigione Frigorifero eseguita.");
+                freezePastEvents(user.uid, data.accepted);
+            } else if (checkFridgeState(user.uid) === 'VALID') {
                 data = mergeFuturesWithFridge(data, user.uid);
             }
 
-            const memVecchia = sessionStorage.getItem('wildu_cache_proposte');
+            const cacheObj = getSafeCacheProposte();
             let isCambiato = false;
-            if (memVecchia) {
-                const cacheObj = JSON.parse(memVecchia);
+            if (cacheObj) {
                 if (cacheObj.isVip !== data.isVip || cacheObj.vipStatus !== data.vipStatus) isCambiato = true;
+            } else {
+                isCambiato = true;
             }
 
             sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
@@ -4873,8 +4892,9 @@ const user = firebase.auth().currentUser;
        alert("Immagine eliminata");
     }
 
-    // 🧟‍♂️ FIX ZOMBIE: Aggiungiamo l'ID alla lista nera PRIMA di ricaricare la galleria!
-    let deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]');
+    // 🧟‍♂️ FIX ZOMBIE PROTETTO: Aggiungiamo l'ID alla lista nera!
+    let deletedList = [];
+    try { deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]'); } catch(e) {}
     deletedList.push(window.selectedPublicId);
     sessionStorage.setItem('wildu_deleted_images', JSON.stringify(deletedList));
 
