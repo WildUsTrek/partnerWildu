@@ -1956,6 +1956,7 @@ try {
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
         sessionStorage.removeItem('wildu_cache_proposte');
         sessionStorage.removeItem('wildu_cache_time');
+        sessionStorage.removeItem('wildu_history_loaded');
         document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
         alert("🚀 Proposta inviata con successo!"); 
         location.reload(); 
@@ -2609,6 +2610,7 @@ async function saveFirstProfile() {
     // Così forziamo l'App a bussare al Master e imporgli i nuovi dati
     sessionStorage.removeItem('wildu_cache_proposte');
     sessionStorage.removeItem('wildu_cache_time');
+    sessionStorage.removeItem('wildu_history_loaded');
 
     // 🚀 4. SINCRONIZZAZIONE IMMEDIATA: Ora bussa al Master per davvero
     await checkProposalLimitAtStartup(user.uid);
@@ -3228,7 +3230,9 @@ async function checkProposalLimitAtStartup(uid) {
         const currentUser = firebase.auth().currentUser;
         const safeToken = currentUser ? await currentUser.getIdToken() : "GUEST";
 
-        const response = await fetch(MOTORE_API_URL, { 
+       // 🧠 SCUDO ANTI-AMNESIA: Controlla se abbiamo lo storico aperto in background
+        const wantHistory = sessionStorage.getItem('wildu_history_loaded') ? "?history=true" : "";
+        const response = await fetch(MOTORE_API_URL + wantHistory, { 
             method: 'POST', 
             body: JSON.stringify({ action: "getUserData", token: safeToken, uid: uid, nome: nomeG, tel: telG }) 
         });
@@ -3649,10 +3653,50 @@ function finalLaunchWA(isBusiness) {
 let currentProposalFilter = "ALL";
 let lastProposalsData = null;
 
-function setProposalFilter(filter) {
+async function setProposalFilter(filter) {
     currentProposalFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('f-' + filter.toLowerCase()).classList.add('active');
+    const btnEl = document.getElementById('f-' + filter.toLowerCase());
+    if (btnEl) btnEl.classList.add('active');
+
+    // 🎯 LAZY LOADING: Scarica lo storico solo se clicca Passate e non lo ha già!
+    if (filter === 'PAST' && !sessionStorage.getItem('wildu_history_loaded')) {
+        const container = document.getElementById('timeline-proposals');
+        if (container) container.innerHTML = `<div class="text-center mt-5"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div><p class="text-muted mt-3 small fw-bold">Discesa in archivio...<br><span class="fw-normal opacity-75">Recupero eventi passati in corso</span></p></div>`;
+
+        try {
+            const user = typeof auth !== 'undefined' ? auth.currentUser : null;
+            if (!user) return;
+            const safeToken = await user.getIdToken();
+            const n = document.getElementById('g_nome') ? document.getElementById('g_nome').value : "";
+            const t = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+
+            // Chiamata al server chiedendo ESPLICITAMENTE lo storico (?history=true)
+            const response = await fetch(MOTORE_API_URL + "?history=true", {
+                method: 'POST',
+                body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (!data.error) {
+                    // Sovrascriviamo la cache con il pacco COMPLETO (Passati + Futuri)
+                    sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+                    sessionStorage.setItem('wildu_cache_time', Date.now().toString());
+                    sessionStorage.setItem('wildu_history_loaded', 'true'); // 📝 POST-IT: STORICO SCARICATO!
+
+                    lastProposalsData = data;
+                    renderProposals(data);
+                    return; 
+                }
+            }
+        } catch (e) {
+            console.error("Errore recupero storico:", e);
+            if (container) container.innerHTML = `<p class='text-danger text-center mt-5 small'>Errore di connessione. Riprova.</p>`;
+            return;
+        }
+    }
+
     if (lastProposalsData) renderProposals(lastProposalsData);
 }
 
@@ -3896,6 +3940,7 @@ async function annullaProposta(itemEncoded) {
     if(res.success) {
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
+      sessionStorage.removeItem('wildu_history_loaded');
       document.querySelector('#loader h5').innerText = "Proposta ritirata!";
       alert("Proposta eliminata con successo."); location.reload();
     } else {
@@ -4543,7 +4588,9 @@ document.addEventListener("visibilitychange", function() {
         try {
             const safeToken = await user.getIdToken();
 
-            fetch(MOTORE_API_URL, {
+            // 🧠 SCUDO ANTI-AMNESIA: La Ronda protegge lo storico
+            const wantHistory = sessionStorage.getItem('wildu_history_loaded') ? "?history=true" : "";
+            fetch(MOTORE_API_URL + wantHistory, {
                 method: 'POST',
                 body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
             })
@@ -4640,7 +4687,9 @@ async function controllaSicurezzaNinja() {
     const myNinjaId = ++window.wilduNinjaCounter;
     const safeToken = await user.getIdToken();
 
-    fetch(MOTORE_API_URL, {
+    // 🧠 SCUDO ANTI-AMNESIA: Il Ninja protegge lo storico
+    const wantHistory = sessionStorage.getItem('wildu_history_loaded') ? "?history=true" : "";
+    fetch(MOTORE_API_URL + wantHistory, {
         method: 'POST',
         body: JSON.stringify({ action: "getUserData", token: safeToken, uid: user.uid, nome: n, tel: t })
     })
