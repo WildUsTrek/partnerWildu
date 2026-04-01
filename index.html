@@ -2722,9 +2722,9 @@ async function loadGallery(tipo) {
     const res = await fetch(MOTORE_API_URL, {
       method: 'POST',
       body: JSON.stringify({
-        action: 'GET_GALLERY_LIST',
+        action: 'GET_PARTNER_GALLERY',
         token: token,
-        galleryType: tipo
+        tipo: tipo
       })
     });
 
@@ -2735,7 +2735,9 @@ async function loadGallery(tipo) {
       return;
     }
 
-    if (!data.resources || data.resources.length === 0) {
+    const serverResources = Array.isArray(data.images) ? data.images : [];
+
+    if (serverResources.length === 0) {
       container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`;
       return;
     }
@@ -2746,7 +2748,7 @@ async function loadGallery(tipo) {
       deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]');
     } catch (e) {}
 
-    let validResources = data.resources;
+    let validResources = serverResources;
 
     if (tipo === 'mie') {
       validResources = validResources.filter(img => !deletedList.includes(img.public_id));
@@ -2760,23 +2762,27 @@ async function loadGallery(tipo) {
     let html = '<div class="d-flex flex-wrap gap-2 justify-content-center">';
 
     validResources.forEach(img => {
-      const imgUrl = img.url || '';
+      const imgUrl = String(img.secure_url || '').replace(/"/g, '&quot;');
+      const publicId = String(img.public_id || '').replace(/"/g, '&quot;');
 
       if (tipo === 'mie') {
         html += `
 <div style="position: relative; display:inline-block;">
   <img src="${imgUrl}"
+       data-full-url="${imgUrl}"
+       data-public-id="${publicId}"
        class="gallery-img rounded-3 shadow-sm"
        style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;"
-       onclick="selectGalleryImage(this, '${imgUrl}', '${img.public_id}')">
+       onclick="selectGalleryImage(this, this.dataset.fullUrl, this.dataset.publicId)">
 </div>`;
       } else {
         html += `
 <div style="position: relative; display:inline-block;">
   <img src="${imgUrl}"
+       data-full-url="${imgUrl}"
        class="gallery-img rounded-3 shadow-sm"
        style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;"
-       onclick="selectGalleryImage(this, '${imgUrl}', '')">
+       onclick="selectGalleryImage(this, this.dataset.fullUrl, '')">
 </div>`;
       }
     });
