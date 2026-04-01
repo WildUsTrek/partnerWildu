@@ -3989,25 +3989,37 @@ var processImageBase64 = function(base64Src) {
                     window.tempTgCanvas = canvas;
                     window.tempTgText = txt;
 
-                    // 🚀 FIX: GENERIAMO IL BLOB IN BACKGROUND E LO SALVIAMO
-                    canvas.toBlob(function(blob) {
-                        window.tempTgBlob = blob; // Salvataggio in globale
+                    try {
+                        canvas.toBlob(function(blob) {
+                            // Se per qualche motivo strano il browser fallisce silenziosamente
+                            if (!blob) {
+                                console.warn("toBlob ha restituito null (possibile canvas infetto).");
+                                fallbackCopy(txt);
+                                return;
+                            }
 
-                        var liveBtn = document.getElementById('btn-do-share');
-                        if (liveBtn) {
-                            liveBtn.disabled = false;
-                            liveBtn.innerHTML = '✨ Genera e Copia';
-                        }
+                            window.tempTgBlob = blob; // Salvataggio in globale
 
-                        var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
-                        if (mOpts) mOpts.hide();
+                            var liveBtn = document.getElementById('btn-do-share');
+                            if (liveBtn) {
+                                liveBtn.disabled = false;
+                                liveBtn.innerHTML = '✨ Genera e Copia';
+                            }
 
-                        if (isWA) {
-                            new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
-                        } else {
-                            new bootstrap.Modal(document.getElementById('modalShareTelegram')).show();
-                        }
-                    }, 'image/png');
+                            var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
+                            if (mOpts) mOpts.hide();
+
+                            if (isWA) {
+                                new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
+                            } else {
+                                new bootstrap.Modal(document.getElementById('modalShareTelegram')).show();
+                            }
+                        }, 'image/png');
+                    } catch (e) {
+                        // CATTURA L'ECCEZIONE DI SICUREZZA (SecurityError)
+                        console.error("Errore di sicurezza Canvas (Tainted Canvas):", e);
+                        fallbackCopy(txt); // Fallback pulito che ripristina anche la UI
+                    }
                 };
 
                 if (logoBase64) {
@@ -4032,7 +4044,7 @@ var processImageBase64 = function(base64Src) {
                 fallbackCopy(txt);
             };
 
-            // 🛡️ FIX ANTI-CACHE (Tainted Canvas): Inganna il browser per forzare il CORS
+            // 🛡️ Bypass della cache per evitare versioni dell'immagine prive di header CORS
             if (base64Src.startsWith('http')) {
                 base64Src += (base64Src.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
             }
