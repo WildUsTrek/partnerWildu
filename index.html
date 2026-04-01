@@ -3956,79 +3956,88 @@ function executeSharePartner() {
         }
     }
 
-    var processImageBase64 = function(base64Src) {
-        if (!base64Src) {
-            fallbackCopy(txt);
-            return;
-        }
-
-        var img = new Image();
-        img.crossOrigin = "Anonymous";
-
-        img.onload = function() {
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-            var max_size = 1000;
-            var w = img.width, h = img.height;
-
-            if (w > h && w > max_size) {
-                h *= max_size / w;
-                w = max_size;
-            } else if (h > w && h > max_size) {
-                w *= max_size / h;
-                h = max_size;
+var processImageBase64 = function(base64Src) {
+            if (!base64Src) {
+                fallbackCopy(txt);
+                return;
             }
 
-            canvas.width = w;
-            canvas.height = h;
-            ctx.drawImage(img, 0, 0, w, h);
+            var img = new Image();
+            img.crossOrigin = "Anonymous";
 
-            var logoBase64 = localStorage.getItem('wildu_partner_logo');
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                var max_size = 1000;
+                var w = img.width, h = img.height;
 
-            var triggerFinalAction = function() {
-                window.tempTgCanvas = canvas;
-                window.tempTgText = txt;
-
-                var liveBtn = document.getElementById('btn-do-share');
-                if (liveBtn) {
-                    liveBtn.disabled = false;
-                    liveBtn.innerHTML = '✨ Genera e Copia';
+                if (w > h && w > max_size) {
+                    h *= max_size / w;
+                    w = max_size;
+                } else if (h > w && h > max_size) {
+                    w *= max_size / h;
+                    h = max_size;
                 }
 
-                var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
-                if (mOpts) mOpts.hide();
+                canvas.width = w;
+                canvas.height = h;
+                ctx.drawImage(img, 0, 0, w, h);
 
-                if (isWA) {
-                    new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
+                var logoBase64 = localStorage.getItem('wildu_partner_logo');
+
+                var triggerFinalAction = function() {
+                    window.tempTgCanvas = canvas;
+                    window.tempTgText = txt;
+
+                    // 🚀 FIX: GENERIAMO IL BLOB IN BACKGROUND E LO SALVIAMO
+                    canvas.toBlob(function(blob) {
+                        window.tempTgBlob = blob; // Salvataggio in globale
+
+                        var liveBtn = document.getElementById('btn-do-share');
+                        if (liveBtn) {
+                            liveBtn.disabled = false;
+                            liveBtn.innerHTML = '✨ Genera e Copia';
+                        }
+
+                        var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
+                        if (mOpts) mOpts.hide();
+
+                        if (isWA) {
+                            new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
+                        } else {
+                            new bootstrap.Modal(document.getElementById('modalShareTelegram')).show();
+                        }
+                    }, 'image/png');
+                };
+
+                if (logoBase64) {
+                    var logoImg = new Image();
+                    logoImg.onload = function() {
+                        ctx.save();
+                        ctx.globalAlpha = 0.8;
+                        var lW = w * 0.15;
+                        var lH = lW * (logoImg.height / logoImg.width);
+                        ctx.drawImage(logoImg, w - lW - 20, 20, lW, lH);
+                        ctx.restore();
+                        triggerFinalAction();
+                    };
+                    logoImg.onerror = triggerFinalAction;
+                    logoImg.src = logoBase64;
                 } else {
-                    new bootstrap.Modal(document.getElementById('modalShareTelegram')).show();
+                    triggerFinalAction();
                 }
             };
 
-            if (logoBase64) {
-                var logoImg = new Image();
-                logoImg.onload = function() {
-                    ctx.save();
-                    ctx.globalAlpha = 0.8;
-                    var lW = w * 0.15;
-                    var lH = lW * (logoImg.height / logoImg.width);
-                    ctx.drawImage(logoImg, w - lW - 20, 20, lW, lH);
-                    ctx.restore();
-                    triggerFinalAction();
-                };
-                logoImg.onerror = triggerFinalAction;
-                logoImg.src = logoBase64;
-            } else {
-                triggerFinalAction();
+            img.onerror = function() {
+                fallbackCopy(txt);
+            };
+
+            // 🛡️ FIX ANTI-CACHE (Tainted Canvas): Inganna il browser per forzare il CORS
+            if (base64Src.startsWith('http')) {
+                base64Src += (base64Src.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
             }
+            img.src = base64Src;
         };
-
-        img.onerror = function() {
-            fallbackCopy(txt);
-        };
-
-        img.src = base64Src;
-    };
 
     if (useOriginal) {
         processImageBase64(ev.fotoUrl);
@@ -4110,25 +4119,25 @@ function finishSharePartner(hasImage, isWA, isDownloaded = false) {
 
 function copiaImmagineTg() {
     var btn = document.getElementById('btn-tg-img');
-    if(!window.tempTgCanvas) return alert("Errore: Immagine non trovata in memoria.");
+    if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
 
     try {
-        var imagePromise = new Promise(function(resolve) {
-            window.tempTgCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
-        });
-
-        var item = new ClipboardItem({ "image/png": imagePromise });
-
+        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
         navigator.clipboard.write([item]).then(function() {
-            btn.classList.remove('btn-outline-info');
-            btn.classList.add('btn-info', 'text-white');
+            btn.classList.remove('btn-outline-info'); 
+            btn.classList.add('btn-info', 'text-white'); 
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-            setTimeout(() => { btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; btn.classList.add('btn-outline-info'); btn.classList.remove('btn-info', 'text-white'); }, 3000);
+            setTimeout(() => { 
+                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
+                btn.classList.add('btn-outline-info'); 
+                btn.classList.remove('btn-info', 'text-white'); 
+            }, 3000);
         }).catch(function(e) {
-            alert("⚠️ Il tuo browser blocca la copia diretta delle immagini. Usa la funzione 'Genera Locandina' per salvarla nella galleria.");
+            console.error(e);
+            alert("⚠️ Il tuo browser blocca la copia diretta. Usa 'Genera Locandina'.");
         });
     } catch(e) {
-        alert("⚠️ Il tuo dispositivo o browser non supporta questa funzione.");
+        alert("⚠️ Funzione non supportata dal tuo browser.");
     }
 }
 
@@ -5026,14 +5035,26 @@ function showLocandinaFallback(dataUrl) {
 
 function copiaImmagineWa() {
     var btn = document.getElementById('btn-wa-img');
-    if(!window.tempTgCanvas) return alert("Errore Immagine.");
+    if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
+    
     try {
-        var imagePromise = new Promise(function(resolve) { window.tempTgCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png'); });
-        navigator.clipboard.write([new ClipboardItem({ "image/png": imagePromise })]).then(function() {
-            btn.classList.remove('btn-outline-success'); btn.classList.add('btn-success', 'text-white'); btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-            setTimeout(() => { btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; btn.classList.add('btn-outline-success'); btn.classList.remove('btn-success', 'text-white'); }, 3000);
-        }).catch(function(e) { alert("⚠️ Il browser blocca la copia diretta. Usa 'Genera Locandina'."); });
-    } catch(e) { alert("⚠️ Funzione non supportata."); }
+        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
+        navigator.clipboard.write([item]).then(function() {
+            btn.classList.remove('btn-outline-success'); 
+            btn.classList.add('btn-success', 'text-white'); 
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
+            setTimeout(() => { 
+                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
+                btn.classList.add('btn-outline-success'); 
+                btn.classList.remove('btn-success', 'text-white'); 
+            }, 3000);
+        }).catch(function(e) { 
+            console.error(e);
+            alert("⚠️ Il browser blocca la copia diretta. Usa 'Genera Locandina'."); 
+        });
+    } catch(e) { 
+        alert("⚠️ Funzione non supportata dal tuo browser."); 
+    }
 }
 
 function copiaTestoWa() {
