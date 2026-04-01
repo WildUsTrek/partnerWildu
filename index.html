@@ -3779,14 +3779,14 @@ function openSharePartner(itemEncoded) {
             <h6 class="fw-bold text-info mb-3">2. Immagine Copertina</h6>
             <div class="form-check mb-2">
                 <input class="form-check-input" type="radio" name="imageChoice" id="imgChoice1" value="original" checked onchange="document.getElementById('customImageDiv').style.display='none'">
-                <label class="form-check-label fw-bold text-light" for="imgChoice1">Usa foto originale</label>
+                <label class="form-check-label fw-bold text-light" for="imgChoice1"> Usa foto originale</label>
             </div>
             <div class="mb-3 ms-4">
                 <img src="${ev.fotoUrl}" class="img-fluid rounded shadow-sm border border-secondary" style="max-height: 140px; object-fit: cover;">
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="radio" name="imageChoice" id="imgChoice2" value="custom" onchange="document.getElementById('customImageDiv').style.display='block'">
-                <label class="form-check-label fw-bold text-light" for="imgChoice2">Carica una nuova foto al volo</label>
+                <label class="form-check-label fw-bold text-light" for="imgChoice2"> Carica una nuova foto al volo</label>
             </div>
             <div id="customImageDiv" style="display:none;" class="mt-3 pt-2 border-top border-secondary ms-4">
                 <input type="file" id="shareImage" class="form-control form-control-sm bg-dark text-white" accept="image/*">
@@ -3807,11 +3807,11 @@ function openSharePartner(itemEncoded) {
                     <div class="card p-3 border-0 shadow-sm mb-4" style="background: #252525;">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="hookType" id="h1" value="Nuovo evento in arrivo 🔥" checked>
-                            <label class="form-check-label fw-bold" for="h1">Nuovo evento in arrivo 🔥</label>
+                            <label class="form-check-label fw-bold" for="h1"> Nuovo evento in arrivo 🔥</label>
                         </div>
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="hookType" id="h2" value="Andiamo a camminare! 🥾">
-                            <label class="form-check-label fw-bold" for="h2">Andiamo a camminare! 🥾</label>
+                            <label class="form-check-label fw-bold" for="h2"> Andiamo a camminare! 🥾</label>
                         </div>
                     </div>
 
@@ -4233,47 +4233,55 @@ async function condividiNativo() {
     const btn = document.querySelector('[onclick="condividiNativo()"]');
     if (!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
 
-    // 🪂 PARACADUTE: Copia preventiva del testo (indispensabile per il fix PC/Android)
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-            await navigator.clipboard.writeText(window.tempTgText);
-            console.log("🪂 Paracadute attivato: testo copiato negli appunti.");
-        } catch (err) {
-            console.warn("Impossibile attivare paracadute copia.");
-        }
-    }
-
-    // Trasformiamo il Blob in un File fisico che il sistema operativo può "sentire"
+    // 1. Prepariamo preventivamente il pacchetto dati
     const file = new File([window.tempTgBlob], "Locandina_Wildu.png", { type: "image/png" });
-    
-    // Prepariamo il pacchetto (Foto + Testo)
     const shareData = {
         files: [file],
         title: 'Evento Wildu',
         text: window.tempTgText
     };
 
-    // Controllo compatibilità: il browser supporta l'invio di file?
+    // 2. Controllo compatibilità Share API
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
 
-        // 🚀 EDUCAZIONE: Avviso "Just-in-Time" (si attiva solo se il browser supporta lo share)
-        const procedi = confirm("Abbiamo preparato foto e testo.\n\n💡 NOTA: Se dopo aver scelto WhatsApp non vedi la descrizione, clicca nel campo di testo e fai 'Incolla': l'abbiamo già copiata per te!\n\nVuoi procedere?");
-        if (!procedi) return;
+        // 🚀 SCHERMATA EDUCATIVA: Usiamo SweetAlert2 per generare un NUOVO click utente
+        Swal.fire({
+            title: 'Tutto Pronto!',
+            html: `Abbiamo preparato foto e testo.<br><br>💡 <b>NOTA:</b> Se dopo aver scelto WhatsApp non vedi la descrizione, clicca nel campo di testo e fai <b>'Incolla'</b>: l'abbiamo già copiata per te!`,
+            icon: 'info',
+            confirmButtonText: 'Apri WhatsApp',
+            confirmButtonColor: '#25D366',
+            showCancelButton: true,
+            cancelButtonText: 'Annulla',
+            reverseButtons: true
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                // 🎯 IL CUORE DEL FIX: Il click su "Apri WhatsApp" attiva questo blocco.
+                // Essendo un evento di input fresco, il browser Windows/PC autorizza tutto.
+                try {
+                    // Paracadute: copia negli appunti
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(window.tempTgText);
+                    }
+                    
+                    // Azione principale: Share nativo
+                    await navigator.share(shareData);
 
-        try {
-            await navigator.share(shareData);
-            // Feedback visivo di successo
-            if(btn) {
-                const oldHtml = btn.innerHTML;
-                btn.innerHTML = '✅ Inviato!';
-                setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+                    // Feedback visivo sul bottone originale
+                    if(btn) {
+                        const oldHtml = btn.innerHTML;
+                        btn.innerHTML = '✅ Inviato!';
+                        setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+                    }
+                } catch (err) {
+                    // Se l'utente non annulla volontariamente, logghiamo l'errore
+                    if (err.name !== 'AbortError') console.error("Errore Share:", err);
+                }
             }
-        } catch (err) {
-            // Se l'utente annulla la condivisione, non facciamo nulla
-            if (err.name !== 'AbortError') console.error("Errore Share:", err);
-        }
+        });
+
     } else {
-        // Fallback: se il browser è vecchio (es. Chrome su PC o vecchi Android)
+        // Fallback per PC obsoleti o browser senza Share API
         alert("⚠️ Il tuo browser o dispositivo non supporta la condivisione diretta di file.\n\nUsa i tasti qui sotto per copiare immagine e testo separatamente!");
     }
 }
@@ -5688,19 +5696,19 @@ const user = firebase.auth().currentUser;
         <div class="modal-content bg-dark text-white border-success border-2 rounded-4 shadow-lg">
             <div class="modal-header border-0 p-4 pb-2 text-center d-block">
                 <h3 class="modal-title fw-bold text-success m-0"><i class="bi bi-whatsapp"></i> WhatsApp Pronto</h3>
-                <p class="text-muted small mt-2">Segui questi 2 passaggi per incollare l'evento su WhatsApp:</p>
+                <p class="text-muted small mt-2">Segui questi passaggi per incollare l'evento:</p>
             </div>
           
             <div class="modal-body p-4 pt-0">
                 <div class="bg-primary bg-opacity-10 p-3 rounded-4 mb-3 border border-primary border-opacity-25">
                     <div class="fw-bold text-primary fs-5 mb-2"><i class="bi bi-lightning-fill"></i> Invio Rapido</div>
-                    <p class="text-muted small mb-3">Invia foto e testo insieme in un colpo (solo alcuni telefoni).</p>
+                    <p class="text-muted small mb-3">Invia tutto insieme (solo alcuni telefoni).</p>
                     <button class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm" onclick="condividiNativo()">
                         <i class="bi bi-share-fill"></i> CONDIVIDI TUTTO
                     </button>
                 </div>
 
-                <div class="text-center my-3 opacity-50 small">— OPPURE PROCEDI MANUALMENTE (safe tutti tel) —</div>
+                <div class="text-center my-3 opacity-50 small">— OPPURE PROCEDI MANUALMENTE (safe) —</div>
 
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
                     <div class="fw-bold text-white fs-5 mb-2">1. La Locandina</div>
@@ -5711,7 +5719,7 @@ const user = firebase.auth().currentUser;
                 </div>
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
                     <div class="fw-bold text-white fs-5 mb-2">2. Il Testo</div>
-                    <p class="text-muted small mb-3">Ora copia il testo, torna su WhatsApp e incollalo sotto la foto.</p>
+                    <p class="text-muted small mb-3">Ora copia il testo, torna su WhatsApp e sotto la foto "incolla come solo testo".</p>
                     <button id="btn-wa-txt" class="btn btn-outline-warning w-100 rounded-pill fw-bold" onclick="copiaTestoWa()">
                         <i class="bi bi-fonts"></i> Copia Testo
                     </button>
@@ -5731,8 +5739,8 @@ const user = firebase.auth().currentUser;
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-info border-2 rounded-4 shadow-lg">
             <div class="modal-header border-0 p-4 pb-2 text-center d-block">
-                <h3 class="modal-title fw-bold text-info m-0"><i class="bi bi-telegram"></i> Condividi su Telegram (solo alcuni telefoni)</h3>
-                <p class="text-muted small mt-2">Telegram richiede di copiare foto e testo separatamente. Segui i 2 passaggi:</p>
+                <h3 class="modal-title fw-bold text-info m-0"><i class="bi bi-telegram"></i> Condividi su Telegram </h3>
+                <p class="text-muted small mt-2">Segui questi passaggi per incollare l'evento:</p>
             </div>
           
             <div class="modal-body p-4 pt-0">
@@ -5744,7 +5752,7 @@ const user = firebase.auth().currentUser;
                     </button>
                 </div>
 
-                <div class="text-center my-3 opacity-50 small">— OPPURE COPIA SINGOLARMENTE (safe tutti tel) —</div>
+                <div class="text-center my-3 opacity-50 small">— OPPURE COPIA SINGOLARMENTE (safe) —</div>
 
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
                     <div class="fw-bold text-white fs-5 mb-2">1. La Locandina</div>
@@ -5756,7 +5764,7 @@ const user = firebase.auth().currentUser;
 
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
                     <div class="fw-bold text-white fs-5 mb-2">2. La Didascalia</div>
-                    <p class="text-muted small mb-3">Ora copia il testo, torna su Telegram e incollalo sotto la foto.</p>
+                    <p class="text-muted small mb-3">Ora copia il testo, torna su Telegram e incollalo sotto la foto come solo testo.</p>
                     <button id="btn-tg-txt" class="btn btn-outline-warning w-100 rounded-pill fw-bold" onclick="copiaTestoTg()">
                         <i class="bi bi-fonts"></i> Copia Testo
                     </button>
