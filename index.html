@@ -1780,27 +1780,72 @@ function checkDuplicatoInTempoReale() {
 }
 
   
-  function formatToItalianDate(dateStr) {
-      if (!dateStr) return "";
-      const p = dateStr.split('-');
-      return `${p[2]}/${p[1]}/${p[0]}`; 
-  }
+function formatToItalianDate(dateStr) {
+    const d = parseIsoDate(dateStr);
+    if (!d) return "";
+    return formatDateToItalian(d);
+}
 
 
 // 🛠️ HELPER CORE & MOTORE FRIGORIFERO PERSISTENTE
 const getLocalDayStr = () => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const parseEventDate = (dateStr) => {
-    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('/')) return null;
-    const p = dateStr.split('/');
-    const day = parseInt(p[0], 10); const month = parseInt(p[1], 10) - 1; const year = parseInt(p[2], 10);
-    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+function parseIsoDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+
+    const year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) - 1;
+    const day = parseInt(m[3], 10);
+
     const d = new Date(year, month, day, 0, 0, 0, 0);
     if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
     return d;
+}
+
+function parseItalianDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const m = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return null;
+
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) - 1;
+    const year = parseInt(m[3], 10);
+
+    const d = new Date(year, month, day, 0, 0, 0, 0);
+    if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+    return d;
+}
+
+function parseAnyEventDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    if (dateStr.includes('/')) return parseItalianDate(dateStr);
+    if (dateStr.includes('-')) return parseIsoDate(dateStr);
+    return null;
+}
+
+function formatDateToItalian(dateObj) {
+    if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) return "";
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatDateToIso(dateObj) {
+    if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) return "";
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+const parseEventDate = (dateStr) => {
+    return parseItalianDate(dateStr);
 };
 
 const getEventKey = (e) => {
@@ -1809,27 +1854,78 @@ const getEventKey = (e) => {
 
 const clearWilduNamespace = () => {
     const pfx = 'wildu_';
-    Object.keys(localStorage).forEach(k => { if (k.startsWith(pfx)) localStorage.removeItem(k); });
-    Object.keys(sessionStorage).forEach(k => { if (k.startsWith(pfx)) sessionStorage.removeItem(k); });
-    console.log("🧹 Wildu Namespace resettato chirurgicamente.");
+
+    // Chiavi fuori namespace ma usate davvero dall'app
+    const explicitLocalKeys = [
+        'attesa_novita_stripe',
+        'rientro_da_stripe_success'
+    ];
+
+    const explicitSessionKeys = [
+        'wasVip'
+    ];
+
+    try {
+        // 1. Pulizia namespace Wildu
+        Object.keys(localStorage).forEach(k => {
+            if (k.startsWith(pfx)) localStorage.removeItem(k);
+        });
+
+        Object.keys(sessionStorage).forEach(k => {
+            if (k.startsWith(pfx)) sessionStorage.removeItem(k);
+        });
+
+        // 2. Pulizia chiavi extra fuori namespace
+        explicitLocalKeys.forEach(k => localStorage.removeItem(k));
+        explicitSessionKeys.forEach(k => sessionStorage.removeItem(k));
+
+        // 3. Reset timer/runtime volatili
+        if (window.wilduProfileTimer) {
+            clearInterval(window.wilduProfileTimer);
+            window.wilduProfileTimer = null;
+        }
+
+        if (window.offlineBadgeTimer) {
+            clearTimeout(window.offlineBadgeTimer);
+            window.offlineBadgeTimer = null;
+        }
+
+        window.wilduForceUpdateConfirmed = false;
+        window.wilduFetchCounter = 0;
+        window.wilduNinjaCounter = 0;
+
+        // 4. Reset stati UI/globali utili
+        window.selectedPublicId = null;
+        if (typeof selectedGalleryUrl !== 'undefined') selectedGalleryUrl = "";
+        if (typeof lastProposalsData !== 'undefined') lastProposalsData = null;
+
+        console.log("🧹 Pulizia logout completata: namespace + chiavi extra + runtime.");
+    } catch (e) {
+        console.error("❌ Errore durante la pulizia completa del logout:", e);
+    }
 };
 
 function getSafeCacheProposte() {
     try {
         const mem = sessionStorage.getItem('wildu_cache_proposte');
         return mem ? JSON.parse(mem) : null;
-    } catch(e) { return null; }
+    } catch (e) {
+        return null;
+    }
 }
 
 function checkFridgeState(uid) {
     const metaStr = localStorage.getItem('wildu_past_meta_' + uid);
     if (!metaStr) return 'UNINITIALIZED';
+
     try {
         const meta = JSON.parse(metaStr);
         if (meta.v !== 1) throw new Error("Version mismatch");
         if (meta.day !== getLocalDayStr() || Date.now() - meta.timestamp > 28800000) return 'EXPIRED';
+
         const cacheStr = localStorage.getItem('wildu_past_events_' + uid);
         if (!cacheStr) return 'EXPIRED';
+
         return 'VALID';
     } catch (e) {
         localStorage.removeItem('wildu_past_meta_' + uid);
@@ -1840,46 +1936,117 @@ function checkFridgeState(uid) {
 
 function getPastEventsFromFridge(uid) {
     if (checkFridgeState(uid) === 'VALID') {
-        try { 
-            return JSON.parse(localStorage.getItem('wildu_past_events_' + uid)); 
-        } catch(e) { 
+        try {
+            return JSON.parse(localStorage.getItem('wildu_past_events_' + uid));
+        } catch (e) {
             console.warn("🧊 Frigo corrotto durante la lettura array, eseguo pulizia.");
             localStorage.removeItem('wildu_past_events_' + uid);
             localStorage.removeItem('wildu_past_meta_' + uid);
-            return null; 
+            return null;
         }
     }
     return null;
 }
 
 function freezePastEvents(uid, allAcceptedEvents) {
-    const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+
     const pastsToFreeze = [];
     (allAcceptedEvents || []).forEach(item => {
         const itemDate = parseEventDate(item.dataInizio);
-        if (itemDate && itemDate < oggi) pastsToFreeze.push(item);
+        if (itemDate && itemDate < oggi) {
+            pastsToFreeze.push(item);
+        }
     });
+
     localStorage.setItem('wildu_past_events_' + uid, JSON.stringify(pastsToFreeze));
-    localStorage.setItem('wildu_past_meta_' + uid, JSON.stringify({ v: 1, day: getLocalDayStr(), timestamp: Date.now() }));
+    localStorage.setItem('wildu_past_meta_' + uid, JSON.stringify({
+        v: 1,
+        day: getLocalDayStr(),
+        timestamp: Date.now()
+    }));
 }
 
 function mergeFuturesWithFridge(dataFromServer, uid) {
     const pasts = getPastEventsFromFridge(uid);
     if (!pasts) return dataFromServer;
+
     const mergedMap = new Map();
-    pasts.forEach(p => { const k = getEventKey(p); if(k) mergedMap.set(k, p); });
-    (dataFromServer.accepted || []).forEach(p => { const k = getEventKey(p); if(k) mergedMap.set(k, p); });
+
+    pasts.forEach(p => {
+        const k = getEventKey(p);
+        if (k) mergedMap.set(k, p);
+    });
+
+    (dataFromServer.accepted || []).forEach(p => {
+        const k = getEventKey(p);
+        if (k) mergedMap.set(k, p);
+    });
+
     dataFromServer.accepted = Array.from(mergedMap.values());
     return dataFromServer;
 }
 
-// 🛡️ Mantenuto esclusivamente per retrocompatibilità modulo di inserimento HTML (input type="date")
+// 🛡️ Retrocompatibilità date + SANITIZZAZIONE CENTRALE TESTO/URL
 function createSafeLocalDate(dateString) {
     if (!dateString || !dateString.includes('-')) return null;
     const parts = dateString.split('-');
-    return new Date(parts[0], parseInt(parts[1]) - 1, parts[2], 0, 0, 0, 0); 
+    return new Date(parts[0], parseInt(parts[1], 10) - 1, parts[2], 0, 0, 0, 0);
 }
 
+function sanitizePlainText(value, maxLen = 4000) {
+    let s = value == null ? "" : String(value);
+
+    // Normalizza fine riga
+    s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    // Rimuove caratteri di controllo pericolosi ma lascia \n e \t
+    s = s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ');
+
+    // Blocca markup basilare / injection grezze
+    s = s.replace(/[<>`]/g, ' ');
+
+    // Evita stringhe smisurate
+    if (typeof maxLen === 'number' && maxLen > 0 && s.length > maxLen) {
+        s = s.substring(0, maxLen);
+    }
+
+    return s.trim();
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function safeHtmlText(value, maxLen = 4000) {
+    return escapeHtml(sanitizePlainText(value, maxLen));
+}
+
+function safeHtmlMultiline(value, maxLen = 4000) {
+    return safeHtmlText(value, maxLen).replace(/\n/g, '<br>');
+}
+
+function sanitizeHttpUrl(value, maxLen = 2000) {
+    const raw = sanitizePlainText(value, maxLen);
+    if (!raw) return '#';
+
+    try {
+        const parsed = new URL(raw, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            return parsed.href;
+        }
+    } catch (e) {
+        // fallback sotto
+    }
+
+    return '#';
+}
 
   
   async function sendToWildu() {
@@ -2535,41 +2702,94 @@ function getGuideTag() {
 }
 
 async function loadGallery(tipo) {
-  resetImage(); 
-  let tag = (tipo === 'mie') ? getGuideTag() : 'archivio_wildu';
-  let container = document.getElementById('gallery-' + tipo);
+  resetImage();
+
+  const container = document.getElementById('gallery-' + tipo);
+  if (!container) return;
+
   container.innerHTML = '<div class="spinner-border text-primary mt-4"></div><p class="small text-muted mt-2">Ricerca...</p>';
+
   try {
-    let url = `https://res.cloudinary.com/daiyrgmbb/image/list/${tag}.json?t=${new Date().getTime()}`;
-    let res = await fetch(url);
-    if (!res.ok) { container.innerHTML = `<p class="text-muted small mt-4">Nessuna foto trovata.</p>`; return; }
-    let data = await res.json();
-    if (!data.resources || data.resources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
-    
+    const user = firebase.auth().currentUser;
+
+    if (!user) {
+      container.innerHTML = `<p class="text-danger small mt-4">Utente non autenticato.</p>`;
+      return;
+    }
+
+    const token = await user.getIdToken();
+
+    const res = await fetch(MOTORE_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'GET_GALLERY_LIST',
+        token: token,
+        galleryType: tipo
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      container.innerHTML = `<p class="text-danger small mt-4">${(data && data.error) ? data.error : 'Errore caricamento galleria.'}</p>`;
+      return;
+    }
+
+    if (!data.resources || data.resources.length === 0) {
+      container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`;
+      return;
+    }
+
     // 🥷 FILTRO ANTI-FANTASMA PROTETTO
     let deletedList = [];
-    try { deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]'); } catch(e) {}
-    let validResources = data.resources.filter(img => !deletedList.includes(img.public_id));
+    try {
+      deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]');
+    } catch (e) {}
 
-    if (validResources.length === 0) { container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`; return; }
+    let validResources = data.resources;
+
+    if (tipo === 'mie') {
+      validResources = validResources.filter(img => !deletedList.includes(img.public_id));
+    }
+
+    if (validResources.length === 0) {
+      container.innerHTML = `<p class="text-muted small mt-4">Archivio vuoto.</p>`;
+      return;
+    }
 
     let html = '<div class="d-flex flex-wrap gap-2 justify-content-center">';
+
     validResources.forEach(img => {
-      
-      let imgUrl = `https://res.cloudinary.com/daiyrgmbb/image/upload/w_800,c_limit,q_auto,f_auto/v${img.version}/${img.public_id}.${img.format}`;
-      html += `
+      const imgUrl = img.url || '';
+
+      if (tipo === 'mie') {
+        html += `
 <div style="position: relative; display:inline-block;">
-  <img src="${imgUrl}" 
-       class="gallery-img rounded-3 shadow-sm" 
-       style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;" 
+  <img src="${imgUrl}"
+       class="gallery-img rounded-3 shadow-sm"
+       style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;"
        onclick="selectGalleryImage(this, '${imgUrl}', '${img.public_id}')">
 </div>`;
+      } else {
+        html += `
+<div style="position: relative; display:inline-block;">
+  <img src="${imgUrl}"
+       class="gallery-img rounded-3 shadow-sm"
+       style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 3px solid transparent;"
+       onclick="selectGalleryImage(this, '${imgUrl}', '')">
+</div>`;
+      }
     });
+
     html += '</div>';
     container.innerHTML = html;
-  } catch (err) { container.innerHTML = `<p class="text-danger small mt-4">Errore di connessione.</p>`; }
-}
 
+  } catch (err) {
+    console.error("Errore loadGallery:", err);
+    container.innerHTML = `<p class="text-danger small mt-4">Errore di connessione.</p>`;
+  }
+}
+  
 let selectedPublicId = "";
 
 function selectGalleryImage(imgElement, url, publicId) {
@@ -2612,66 +2832,157 @@ function loginGoogle() {
 }
 
 auth.onAuthStateChanged(async (user) => {
-  const initScreen = document.getElementById('init-screen'); 
-  const authOverlay = document.getElementById('auth-overlay'); 
-  const profileOverlay = document.getElementById('profile-overlay'); 
-  
-  if (user) {
-    // 1. LEGGIAMO PRIMA FIREBASE PER RECUPERARE NOME E TEL
-    const docRef = db.collection("users_partners").doc(user.uid);
-    const doc = await docRef.get();
+  const initScreen = document.getElementById('init-screen');
+  const authOverlay = document.getElementById('auth-overlay');
+  const profileOverlay = document.getElementById('profile-overlay');
+  const homeView = document.getElementById('home-view');
+  const gNome = document.getElementById('g_nome');
+  const gTel = document.getElementById('g_tel');
 
-    if (doc.exists) {
-      const data = doc.data();
-      // 2. POPOLIAMO I CAMPI IMMEDIATAMENTE
-      document.getElementById('g_nome').value = data.nome_cognome || "";
-      document.getElementById('g_tel').value = data.whatsapp || "";
-      
-      // 🚀 3. ORA BUSSIAMO AL MASTER: Avendo compilato i campi sopra, 
-      // il Master riceverà Nome e Tel e popolerà lo Sheet anche per i vecchi utenti.
-      checkProposalLimitAtStartup(user.uid);
+  function showBootToast(title, text, icon = 'warning') {
+    try {
+      window.wilduAuthBootToastShown = window.wilduAuthBootToastShown || {};
+      const dedupeKey = `${icon}|${title}|${text}`;
 
-      authOverlay.style.display = 'none';
-      profileOverlay.style.display = 'none';
-      showPage('home'); 
-    } else {
-      // Nuovo utente assoluto: deve fare il profilo
-      authOverlay.style.display = 'none';
-      profileOverlay.style.display = 'flex';
+      if (window.wilduAuthBootToastShown[dedupeKey]) return;
+      window.wilduAuthBootToastShown[dedupeKey] = true;
+
+      if (typeof Swal !== 'undefined' && Swal.fire) {
+        Swal.fire({
+          toast: true,
+          position: 'top',
+          icon: icon,
+          title: title,
+          text: text,
+          showConfirmButton: false,
+          timer: 4500,
+          timerProgressBar: true
+        });
+      } else {
+        console.warn(title + " - " + text);
+      }
+    } catch (toastError) {
+      console.warn("Impossibile mostrare toast bootstrap auth:", toastError);
     }
-  } else {
-    // 👤 UTENTE NON LOGGATO
-    authOverlay.style.display = 'flex';
-    profileOverlay.style.display = 'none';
-    document.getElementById('home-view').style.display = 'none';
+  }
 
-    // 🛡️ 2. RISVEGLIO DEL BOTTONE: Ora siamo sicuri che deve fare il login, sblocchiamo il tasto!
-    const btnLogin = document.getElementById('btn-login-google');
-    if (btnLogin) {
+  try {
+    if (user) {
+      let profiloValido = false;
+      let nomeProfilo = "";
+      let telProfilo = "";
+
+      try {
+        const docRef = db.collection("users_partners").doc(user.uid);
+        const doc = await docRef.get();
+
+        if (doc.exists) {
+          const data = doc.data() || {};
+          nomeProfilo = (data.nome_cognome || "").trim();
+          telProfilo = (data.whatsapp || "").trim();
+
+          // Profilo considerato valido solo se completo
+          profiloValido = !!(nomeProfilo && telProfilo);
+
+          // Manteniamo fresco il fallback locale
+          if (nomeProfilo) localStorage.setItem('wildu_p_nome', nomeProfilo);
+          if (telProfilo) localStorage.setItem('wildu_p_tel', telProfilo);
+        }
+      } catch (firestoreError) {
+        console.error("Errore lettura profilo Firestore:", firestoreError);
+
+        nomeProfilo = (localStorage.getItem('wildu_p_nome') || user.displayName || "").trim();
+        telProfilo = (localStorage.getItem('wildu_p_tel') || "").trim();
+
+        // Anche nel fallback locale pretendiamo profilo completo
+        profiloValido = !!(nomeProfilo && telProfilo);
+
+        if (profiloValido) {
+          showBootToast(
+            "Avvio in modalità recupero",
+            "Firestore non ha risposto. Sto usando i dati locali salvati sul dispositivo.",
+            "warning"
+          );
+        } else {
+          showBootToast(
+            "Profilo non recuperato",
+            "Firestore non ha risposto e non ho trovato dati locali completi. Apro la schermata profilo.",
+            "error"
+          );
+        }
+      }
+
+      if (profiloValido) {
+        if (gNome) gNome.value = nomeProfilo;
+        if (gTel) gTel.value = telProfilo;
+
+        if (authOverlay) authOverlay.style.display = 'none';
+        if (profileOverlay) profileOverlay.style.display = 'none';
+        showPage('home');
+
+        try {
+          await checkProposalLimitAtStartup(user.uid);
+        } catch (startupSyncError) {
+          console.error("Errore bootstrap checkProposalLimitAtStartup:", startupSyncError);
+          showBootToast(
+            "Sincronizzazione iniziale incompleta",
+            "Sono entrato nell'app, ma la sincronizzazione iniziale non è riuscita. Puoi riprovare tra poco.",
+            "warning"
+          );
+        }
+      } else {
+        if (authOverlay) authOverlay.style.display = 'none';
+        if (profileOverlay) profileOverlay.style.display = 'flex';
+      }
+    } else {
+      if (authOverlay) authOverlay.style.display = 'flex';
+      if (profileOverlay) profileOverlay.style.display = 'none';
+      if (homeView) homeView.style.display = 'none';
+
+      const btnLogin = document.getElementById('btn-login-google');
+      if (btnLogin) {
         btnLogin.disabled = false;
         btnLogin.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="22" class="me-2" style="transform: translateY(-2px);"> Accedi con Google';
-    }
+      }
 
-    // 🚀 3. ACCENSIONE MANUALE DEL CAROSELLO 
-    const pitchCarousel = document.getElementById('pitchCarousel');
-    if (pitchCarousel) {
+      const pitchCarousel = document.getElementById('pitchCarousel');
+      if (pitchCarousel && typeof bootstrap !== 'undefined' && bootstrap.Carousel) {
         const bsCarousel = bootstrap.Carousel.getOrCreateInstance(pitchCarousel, {
-            interval: 4500, 
-            ride: 'carousel',
-            pause: 'hover' // 🟢 LA MODIFICA: Ora si ferma se l'utente tocca o ci passa col mouse, pause = sempre
+          interval: 4500,
+          ride: 'carousel',
+          pause: 'hover'
         });
-        bsCarousel.cycle(); 
+        bsCarousel.cycle();
+      }
     }
-  }
-  
-  if (initScreen) {
-    setTimeout(() => { 
-      initScreen.style.opacity = '0';
-      setTimeout(() => { initScreen.style.display = 'none'; }, 500);
-    }, 1000); 
+  } catch (e) {
+    console.error("Errore generale onAuthStateChanged:", e);
+
+    showBootToast(
+      "Errore di inizializzazione",
+      "Si è verificato un problema durante l'avvio. Entro in fallback per non bloccare l'app.",
+      "error"
+    );
+
+    if (user) {
+      if (authOverlay) authOverlay.style.display = 'none';
+      if (profileOverlay) profileOverlay.style.display = 'flex';
+    } else {
+      if (authOverlay) authOverlay.style.display = 'flex';
+      if (profileOverlay) profileOverlay.style.display = 'none';
+    }
+  } finally {
+    if (initScreen) {
+      setTimeout(() => {
+        initScreen.style.opacity = '0';
+        setTimeout(() => {
+          initScreen.style.display = 'none';
+        }, 500);
+      }, 1000);
+    }
   }
 });
-
+  
 async function saveFirstProfile() {
   const user = auth.currentUser;
   const nome = document.getElementById('p_nome_completo').value.trim();
@@ -2855,28 +3166,24 @@ async function updateProfileBackend() {
     return;
   }
 
-  // 🛡️ SCUDO ANTI-PANICO E UI FEEDBACK: Blocchiamo la UI istantaneamente
   const btnUpdate = document.getElementById('btn-update-profile');
   const btnLogout = document.querySelector('button[onclick="logout()"]');
   const btnUploadLogo = document.getElementById('btn-upload-logo-cloud');
   const originalBtnText = btnUpdate ? btnUpdate.innerHTML : "AGGIORNA DATI";
 
   if (btnUpdate) {
-      btnUpdate.disabled = true;
-      // 🟢 FORZATURA VISIVA: Questo assicura che il DOM prepari la rotellina
-      btnUpdate.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
+    btnUpdate.disabled = true;
+    btnUpdate.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sincronizzazione...';
   }
-  
+
   if (btnLogout) btnLogout.disabled = true;
   if (btnUploadLogo) btnUploadLogo.disabled = true;
   if (inputNome) inputNome.disabled = true;
   if (inputTel) inputTel.disabled = true;
 
-  // ⏱️ Un piccolo respiro di 50 millisecondi per far dipingere la rotellina al browser prima dei calcoli pesanti
   await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
-    // 🚀 1. AGGIORNA FIREBASE (Il database veloce - Anti-Crash)
     await db.collection("users_partners").doc(user.uid).set({
       nome_cognome: nome,
       whatsapp: tel
@@ -2884,7 +3191,6 @@ async function updateProfileBackend() {
 
     const token = await user.getIdToken();
 
-    // 🚀 2. AGGIORNA MASTER (Google Sheets)
     const res = await fetch(MOTORE_API_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -2896,15 +3202,40 @@ async function updateProfileBackend() {
     });
 
     const data = await res.json();
+    if (!data.success) throw new Error(data.error || "Aggiornamento rifiutato dal server");
 
-    if (!data.success) throw new Error(data.error);
+    // ✅ 1. Aggiorna subito il DOM vivo
+    const gNome = document.getElementById('g_nome');
+    const gTel = document.getElementById('g_tel');
+    if (gNome) gNome.value = nome;
+    if (gTel) gTel.value = tel;
 
-    // ✅ 3. AGGIORNA UI LOCALE E VARIABILI LAVORO
-    document.getElementById('g_nome').value = nome;
-    document.getElementById('g_tel').value = tel;
+    // ✅ 2. Aggiorna i riferimenti locali semplici
+    localStorage.setItem('wildu_p_nome', nome);
+    localStorage.setItem('wildu_p_tel', tel);
 
-    // ⛔ OTTIMIZZAZIONE: Rimosso il reset cache e il re-fetch forzato.
-    // L'app ha già aggiornato Firebase e i campi locali. Risparmiamo il carico al Master.
+    // ✅ 3. Patch conservativa della cache sessione, se esiste
+    try {
+      const rawCache = sessionStorage.getItem('wildu_cache_proposte');
+      if (rawCache) {
+        const cacheObj = JSON.parse(rawCache);
+
+        // aggiorniamo solo campi “profilo utente” se già presenti o compatibili
+        if (typeof cacheObj === 'object' && cacheObj !== null) {
+          if ('nome' in cacheObj) cacheObj.nome = nome;
+          if ('tel' in cacheObj) cacheObj.tel = tel;
+          if ('guidaNome' in cacheObj) cacheObj.guidaNome = nome;
+          if ('guidaTel' in cacheObj) cacheObj.guidaTel = tel;
+          if ('nome_cognome' in cacheObj) cacheObj.nome_cognome = nome;
+          if ('whatsapp' in cacheObj) cacheObj.whatsapp = tel;
+        }
+
+        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheObj));
+        sessionStorage.setItem('wildu_cache_time', Date.now().toString());
+      }
+    } catch (cacheErr) {
+      console.warn("Cache profilo non allineata localmente:", cacheErr);
+    }
 
     alert("✅ Profilo e Database aggiornati con successo!");
     if (typeof closeProfile === "function") closeProfile();
@@ -2912,21 +3243,19 @@ async function updateProfileBackend() {
   } catch (e) {
     alert("Errore durante l'aggiornamento: " + e.message);
   } finally {
-    // 🔓 SBLOCCO FINALE: Riapriamo tutto, sia in caso di successo che di errore
     if (btnUpdate) {
-        btnUpdate.disabled = false;
-        btnUpdate.innerHTML = originalBtnText;
+      btnUpdate.disabled = false;
+      btnUpdate.innerHTML = originalBtnText;
     }
     if (btnLogout) btnLogout.disabled = false;
     if (btnUploadLogo) btnUploadLogo.disabled = false;
     if (inputNome) inputNome.disabled = false;
     if (inputTel) inputTel.disabled = false;
-    
-    // 🛟 SALVAGENTE: Assicuriamoci che il loader principale non resti MAI incantato
+
     const mainLoader = document.getElementById('loader');
     if (mainLoader) mainLoader.style.display = 'none';
   }
-}  
+}
   
 // 🟢 REFRESH UI LOGO (Gestisce anche la rotellina di Upload)
 function refreshProfileLogoUI() {
@@ -3492,83 +3821,177 @@ function openSharePartner(itemEncoded) {
 }
 
 function executeSharePartner() {
-  // PULIZIA PREVENTIVA MODALI ISTRUZIONI
+    // PULIZIA PREVENTIVA MODALI ISTRUZIONI
     var oldWA = bootstrap.Modal.getInstance(document.getElementById('modalShareInstructions'));
-    if(oldWA) oldWA.dispose();
+    if (oldWA) oldWA.dispose();
     var oldTG = bootstrap.Modal.getInstance(document.getElementById('modalShareTelegram'));
-    if(oldTG) oldTG.dispose();
+    if (oldTG) oldTG.dispose();
+
     var ev = window.currentShareItem;
     var btn = document.getElementById('btn-do-share');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Elaborazione...';
+
+    if (!ev) {
+        alert("Errore: dati evento non trovati.");
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Elaborazione...';
+    }
+
+    function normalizeItalianDate(raw) {
+        if (!raw) return "N/D";
+
+        // Già in formato italiano dd/mm/yyyy
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+            return raw;
+        }
+
+        // Formato ISO yyyy-mm-dd
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+            var partsIso = raw.split('-');
+            return partsIso[2] + "/" + partsIso[1] + "/" + partsIso[0];
+        }
+
+        // Fallback finale: provo il parser JS, ma se fallisce restituisco il grezzo
+        var parsed = new Date(raw);
+        if (!isNaN(parsed.getTime())) {
+            return parsed.toLocaleDateString('it-IT');
+        }
+
+        return String(raw);
+    }
 
     var hookVal = "";
     var radios = document.getElementsByName('hookType');
-    for(var i=0; i<radios.length; i++) { if(radios[i].checked) { hookVal = radios[i].value; break; } }
-    
-    var isWA = (document.getElementById('shareApp').value === 'WA');
+    for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) {
+            hookVal = radios[i].value;
+            break;
+        }
+    }
+
+    var shareAppEl = document.getElementById('shareApp');
+    var isWA = shareAppEl && shareAppEl.value === 'WA';
     var b = isWA ? "*" : "**";
 
-    // Costruzione del testo formattato
+    var titolo = ev.titolo || "";
+    var dIn = normalizeItalianDate(ev.dataInizio);
+    var dFine = ev.dataFine ? " ➡️ " + normalizeItalianDate(ev.dataFine) : "";
+
+    var oraIn = ev.oraIn || ev.orarioInizio || "";
+    var oraOut = ev.oraOut || ev.orarioFine || "";
+
+    var luogo = ev.luogoNome || ev.luogo || "";
+    var link = ev.luogoLink || ev.link || "";
+
+    var descrizioneRaw = ev.desc || ev.descrizione || "";
+    var cleanDesc = descrizioneRaw.replace(/^Guida:.*?\|\s*/i, "").trim();
+
+    var attrezzaturaRaw = ev.eq || ev.attrezzaturaJson || "";
+    var eqStrs = [];
+    try {
+        var eqList = JSON.parse(attrezzaturaRaw);
+        if (Array.isArray(eqList)) {
+            eqList.forEach(function(item) {
+                if (!item) return;
+                var s = item.item || "";
+                if (!s) return;
+                if (item.note) s += " (" + item.note + ")";
+                eqStrs.push(s);
+            });
+        }
+    } catch (e) {}
+
     var txt = "";
-    if(hookVal) txt += b + hookVal.toUpperCase() + b + "\n\n";
-    txt += b + "🥾 " + (ev.titolo || "").toUpperCase() + b + "\n\n";
-    
-    const dIn = ev.dataInizio ? new Date(ev.dataInizio).toLocaleDateString('it-IT') : "N/D";
-    const dFine = ev.dataFine ? " ➡️ " + new Date(ev.dataFine).toLocaleDateString('it-IT') : "";
+
+    if (hookVal) txt += b + hookVal.toUpperCase() + b + "\n\n";
+    txt += b + "🥾 " + titolo.toUpperCase() + b + "\n\n";
+
     txt += "📅 " + b + "Data:" + b + " " + dIn + dFine + "\n";
-    if(ev.oraIn) txt += "🕒 " + b + "Orari:" + b + " " + ev.oraIn + (ev.oraOut ? " ➡️ " + ev.oraOut : "") + "\n\n";
-    if(ev.luogo) txt += "📍 " + b + "Luogo:" + b + " " + ev.luogo + (ev.link ? " (" + ev.link + ")" : "") + "\n\n";
-    
-    if(ev.km || ev.dislivello) txt += "⛰️ " + b + "Dati Tecnici:" + b + " " + (ev.km ? ev.km + " km" : "") + (ev.dislivello ? " | " + ev.dislivello + " m D+" : "") + "\n\n";
-    
-    var eqStrs = []; try { 
-        var eqList = JSON.parse(ev.eq); 
-        eqList.forEach(function(item) {
-            var s = item.item; if (item.note) s += " (" + item.note + ")"; eqStrs.push(s);
-        });
-    } catch(e){}
-    if(eqStrs.length > 0) txt += "🎒 " + b + "Attrezzatura necessaria:" + b + "\n" + eqStrs.join(", ") + "\n\n";
-    
-    var cleanDesc = (ev.desc || "").replace(/^Guida:.*?\|\s*/i, "").trim();
-    if(cleanDesc) txt += "📝 " + b + "Info Evento:" + b + "\n" + cleanDesc + "\n\n";
+
+    if (oraIn) {
+        txt += "🕒 " + b + "Orari:" + b + " " + oraIn + (oraOut ? " ➡️ " + oraOut : "") + "\n\n";
+    }
+
+    if (luogo) {
+        txt += "📍 " + b + "Luogo:" + b + " " + luogo + (link ? " (" + link + ")" : "") + "\n\n";
+    }
+
+    if (ev.km || ev.dislivello) {
+        txt += "⛰️ " + b + "Dati Tecnici:" + b + " " +
+            (ev.km ? ev.km + " km" : "") +
+            (ev.dislivello ? " | " + ev.dislivello + " m D+" : "") +
+            "\n\n";
+    }
+
+    if (eqStrs.length > 0) {
+        txt += "🎒 " + b + "Attrezzatura necessaria:" + b + "\n" + eqStrs.join(", ") + "\n\n";
+    }
+
+    if (cleanDesc) {
+        txt += "📝 " + b + "Info Evento:" + b + "\n" + cleanDesc + "\n\n";
+    }
 
     var infoNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
-    if(infoNum) txt += "📲 " + b + "Info e Prenotazioni:" + b + " " + infoNum + "\n\n";
+    if (infoNum) {
+        txt += "📲 " + b + "Info e Prenotazioni:" + b + " " + infoNum + "\n\n";
+    }
 
     // Gestione Immagine
     var useOriginal = false;
-    if(ev.fotoUrl && ev.fotoUrl.trim() !== '') {
+    if (ev.fotoUrl && ev.fotoUrl.trim() !== '') {
         var imgRadios = document.getElementsByName('imageChoice');
-        for(var r=0; r<imgRadios.length; r++) { if(imgRadios[r].checked && imgRadios[r].value === 'original') useOriginal = true; }
+        for (var r = 0; r < imgRadios.length; r++) {
+            if (imgRadios[r].checked && imgRadios[r].value === 'original') {
+                useOriginal = true;
+            }
+        }
     }
 
     var processImageBase64 = function(base64Src) {
+        if (!base64Src) {
+            fallbackCopy(txt);
+            return;
+        }
+
         var img = new Image();
-        img.crossOrigin = "Anonymous"; // Cruciale per scaricare da Cloudinary senza blocchi
+        img.crossOrigin = "Anonymous";
+
         img.onload = function() {
             var canvas = document.createElement('canvas');
             var ctx = canvas.getContext('2d');
             var max_size = 1000;
             var w = img.width, h = img.height;
-            if(w > h && w > max_size) { h *= max_size / w; w = max_size; }
-            else if(h > w && h > max_size) { w *= max_size / h; h = max_size; }
-            canvas.width = w; canvas.height = h;
+
+            if (w > h && w > max_size) {
+                h *= max_size / w;
+                w = max_size;
+            } else if (h > w && h > max_size) {
+                w *= max_size / h;
+                h = max_size;
+            }
+
+            canvas.width = w;
+            canvas.height = h;
             ctx.drawImage(img, 0, 0, w, h);
-            
-            // Stampa il Logo Partner (se presente)
+
             var logoBase64 = localStorage.getItem('wildu_partner_logo');
+
             var triggerFinalAction = function() {
-                // SALVIAMO SEMPRE IN MEMORIA PRIMA DI AGIRE (Bypassa i blocchi)
                 window.tempTgCanvas = canvas;
                 window.tempTgText = txt;
-                
-                var btn = document.getElementById('btn-do-share');
-                if(btn) { btn.disabled = false; btn.innerHTML = '✨ Genera e Copia'; }
-                
+
+                var liveBtn = document.getElementById('btn-do-share');
+                if (liveBtn) {
+                    liveBtn.disabled = false;
+                    liveBtn.innerHTML = '✨ Genera e Copia';
+                }
+
                 var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
-                if(mOpts) mOpts.hide();
-                
-                // Smistamento visivo Modali
+                if (mOpts) mOpts.hide();
+
                 if (isWA) {
                     new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
                 } else {
@@ -3579,8 +4002,10 @@ function executeSharePartner() {
             if (logoBase64) {
                 var logoImg = new Image();
                 logoImg.onload = function() {
-                    ctx.save(); ctx.globalAlpha = 0.8;
-                    var lW = w * 0.15; var lH = lW * (logoImg.height / logoImg.width);
+                    ctx.save();
+                    ctx.globalAlpha = 0.8;
+                    var lW = w * 0.15;
+                    var lH = lW * (logoImg.height / logoImg.width);
                     ctx.drawImage(logoImg, w - lW - 20, 20, lW, lH);
                     ctx.restore();
                     triggerFinalAction();
@@ -3591,17 +4016,23 @@ function executeSharePartner() {
                 triggerFinalAction();
             }
         };
-        img.onerror = function() { fallbackCopy(txt); };
+
+        img.onerror = function() {
+            fallbackCopy(txt);
+        };
+
         img.src = base64Src;
     };
 
-    if(useOriginal) {
+    if (useOriginal) {
         processImageBase64(ev.fotoUrl);
     } else {
         var fileInput = document.getElementById('shareImage');
-        if(fileInput && fileInput.files && fileInput.files[0]) {
+        if (fileInput && fileInput.files && fileInput.files[0]) {
             var reader = new FileReader();
-            reader.onload = function(e) { processImageBase64(e.target.result); };
+            reader.onload = function(e) {
+                processImageBase64(e.target.result);
+            };
             reader.readAsDataURL(fileInput.files[0]);
         } else {
             fallbackCopy(txt);
@@ -3819,49 +4250,42 @@ function renderProposals(data) {
     if (!container) return;
     container.innerHTML = "";
 
-    // Calcolo data odierna per lo spartiacque (Mezzanotte di oggi)
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
 
-    // 1. Unione e marcatura status
     let pending = (data.pending || []).map(p => ({ ...p, uiStatus: 'PENDING' }));
     let accepted = (data.accepted || []).map(a => ({ ...a, uiStatus: 'ACCEPTED' }));
     let rawAll = [...pending, ...accepted];
 
-    // 2. Smistamento FORTE (Futuro vs Passato)
     let futureItems = [];
     let pastItems = [];
 
-        rawAll.forEach(item => {
+    rawAll.forEach(item => {
         const itemDate = parseEventDate(item.dataInizio);
-        
+
         if (itemDate === null) {
             console.error(`🚨 Invariante violata: Evento ${getEventKey(item)} ha data corrotta o nulla.`, item);
-            item._hasDateError = true; // Flag neutrale per eventuale uso UI, non tocca il db status
-            futureItems.push(item); // Forzato tra i futuri per non farlo scomparire e permetterne la correzione
+            item._hasDateError = true;
+            futureItems.push(item);
             return;
         }
 
         if (itemDate < oggi) pastItems.push(item);
         else futureItems.push(item);
-      });
+    });
 
-    // 3. Selezione della lista in base al filtro scelto
     let filteredList = [];
     if (currentProposalFilter === "ALL") {
-        filteredList = futureItems; // "Tutte" mostra solo eventi da oggi in poi
+        filteredList = futureItems;
     } else if (currentProposalFilter === "PAST") {
-        filteredList = pastItems; // "Passati" mostra solo lo storico
+        filteredList = pastItems;
     } else {
-        // Pendenti o Accettate mostrano solo eventi futuri filtrate per status
         filteredList = futureItems.filter(p => p.uiStatus === currentProposalFilter);
     }
 
-    // 4. Ordinamento Cronologico Intelligente
     filteredList.sort((a, b) => {
-        const timeA = new Date(a.dataInizio.split('/').reverse().join('-')).getTime();
-        const timeB = new Date(b.dataInizio.split('/').reverse().join('-')).getTime();
-        // Se siamo nei passati, mostriamo i più recenti (ieri) per primi
+        const timeA = new Date((a.dataInizio || '').split('/').reverse().join('-')).getTime();
+        const timeB = new Date((b.dataInizio || '').split('/').reverse().join('-')).getTime();
         return currentProposalFilter === "PAST" ? timeB - timeA : timeA - timeB;
     });
 
@@ -3876,21 +4300,26 @@ function renderProposals(data) {
         const dIn = item.dataInizio || "N/D";
         const dFine = item.dataFine ? " - " + item.dataFine : "";
         const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
-        let itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27");
-        
+        const itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27");
+
         const isPaid = (item.tipo === 'PAID' || (item.prezzo && item.prezzo != "0"));
         const colorClass = item.uiStatus === 'PENDING' ? 'warning' : 'success';
-        
-        // 🟢 Scritta leggera di stato (In alto a DX)
-        const labelStato = item.uiStatus === 'PENDING' 
-            ? `<span class="status-label status-pendente">Pendente</span>` 
+
+        const safeTitle = safeHtmlText(item.titolo || "Senza Titolo", 160);
+        const safeDateLine = safeHtmlText(`${dIn}${dFine}${orari}`, 120);
+        const safeLocation = safeHtmlText(item.luogoNome || item.luogo || "", 240);
+        const safeDesc = safeHtmlMultiline(item.desc || item.descrizione || "", 2500);
+        const safeMapUrl = sanitizeHttpUrl(item.luogoLink || item.link || "#");
+        const safePrezzo = safeHtmlText(String(item.prezzo || ""), 32);
+
+        const labelStato = item.uiStatus === 'PENDING'
+            ? `<span class="status-label status-pendente">Pendente</span>`
             : `<span class="status-label status-approvata">Approvata</span>`;
 
-        // Logica Badge Iscritti (Recupero integrale originale)
         let conteggioIscritti = (item.iscritti && Array.isArray(item.iscritti)) ? item.iscritti.length : 0;
         let badgeIscritti = "";
         if (item.uiStatus === 'ACCEPTED') {
-            let max = parseInt(item.postiMax);
+            let max = parseInt(item.postiMax, 10);
             if (!isNaN(max) && max > 0) {
                 if (conteggioIscritti >= max) {
                     badgeIscritti = `<span class="badge bg-danger ms-2">${conteggioIscritti}/${max}</span>`;
@@ -3904,12 +4333,20 @@ function renderProposals(data) {
             }
         }
 
-        // Separatori Mesi
         const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-        const dParts = dIn.split('/');
-        const currentMonthYear = monthNames[parseInt(dParts[1]) - 1] + " " + dParts[2];
+        let currentMonthYear = "Data non valida";
+
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dIn)) {
+            const dParts = dIn.split('/');
+            const monthIndex = parseInt(dParts[1], 10) - 1;
+            const yearPart = dParts[2];
+            if (monthIndex >= 0 && monthIndex < 12 && yearPart) {
+                currentMonthYear = monthNames[monthIndex] + " " + yearPart;
+            }
+        }
+
         if (currentMonthYear !== lastMonthYear) {
-            container.innerHTML += `<div class="month-divider"><span>${currentMonthYear}</span></div>`;
+            container.innerHTML += `<div class="month-divider"><span>${safeHtmlText(currentMonthYear, 40)}</span></div>`;
             lastMonthYear = currentMonthYear;
         }
 
@@ -3919,18 +4356,18 @@ function renderProposals(data) {
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
                             <div class="card-header-flex mb-2">
-                                ${isPaid 
-                                    ? `<span class="badge bg-warning text-dark fw-bold">PAY-DAY €${item.prezzo}</span>`
+                                ${isPaid
+                                    ? `<span class="badge bg-warning text-dark fw-bold">PAY-DAY €${safePrezzo}</span>`
                                     : `<span class="badge bg-success text-white fw-bold">OPEN DAY</span>`
                                 }
                                 ${badgeIscritti}
                                 ${labelStato}
                             </div>
-                            <h6 class="text-white fw-bold m-0 mb-1">${item.titolo || "Senza Titolo"}</h6>
+                            <h6 class="text-white fw-bold m-0 mb-1">${safeTitle}</h6>
                             <div class="small text-info fw-bold">
-                                <i class="bi bi-calendar-event"></i> ${dIn}${dFine}${orari}
+                                <i class="bi bi-calendar-event"></i> ${safeDateLine}
                                 <br>
-                                <i class="bi bi-geo-alt"></i> ${item.luogoNome || item.luogo || ""}
+                                <i class="bi bi-geo-alt"></i> ${safeLocation}
                             </div>
                         </div>
                         <div class="ps-2"><i class="bi bi-chevron-down expand-indicator fs-5"></i></div>
@@ -3938,9 +4375,9 @@ function renderProposals(data) {
 
                     <div class="card-body-expanded">
                         <div class="pt-3 mt-3 border-top border-secondary">
-                            <p class="small text-light opacity-75 mb-3">${item.desc || item.descrizione || ""}</p>
+                            <p class="small text-light opacity-75 mb-3">${safeDesc}</p>
                             <div class="d-flex gap-2">
-                                <a href="${item.luogoLink || item.link || "#"}" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1" onclick="event.stopPropagation()"><i class="bi bi-map"></i> Mappa</a>
+                                <a href="${safeMapUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1" onclick="event.stopPropagation()"><i class="bi bi-map"></i> Mappa</a>
                                 <button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="event.stopPropagation(); mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info</button>
                             </div>
                             <button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="event.stopPropagation(); riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi</button>
