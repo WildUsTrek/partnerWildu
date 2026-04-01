@@ -4233,6 +4233,16 @@ async function condividiNativo() {
     const btn = document.querySelector('[onclick="condividiNativo()"]');
     if (!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
 
+    // 🪂 PARACADUTE: Copia preventiva del testo (indispensabile per il fix PC/Android)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(window.tempTgText);
+            console.log("🪂 Paracadute attivato: testo copiato negli appunti.");
+        } catch (err) {
+            console.warn("Impossibile attivare paracadute copia.");
+        }
+    }
+
     // Trasformiamo il Blob in un File fisico che il sistema operativo può "sentire"
     const file = new File([window.tempTgBlob], "Locandina_Wildu.png", { type: "image/png" });
     
@@ -4245,6 +4255,11 @@ async function condividiNativo() {
 
     // Controllo compatibilità: il browser supporta l'invio di file?
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+
+        // 🚀 EDUCAZIONE: Avviso "Just-in-Time" (si attiva solo se il browser supporta lo share)
+        const procedi = confirm("Abbiamo preparato foto e testo.\n\n💡 NOTA: Se dopo aver scelto WhatsApp non vedi la descrizione, clicca nel campo di testo e fai 'Incolla': l'abbiamo già copiata per te!\n\nVuoi procedere?");
+        if (!procedi) return;
+
         try {
             await navigator.share(shareData);
             // Feedback visivo di successo
@@ -4261,7 +4276,7 @@ async function condividiNativo() {
         // Fallback: se il browser è vecchio (es. Chrome su PC o vecchi Android)
         alert("⚠️ Il tuo browser o dispositivo non supporta la condivisione diretta di file.\n\nUsa i tasti qui sotto per copiare immagine e testo separatamente!");
     }
-}  
+}
 
 
   
