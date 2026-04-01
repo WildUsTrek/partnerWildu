@@ -3756,6 +3756,7 @@ async function openMyProposals() {
 // =========================================================
 window.currentShareItem = null;
 window.tempTgCanvas = null;
+window.tempTgBlob = null;
 window.tempTgText = "";  
 
 function openSharePartner(itemEncoded) {
@@ -3841,10 +3842,15 @@ function executeSharePartner() {
         return;
     }
 
-    if (btn) {
+        if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Elaborazione...';
     }
+
+    // Reset stato temporaneo per evitare riuso di canvas/blob vecchi
+    window.tempTgCanvas = null;
+    window.tempTgBlob = null;
+    window.tempTgText = "";
 
     function normalizeItalianDate(raw) {
         if (!raw) return "N/D";
@@ -3958,7 +3964,7 @@ function executeSharePartner() {
 
 var processImageBase64 = function(base64Src) {
             if (!base64Src) {
-                fallbackCopy(txt);
+                fallbackCopy(txt, isWA);
                 return;
             }
 
@@ -3991,14 +3997,13 @@ var processImageBase64 = function(base64Src) {
 
                     try {
                         canvas.toBlob(function(blob) {
-                            // Se per qualche motivo strano il browser fallisce silenziosamente
                             if (!blob) {
                                 console.warn("toBlob ha restituito null (possibile canvas infetto).");
-                                fallbackCopy(txt);
+                                fallbackCopy(txt, isWA);
                                 return;
                             }
 
-                            window.tempTgBlob = blob; // Salvataggio in globale
+                            window.tempTgBlob = blob;
 
                             var liveBtn = document.getElementById('btn-do-share');
                             if (liveBtn) {
@@ -4016,9 +4021,8 @@ var processImageBase64 = function(base64Src) {
                             }
                         }, 'image/png');
                     } catch (e) {
-                        // CATTURA L'ECCEZIONE DI SICUREZZA (SecurityError)
                         console.error("Errore di sicurezza Canvas (Tainted Canvas):", e);
-                        fallbackCopy(txt); // Fallback pulito che ripristina anche la UI
+                        fallbackCopy(txt, isWA);
                     }
                 };
 
@@ -4041,10 +4045,9 @@ var processImageBase64 = function(base64Src) {
             };
 
             img.onerror = function() {
-                fallbackCopy(txt);
+                fallbackCopy(txt, isWA);
             };
 
-            // 🛡️ Bypass della cache per evitare versioni dell'immagine prive di header CORS
             if (base64Src.startsWith('http')) {
                 base64Src += (base64Src.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
             }
@@ -4174,11 +4177,10 @@ function copyToClipboard(canvas, txt, isWA) {
         canvas.toBlob(function(blob) {
             if (!blob) {
                 console.warn("Canvas toBlob ha restituito null.");
-                fallbackCopy(txt);
+                fallbackCopy(txt, isWA);
                 return;
             }
             try {
-                // Costruzione atomica dell'Item
                 var item = new ClipboardItem({
                     "text/plain": new Blob([txt], { type: "text/plain" }),
                     "image/png": blob
@@ -4188,41 +4190,47 @@ function copyToClipboard(canvas, txt, isWA) {
                     finishSharePartner(true, isWA);
                 }).catch(function(e) {
                     console.warn("Write clipboard negato (spesso su iOS):", e);
-                    fallbackCopy(txt);
+                    fallbackCopy(txt, isWA);
                 });
             } catch(e) {
                 console.warn("Errore generazione ClipboardItem", e);
-                fallbackCopy(txt);
+                fallbackCopy(txt, isWA);
             }
         }, 'image/png');
     } catch(e) {
         console.warn("Errore generale Clipboard API", e);
-        fallbackCopy(txt);
+        fallbackCopy(txt, isWA);
     }
 }
 
-function fallbackCopy(txt) {
-    navigator.clipboard.writeText(txt).then(function() { finishSharePartner(false, false); });
+function fallbackCopy(txt, isWA) {
+    navigator.clipboard.writeText(txt).then(function() {
+        finishSharePartner(false, isWA);
+    }).catch(function(e) {
+        console.warn("Fallback testo non riuscito:", e);
+        finishSharePartner(false, isWA);
+    });
 }
 
 function finishSharePartner(hasImage, isWA, isDownloaded = false) {
-    // 1. Riabilitiamo e ripristiniamo il bottone del modale precedente
     var btn = document.getElementById('btn-do-share');
-    if(btn) { btn.disabled = false; btn.innerHTML = '✨ Genera e Copia'; }
+    if(btn) {
+        btn.disabled = false;
+        btn.innerHTML = '✨ Genera e Copia';
+    }
     
-    // 2. Chiudiamo il modale delle opzioni
     var mOpts = bootstrap.Modal.getInstance(document.getElementById('modalSharePartner'));
     if(mOpts) mOpts.hide();
     
-    // 3. Smistamento intelligente
-    if (hasImage && isWA) {
-        // WhatsApp: Modale con micro-guida
+    var hasPreparedMedia = !!(window.tempTgCanvas || window.tempTgBlob);
+
+    if (isWA && (hasImage || hasPreparedMedia)) {
         new bootstrap.Modal(document.getElementById('modalShareInstructions')).show();
+    } else if (!isWA && (hasImage || hasPreparedMedia)) {
+        new bootstrap.Modal(document.getElementById('modalShareTelegram')).show();
     } else if (hasImage && !isWA && isDownloaded) {
-        // Telegram/FB: Immagine scaricata + Testo copiato (A prova di nonno)
         alert("📥 LOCANDINA SALVATA!\nAbbiamo scaricato l'immagine nella tua Galleria e copiato il testo.\n\nPer Telegram o Facebook:\n1️⃣ Apri l'App.\n2️⃣ Allega la foto dalla tua galleria.\n3️⃣ Fai 'Incolla' per aggiungere il testo.\n\nFacilissimo!");
     } else {
-        // Fallback: Solo Testo
         var nomeApp = isWA ? "WhatsApp" : "Telegram/Facebook";
         alert("✅ Testo copiato negli appunti con successo!\nOra vai su " + nomeApp + " e incollalo.");
     }
