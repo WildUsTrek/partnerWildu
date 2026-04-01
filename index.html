@@ -4222,6 +4222,43 @@ function fallbackCopy(txt, isWA) {
     });
 }
 
+
+async function condividiNativo() {
+    const btn = document.querySelector('[onclick="condividiNativo()"]');
+    if (!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
+
+    // Trasformiamo il Blob in un File fisico che il sistema operativo può "sentire"
+    const file = new File([window.tempTgBlob], "Locandina_Wildu.png", { type: "image/png" });
+    
+    // Prepariamo il pacchetto (Foto + Testo)
+    const shareData = {
+        files: [file],
+        title: 'Evento Wildu',
+        text: window.tempTgText
+    };
+
+    // Controllo compatibilità: il browser supporta l'invio di file?
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share(shareData);
+            // Feedback visivo di successo
+            if(btn) {
+                const oldHtml = btn.innerHTML;
+                btn.innerHTML = '✅ Inviato!';
+                setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+            }
+        } catch (err) {
+            // Se l'utente annulla la condivisione, non facciamo nulla
+            if (err.name !== 'AbortError') console.error("Errore Share:", err);
+        }
+    } else {
+        // Fallback: se il browser è vecchio (es. Chrome su PC o vecchi Android)
+        alert("⚠️ Il tuo browser o dispositivo non supporta la condivisione diretta di file.\n\nUsa i tasti qui sotto per copiare immagine e testo separatamente!");
+    }
+}  
+
+
+  
 function finishSharePartner(hasImage, isWA, isDownloaded = false) {
     var btn = document.getElementById('btn-do-share');
     if(btn) {
@@ -5628,7 +5665,18 @@ const user = firebase.auth().currentUser;
                 <h3 class="modal-title fw-bold text-success m-0"><i class="bi bi-whatsapp"></i> WhatsApp Pronto</h3>
                 <p class="text-muted small mt-2">Segui questi 2 passaggi per incollare l'evento su WhatsApp:</p>
             </div>
+          
             <div class="modal-body p-4 pt-0">
+                <div class="bg-primary bg-opacity-10 p-3 rounded-4 mb-3 border border-primary border-opacity-25">
+                    <div class="fw-bold text-primary fs-5 mb-2"><i class="bi bi-lightning-fill"></i> Invio Rapido</div>
+                    <p class="text-muted small mb-3">Invia foto e testo insieme in un colpo (solo alcuni telefoni).</p>
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm" onclick="condividiNativo()">
+                        <i class="bi bi-share-fill"></i> CONDIVIDI TUTTO
+                    </button>
+                </div>
+
+                <div class="text-center my-3 opacity-50 small">— OPPURE PROCEDI MANUALMENTE (safe tutti tel) —</div>
+
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
                     <div class="fw-bold text-white fs-5 mb-2">1. La Locandina</div>
                     <p class="text-muted small mb-3">Copia l'immagine, apri WhatsApp, incollala nella chat, <b>poi torna qui</b>.</p>
@@ -5638,7 +5686,7 @@ const user = firebase.auth().currentUser;
                 </div>
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
                     <div class="fw-bold text-white fs-5 mb-2">2. Il Testo</div>
-                    <p class="text-muted small mb-3">Ora copia il testo, torna su WhatsApp e incollalo nello spazio sotto la foto selezionando come "solo testo".</p>
+                    <p class="text-muted small mb-3">Ora copia il testo, torna su WhatsApp e incollalo sotto la foto.</p>
                     <button id="btn-wa-txt" class="btn btn-outline-warning w-100 rounded-pill fw-bold" onclick="copiaTestoWa()">
                         <i class="bi bi-fonts"></i> Copia Testo
                     </button>
@@ -5648,6 +5696,7 @@ const user = firebase.auth().currentUser;
                     <div class="col-6"><button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold p-3" data-bs-dismiss="modal">Chiudi</button></div>
                 </div>
             </div>
+          
         </div>
     </div>
 </div>
@@ -5657,15 +5706,23 @@ const user = firebase.auth().currentUser;
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-info border-2 rounded-4 shadow-lg">
             <div class="modal-header border-0 p-4 pb-2 text-center d-block">
-                <h3 class="modal-title fw-bold text-info m-0"><i class="bi bi-telegram"></i> Condividi su Telegram</h3>
+                <h3 class="modal-title fw-bold text-info m-0"><i class="bi bi-telegram"></i> Condividi su Telegram (solo alcuni telefoni)</h3>
                 <p class="text-muted small mt-2">Telegram richiede di copiare foto e testo separatamente. Segui i 2 passaggi:</p>
             </div>
+          
             <div class="modal-body p-4 pt-0">
-                
+                <div class="bg-primary bg-opacity-10 p-3 rounded-4 mb-3 border border-primary border-opacity-25">
+                    <div class="fw-bold text-primary fs-5 mb-2"><i class="bi bi-lightning-fill"></i> Invio Rapido</div>
+                    <p class="text-muted small mb-3">Invia locandina e info direttamente a Telegram o Facebook.</p>
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm" onclick="condividiNativo()">
+                        <i class="bi bi-share-fill"></i> CONDIVIDI ORA
+                    </button>
+                </div>
+
+                <div class="text-center my-3 opacity-50 small">— OPPURE COPIA SINGOLARMENTE (safe tutti tel) —</div>
+
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold text-white fs-5">1. La Locandina</div>
-                    </div>
+                    <div class="fw-bold text-white fs-5 mb-2">1. La Locandina</div>
                     <p class="text-muted small mb-3">Copia l'immagine, vai su Telegram, incollala nella chat, <b>poi torna qui</b>.</p>
                     <button id="btn-tg-img" class="btn btn-outline-info w-100 rounded-pill fw-bold" onclick="copiaImmagineTg()">
                         <i class="bi bi-image"></i> Copia Immagine
@@ -5673,10 +5730,8 @@ const user = firebase.auth().currentUser;
                 </div>
 
                 <div class="bg-black p-3 rounded-4 mb-3" style="background: rgba(0,0,0,0.3); border: 1px solid #252525;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold text-white fs-5">2. La Didascalia</div>
-                    </div>
-                    <p class="text-muted small mb-3">Ora copia il testo, torna su Telegram e incollalo nello spazio sotto la foto come solo testo.</p>
+                    <div class="fw-bold text-white fs-5 mb-2">2. La Didascalia</div>
+                    <p class="text-muted small mb-3">Ora copia il testo, torna su Telegram e incollalo sotto la foto.</p>
                     <button id="btn-tg-txt" class="btn btn-outline-warning w-100 rounded-pill fw-bold" onclick="copiaTestoTg()">
                         <i class="bi bi-fonts"></i> Copia Testo
                     </button>
@@ -5687,8 +5742,8 @@ const user = firebase.auth().currentUser;
                         Finito, Chiudi
                     </button>
                 </div>
-
             </div>
+          
         </div>
     </div>
 </div> 
