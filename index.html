@@ -3779,14 +3779,14 @@ function openSharePartner(itemEncoded) {
             <h6 class="fw-bold text-info mb-3">2. Immagine Copertina</h6>
             <div class="form-check mb-2">
                 <input class="form-check-input" type="radio" name="imageChoice" id="imgChoice1" value="original" checked onchange="document.getElementById('customImageDiv').style.display='none'">
-                <label class="form-check-label fw-bold text-light" for="imgChoice1"> Usa foto originale</label>
+                <label class="form-check-label fw-bold text-light ms-2" for="imgChoice1">Usa foto originale</label>
             </div>
             <div class="mb-3 ms-4">
                 <img src="${ev.fotoUrl}" class="img-fluid rounded shadow-sm border border-secondary" style="max-height: 140px; object-fit: cover;">
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="radio" name="imageChoice" id="imgChoice2" value="custom" onchange="document.getElementById('customImageDiv').style.display='block'">
-                <label class="form-check-label fw-bold text-light" for="imgChoice2"> Carica una nuova foto al volo</label>
+                <label class="form-check-label fw-bold text-light ms-2" for="imgChoice2">Carica una nuova foto al volo</label>
             </div>
             <div id="customImageDiv" style="display:none;" class="mt-3 pt-2 border-top border-secondary ms-4">
                 <input type="file" id="shareImage" class="form-control form-control-sm bg-dark text-white" accept="image/*">
@@ -3799,7 +3799,7 @@ function openSharePartner(itemEncoded) {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border-0 rounded-4 shadow-lg">
                 <div class="modal-header border-secondary p-4">
-                    <h5 class="modal-title fw-bold mb-0 text-info"><i class="bi bi-share"></i> Condividi Evento</h5>
+                    <h5 class="modal-title fw-bold mb-0 text-info"><i class="bi bi-share"></i>Condividi Evento</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
@@ -3807,11 +3807,11 @@ function openSharePartner(itemEncoded) {
                     <div class="card p-3 border-0 shadow-sm mb-4" style="background: #252525;">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="hookType" id="h1" value="Nuovo evento in arrivo 🔥" checked>
-                            <label class="form-check-label fw-bold" for="h1"> Nuovo evento in arrivo 🔥</label>
+                            <label class="form-check-label fw-bold ms-2" for="h1">Nuovo evento in arrivo 🔥</label>
                         </div>
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="hookType" id="h2" value="Andiamo a camminare! 🥾">
-                            <label class="form-check-label fw-bold" for="h2"> Andiamo a camminare! 🥾</label>
+                            <label class="form-check-label fw-bold ms-2" for="h2">Andiamo a camminare! 🥾</label>
                         </div>
                     </div>
 
