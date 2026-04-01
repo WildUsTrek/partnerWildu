@@ -4028,6 +4028,10 @@ var processImageBase64 = function(base64Src) {
 
                 if (logoBase64) {
                     var logoImg = new Image();
+                    
+                    // 🛡️ ECCO IL VACCINO: Chiediamo il passaporto CORS anche per il logo!
+                    logoImg.crossOrigin = "Anonymous"; 
+
                     logoImg.onload = function() {
                         ctx.save();
                         ctx.globalAlpha = 0.8;
@@ -4038,6 +4042,12 @@ var processImageBase64 = function(base64Src) {
                         triggerFinalAction();
                     };
                     logoImg.onerror = triggerFinalAction;
+                    
+                    // 🛡️ E per estrema sicurezza, bypassiamo la cache anche per il logo
+                    if (logoBase64.startsWith('http')) {
+                        logoBase64 += (logoBase64.includes('?') ? '&' : '?') + 'nocache_logo=' + Date.now();
+                    }
+                    
                     logoImg.src = logoBase64;
                 } else {
                     triggerFinalAction();
