@@ -4100,24 +4100,33 @@ function fallbackSalvaImmagineUniversale(blob, tipo) {
 function copiaImmagineWa() {
     var btn = document.getElementById('btn-wa-img');
     if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
+
+    if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+        console.warn("⚠️ Clipboard API non disponibile, innesco paracadute...");
+        fallbackSalvaImmagineUniversale(window.tempTgBlob, 'WhatsApp');
+        return;
+    }
     
     try {
-        // 🍎 Trucco per Safari: passiamo un array con un singolo ClipboardItem contenente il Blob
-        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
+        // 🍎 Safari/WebKit digeriscono meglio una Promise che risolve il Blob
+        const item = new ClipboardItem({
+            "image/png": Promise.resolve(window.tempTgBlob)
+        });
+
         navigator.clipboard.write([item]).then(function() {
-            btn.classList.remove('btn-outline-success'); 
-            btn.classList.add('btn-success', 'text-white'); 
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-success', 'text-white');
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-            setTimeout(() => { 
-                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
-                btn.classList.add('btn-outline-success'); 
-                btn.classList.remove('btn-success', 'text-white'); 
+            setTimeout(() => {
+                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine';
+                btn.classList.add('btn-outline-success');
+                btn.classList.remove('btn-success', 'text-white');
             }, 3000);
-        }).catch(function(e) { 
+        }).catch(function(e) {
             console.warn("⚠️ Clipboard API respinta (iOS o policy browser), innesco paracadute...", e);
             fallbackSalvaImmagineUniversale(window.tempTgBlob, 'WhatsApp');
         });
-    } catch(e) { 
+    } catch(e) {
         console.warn("⚠️ Costruttore ClipboardItem non supportato, innesco paracadute...", e);
         fallbackSalvaImmagineUniversale(window.tempTgBlob, 'WhatsApp');
     }
@@ -4127,16 +4136,25 @@ function copiaImmagineTg() {
     var btn = document.getElementById('btn-tg-img');
     if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
 
+    if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+        console.warn("⚠️ Clipboard API non disponibile, innesco paracadute...");
+        fallbackSalvaImmagineUniversale(window.tempTgBlob, 'Telegram/Facebook');
+        return;
+    }
+
     try {
-        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
+        const item = new ClipboardItem({
+            "image/png": Promise.resolve(window.tempTgBlob)
+        });
+
         navigator.clipboard.write([item]).then(function() {
-            btn.classList.remove('btn-outline-info'); 
-            btn.classList.add('btn-info', 'text-white'); 
+            btn.classList.remove('btn-outline-info');
+            btn.classList.add('btn-info', 'text-white');
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-            setTimeout(() => { 
-                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
-                btn.classList.add('btn-outline-info'); 
-                btn.classList.remove('btn-info', 'text-white'); 
+            setTimeout(() => {
+                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine';
+                btn.classList.add('btn-outline-info');
+                btn.classList.remove('btn-info', 'text-white');
             }, 3000);
         }).catch(function(e) {
             console.warn("⚠️ Clipboard API respinta (iOS o policy browser), innesco paracadute...", e);
@@ -4147,7 +4165,6 @@ function copiaImmagineTg() {
         fallbackSalvaImmagineUniversale(window.tempTgBlob, 'Telegram/Facebook');
     }
 }
-  
 
 function copyToClipboard(canvas, txt, isWA) {
     var btn = document.getElementById('btn-do-share');
