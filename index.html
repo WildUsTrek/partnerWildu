@@ -735,7 +735,7 @@ body {
       <label class="text-primary small fw-bold">NOME E COGNOME</label>
       <input type="text" id="p_nome_completo" class="form-control mb-3" placeholder="Es. Mario Rossi">
       <label class="text-primary small fw-bold">WHATSAPP</label>
-      <input type="tel" id="p_whatsapp" class="form-control mb-4" placeholder="Es. +393331234567" inputmode="tel" oninput="this.value = this.value.replace(/[^+0-9]/g, '').replace(/(.+)\+/g, '$1')">
+      <input type="tel" id="p_whatsapp" class="form-control mb-4" placeholder="Es. +393331234567" inputmode="tel" autocomplete="tel" oninput="this.value = this.value.replace(/[^+0-9]/g, '').replace(/(.+)\+/g, '$1')">
     </div>
     <button class="btn btn-primary rounded-pill w-100 fw-bold p-3" type="button" onclick="saveFirstProfile()">SALVA E INIZIA</button>
   </div>
@@ -5604,7 +5604,7 @@ document.addEventListener('input', function (e) {
     <label class="text-primary small fw-bold mb-1">NOME E COGNOME</label>
     <input type="text" id="edit_p_nome" class="form-control mb-3">
     <label class="text-primary small fw-bold mb-1">TELEFONO (WHATSAPP)</label>
-    <input type="tel" id="edit_p_tel" class="form-control mb-4" placeholder="Es. +393331234567" inputmode="tel" oninput="this.value = this.value.replace(/[^+0-9]/g, '').replace(/(.+)\+/g, '$1')">
+    <input type="tel" id="edit_p_tel" class="form-control mb-4" placeholder="Es. +393331234567" inputmode="tel" autocomplete="tel" oninput="this.value = this.value.replace(/[^+0-9]/g, '').replace(/(.+)\+/g, '$1')">
 
 <label class="text-primary small fw-bold mb-1 mt-2">IL TUO LOGO</label>
     <div class="d-flex align-items-center mb-4 p-3 rounded-4" style="background: rgba(13,110,253,0.05); border: 1px dashed #333;">
