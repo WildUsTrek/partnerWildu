@@ -4067,6 +4067,88 @@ var processImageBase64 = function(base64Src) {
     }
 }
 
+
+
+  // 🪂 PARACADUTE DI EMERGENZA: Si attiva se il Clipboard fallisce (Safari/In-App)
+function fallbackSalvaImmagineUniversale(blob, tipo) {
+    const fileName = "Locandina_Wildu_" + Date.now() + ".png";
+    const file = new File([blob], fileName, { type: "image/png" });
+
+    // Tentativo A: Web Share API (Apre la tendina nativa di iOS/Android con la foto già pronta)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({
+            title: 'Locandina Evento Wildu',
+            files: [file]
+        }).catch(e => console.log("Condivisione annullata dall'utente."));
+    } else {
+        // Tentativo B: Download classico (Forza lo scaricamento del file nella galleria/download)
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        alert(`📥 Copia diretta bloccata dal browser.\nAbbiamo salvato l'immagine nei tuoi Download/Galleria.\n\nVai su ${tipo} e allegala manualmente!`);
+    }
+}
+
+function copiaImmagineWa() {
+    var btn = document.getElementById('btn-wa-img');
+    if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
+    
+    try {
+        // 🍎 Trucco per Safari: passiamo un array con un singolo ClipboardItem contenente il Blob
+        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
+        navigator.clipboard.write([item]).then(function() {
+            btn.classList.remove('btn-outline-success'); 
+            btn.classList.add('btn-success', 'text-white'); 
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
+            setTimeout(() => { 
+                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
+                btn.classList.add('btn-outline-success'); 
+                btn.classList.remove('btn-success', 'text-white'); 
+            }, 3000);
+        }).catch(function(e) { 
+            console.warn("⚠️ Clipboard API respinta (iOS o policy browser), innesco paracadute...", e);
+            fallbackSalvaImmagineUniversale(window.tempTgBlob, 'WhatsApp');
+        });
+    } catch(e) { 
+        console.warn("⚠️ Costruttore ClipboardItem non supportato, innesco paracadute...", e);
+        fallbackSalvaImmagineUniversale(window.tempTgBlob, 'WhatsApp');
+    }
+}
+
+function copiaImmagineTg() {
+    var btn = document.getElementById('btn-tg-img');
+    if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
+
+    try {
+        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
+        navigator.clipboard.write([item]).then(function() {
+            btn.classList.remove('btn-outline-info'); 
+            btn.classList.add('btn-info', 'text-white'); 
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
+            setTimeout(() => { 
+                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
+                btn.classList.add('btn-outline-info'); 
+                btn.classList.remove('btn-info', 'text-white'); 
+            }, 3000);
+        }).catch(function(e) {
+            console.warn("⚠️ Clipboard API respinta (iOS o policy browser), innesco paracadute...", e);
+            fallbackSalvaImmagineUniversale(window.tempTgBlob, 'Telegram/Facebook');
+        });
+    } catch(e) {
+        console.warn("⚠️ Costruttore ClipboardItem non supportato, innesco paracadute...", e);
+        fallbackSalvaImmagineUniversale(window.tempTgBlob, 'Telegram/Facebook');
+    }
+}
+  
+
 function copyToClipboard(canvas, txt, isWA) {
     var btn = document.getElementById('btn-do-share');
     if(btn) { btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Copia...'; }
@@ -4129,29 +4211,6 @@ function finishSharePartner(hasImage, isWA, isDownloaded = false) {
     }
 }
 
-function copiaImmagineTg() {
-    var btn = document.getElementById('btn-tg-img');
-    if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
-
-    try {
-        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
-        navigator.clipboard.write([item]).then(function() {
-            btn.classList.remove('btn-outline-info'); 
-            btn.classList.add('btn-info', 'text-white'); 
-            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-            setTimeout(() => { 
-                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
-                btn.classList.add('btn-outline-info'); 
-                btn.classList.remove('btn-info', 'text-white'); 
-            }, 3000);
-        }).catch(function(e) {
-            console.error(e);
-            alert("⚠️ Il tuo browser blocca la copia diretta. Usa 'Genera Locandina'.");
-        });
-    } catch(e) {
-        alert("⚠️ Funzione non supportata dal tuo browser.");
-    }
-}
 
 function copiaTestoTg() {
     var btn = document.getElementById('btn-tg-txt');
@@ -5045,29 +5104,6 @@ function showLocandinaFallback(dataUrl) {
 }
 
 
-function copiaImmagineWa() {
-    var btn = document.getElementById('btn-wa-img');
-    if(!window.tempTgBlob) return alert("⚠️ Immagine in elaborazione, riprova tra un secondo.");
-    
-    try {
-        const item = new ClipboardItem({ "image/png": window.tempTgBlob });
-        navigator.clipboard.write([item]).then(function() {
-            btn.classList.remove('btn-outline-success'); 
-            btn.classList.add('btn-success', 'text-white'); 
-            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Immagine Copiata!';
-            setTimeout(() => { 
-                btn.innerHTML = '<i class="bi bi-image"></i> Copia Immagine'; 
-                btn.classList.add('btn-outline-success'); 
-                btn.classList.remove('btn-success', 'text-white'); 
-            }, 3000);
-        }).catch(function(e) { 
-            console.error(e);
-            alert("⚠️ Il browser blocca la copia diretta. Usa 'Genera Locandina'."); 
-        });
-    } catch(e) { 
-        alert("⚠️ Funzione non supportata dal tuo browser."); 
-    }
-}
 
 function copiaTestoWa() {
     var btn = document.getElementById('btn-wa-txt');
