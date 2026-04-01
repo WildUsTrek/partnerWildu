@@ -4539,12 +4539,16 @@ function renderProposals(data) {
                                 <button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="event.stopPropagation(); mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info</button>
                             </div>
                             <button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="event.stopPropagation(); riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi</button>
+                            
                             ${item.uiStatus === 'PENDING' ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')">Ritira</button>` : ''}
                             <button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); generaLocandina('${itemStr}')">Locandina</button>
+                            
+                            <button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Post</button>
+
                             ${item.uiStatus === 'ACCEPTED' ? `
-                                <button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Post</button>
                                 <button class="btn btn-sm btn-primary text-white rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); vediIscrittiPartner('${itemStr}')">Iscritti</button>
                             ` : ''}
+                            
                         </div>
                     </div>
                 </div>
