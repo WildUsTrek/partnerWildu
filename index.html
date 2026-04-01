@@ -4857,34 +4857,54 @@ function startSyncTimer() { pressTimer = setTimeout(() => { forceSync(); }, 3000
 function cancelSyncTimer() { clearTimeout(pressTimer); }
 
   
-function forceSync() {
+async function forceSync() {
     let input = prompt("🛠️ MODALITÀ TECNICA 🛠️\n\nInserisci il PIN di sicurezza per forzare il ripristino di sistema:");
     if (!input) return;
 
-    let improntaServer = null;
-    try {
-        const mem = sessionStorage.getItem('wildu_cache_proposte');
-        if (mem) {
-            const data = JSON.parse(mem);
-            if (data.config && data.config.pinSegreto) {
-                improntaServer = data.config.pinSegreto;
-            }
-        }
-    } catch(e) { console.warn("Memoria corrosa"); }
-
-    // 🛑 IL MURO: Se non c'è il PIN in memoria (es. offline e senza cache), non si passa. Nessuna backdoor.
-    if (!improntaServer) {
-        alert("❌ Impossibile verificare il PIN (Memoria vuota o server irraggiungibile). Se l'app è bloccata, ricarica la pagina o usa il Tasto Rosso di emergenza.");
-        return;
+    // 1. Preparazione UI
+    const loader = document.getElementById('loader');
+    if (loader) {
+        loader.style.display = 'flex';
+        const loaderText = loader.querySelector('h5');
+        if (loaderText) loaderText.innerText = "Verifica PIN sul server...";
     }
 
-    // Creiamo l'impronta e confrontiamo RIGOROSAMENTE con quella del server
-    const improntaDigitata = btoa("Wildu" + input.trim());
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error("Utente non autenticato. Ricarica l'app.");
 
-    if (improntaDigitata === improntaServer) {
-        // ☢️ PULIZIA NUCLEARE TOTALE
+        const safeToken = await user.getIdToken();
+
+        // 2. Chiamata sicura al Backend (Il Postino)
+        const response = await fetch(MOTORE_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "VERIFY_TECH_PIN", 
+                token: safeToken, 
+                pin: input.trim() 
+            })
+        });
+
+        const data = await response.json();
+
+        // 3. Gestione Risposta del Server
+        if (!data.success) {
+            // Gestione dei vari errori (Inclusi i blocchi Brute-Force)
+            if (data.error === "RATE_LIMIT") {
+                alert(`🛑 ACCESSO NEGATO\nHai superato i 5 tentativi consentiti.\nRiprovaci tra ${data.minutesLeft || 60} minuti.`);
+            } else if (data.error === "WRONG_PIN") {
+                alert(`❌ PIN errato.\nTentativi rimasti: ${data.attemptsLeft}`);
+            } else {
+                alert("❌ Errore: " + data.error);
+            }
+            return;
+        }
+
+        // 4. ✅ PIN CORRETTO (Validato dal Server) - Esecuzione Pulizia Nucleare
+        alert("✅ Autorizzazione server confermata. Pulizia cache in corso...");
+        
         sessionStorage.clear(); 
-        localStorage.removeItem('wildu_global_cooldown'); // Pulizia extra del nuovo timer
+        localStorage.removeItem('wildu_global_cooldown'); 
         
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -4895,22 +4915,23 @@ function forceSync() {
         }
         keysToRemove.forEach(k => localStorage.removeItem(k));
         
-        alert("✅ Autorizzazione confermata. Pulizia cache in corso...");
-        // 🔥 FORZA DOWNLOAD NUOVA VERSIONE (bypass totale cache)
-        // 🧨 DISTRUGGE SERVICE WORKER + BYPASS CACHE
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-        
-        setTimeout(() => {
+        // Distruzione Service Worker e Riavvio
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(r => r.unregister());
+                setTimeout(() => {
+                    location.href = location.pathname + "?v=" + Date.now();
+                }, 300);
+            });
+        } else {
             location.href = location.pathname + "?v=" + Date.now();
-        }, 300);
-    });
-} else {
-    location.href = location.pathname + "?v=" + Date.now();
-}
-    } else {
-        alert("❌ PIN errato. Operazione annullata.");
+        }
+
+    } catch (error) {
+        console.error("Errore verifica PIN:", error);
+        alert("⚠️ Impossibile contattare il server per la verifica. Controlla la connessione.");
+    } finally {
+        if (loader) loader.style.display = 'none';
     }
 }
 
