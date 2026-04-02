@@ -786,12 +786,12 @@ function goToStripe(tipo, btnElement) {
     }
 
     if (tipo === 'CHECKOUT') {
-        // 🚀 FIX STRIPE: Passiamo l'UID dentro i metadata della "Subscription", 
-        // così anche le fatture dei rinnovi futuri avranno il nostro UID Firebase!
-        const stripeLink = `https://buy.stripe.com/test_cNi00b50zboI5Fn3o1dMI00?client_reference_id=${user.uid}&subscription_data[metadata][client_reference_id]=${user.uid}`;
+        // 🌍 LIVE MODE: Manteniamo i parametri per il tracciamento dell'UID
+        const stripeLink = `https://buy.stripe.com/cNi00b50zboI5Fn3o1dMI00?client_reference_id=${user.uid}&subscription_data[metadata][client_reference_id]=${user.uid}`;
         window.open(stripeLink, '_blank');
     } else if (tipo === 'PORTAL') {
-        const portalLink = "https://billing.stripe.com/p/login/test_cNi00b50zboI5Fn3o1dMI00";
+        // 🌍 LIVE MODE: Portale reale per la gestione abbonamenti
+        const portalLink = "https://billing.stripe.com/p/login/cNi00b50zboI5Fn3o1dMI00";
         window.open(portalLink, '_blank');
     }
 }
