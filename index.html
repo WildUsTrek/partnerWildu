@@ -2893,7 +2893,7 @@ auth.onAuthStateChanged(async (user) => {
         if (doc.exists) {
           const data = doc.data() || {};
           nomeProfilo = (data.nome_cognome || "").trim();
-          telProfilo = (data.whatsapp || "").trim();
+          telProfilo = (String(data.whatsapp || "")).trim();
 
           // Profilo considerato valido solo se completo
           profiloValido = !!(nomeProfilo && telProfilo);
