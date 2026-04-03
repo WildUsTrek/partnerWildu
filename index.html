@@ -2996,6 +2996,7 @@ auth.onAuthStateChanged(async (user) => {
     }
   }
 });
+
   
 async function saveFirstProfile() {
   const user = auth.currentUser;
@@ -3005,19 +3006,19 @@ async function saveFirstProfile() {
   if (!nome || !tel) return alert("⚠️ Compila entrambi i campi!");
 
   try {
-    // 1. Salva su Firebase
+    // 1. Salva su Firebase (con Merge per rispettare le Security Rules e non sovrascrivere il Backend)
     await db.collection("users_partners").doc(user.uid).set({ 
       nome_cognome: nome, 
       whatsapp: tel, 
-      email: user.email, 
+      email: user.email,
       creato_il: firebase.firestore.FieldValue.serverTimestamp() 
-    });
+    }, { merge: true });
 
     // 2. Popola i campi nascosti necessari per il Master
     document.getElementById('g_nome').value = nome;
     document.getElementById('g_tel').value = tel;
 
-// 🧹 3. IL SEGRETO: DISTRUGGIAMO LA CACHE DEI FANTASMI!
+    // 🧹 3. IL SEGRETO: DISTRUGGIAMO LA CACHE DEI FANTASMI!
     // Così forziamo l'App a bussare al Master e imporgli i nuovi dati
     sessionStorage.removeItem('wildu_cache_proposte');
     sessionStorage.removeItem('wildu_cache_time');
