@@ -486,6 +486,7 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     height: 100%;
     align-items: center;
     padding: 0 10px;
+    scroll-snap-stop: always; /* Forza il magnetismo su ogni card */
 }
 
 .amazon-slider::-webkit-scrollbar { display: none; } /* Nasconde barra scorrimento */
@@ -606,13 +607,15 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
 
 /* Dettagli interni card */
 .amazon-det-img {
-    width: 120px;
-    height: 120px;
+    width: 100%;
+    max-width: 180px; /* 👈 Ingrandita per dare risalto al prodotto */
+    height: 180px;
     object-fit: contain;
     background: white;
-    border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 15px;
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3); /* Ombra per staccarla dal fondo nero */
 }
 
 .amazon-det-title {
@@ -6280,6 +6283,8 @@ async function initAmazonSponsors() {
 
         const data = docSnap.data();
         currentAmazonProducts = data.amazon_links || []; // <--- CAMBIA 'payload' SE IL CAMPO HA UN ALTRO NOME
+        // 🎲 Rimescola l'ordine dei prodotti ogni volta che carica
+        currentAmazonProducts.sort(() => Math.random() - 0.5);
 
         let html = "";
         
@@ -6309,6 +6314,19 @@ async function initAmazonSponsors() {
         // Sensore interazione umana per pausa
         slider.addEventListener('touchstart', pauseAmazonAutoScroll, {passive: true});
         slider.addEventListener('mousedown', pauseAmazonAutoScroll);
+
+      // 🧲 FIX MURO SWIPE: Se arrivi in fondo col dito, ti riporta all'inizio
+        slider.addEventListener('scroll', () => {
+            const isEnd = slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 1;
+            if (isEnd) {
+                setTimeout(() => {
+                    if (slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 1) {
+                        slider.scrollTo({ left: 0, behavior: 'smooth' });
+                    }
+                }, 400); // Leggero ritardo per assecondare il movimento del dito
+            }
+        });
+      
     } catch (e) { console.error("Errore sponsor:", e); }
 }
 
