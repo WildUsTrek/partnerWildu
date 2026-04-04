@@ -6139,19 +6139,20 @@ async function initAmazonSponsors() {
     if (!slider) return;
 
     try {
-        // 1. Recupero dati (Assumendo collezione 'official_sponsors')
-        const snapshot = await db.collection('official_sponsors')
-                                 .where('active', '==', true)
-                                 .get();
 
-        if (snapshot.empty) {
-            console.log("🛒 Nessuno sponsor Amazon attivo.");
-            return;
-        }
+      
+        // 1. Lettura Documento Unico prodotti_wildu
+        const docSnap = await db.collection('PARAMETERS_PARTNER').doc('prodotti_wildu').get();
+        if (!docSnap.exists) return;
+
+        const data = docSnap.data();
+        const prodotti = data.amazon_links || []; // <--- CAMBIA 'payload' SE IL CAMPO HA UN ALTRO NOME
 
         let html = "";
-        snapshot.forEach(doc => {
-            const p = doc.data();
+        prodotti.forEach(p => {
+            if (p.active !== true) return; // Salta i prodotti disattivati
+
+          
             html += `
                 <a href="${p.affiliate_url}" target="_blank" class="amazon-card">
                     <img src="${p.img_url}" alt="${p.title}">
