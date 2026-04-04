@@ -468,12 +468,13 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     left: 0;
     width: 100%;
     height: 100px;
-    background: rgba(18, 18, 18, 0.85);
+    background: rgba(18, 18, 18, 0.95); /* Leggermente più opaco per leggere meglio */
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(255,255,255,0.1);
-    z-index: 9999;
-    display: none; /* Si accende solo se ci sono prodotti */
+    z-index: 1040; /* 👈 Abbassato: ora i Modali e i Loader gli passano sopra */
+    display: none; 
     overflow: hidden;
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
 }
 
 .amazon-slider {
@@ -548,6 +549,16 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     margin-left: 5px;
 }
 
+
+/* Protezione per le viste principali e l'archivio */
+#home-view, #form-view, #my-proposals-view, #istruzioni-view, #chisiamo-view {
+    padding-bottom: 110px !important; /* Forza lo spazio extra in fondo a ogni pagina */
+}
+
+/* Protezione specifica per le card nell'archivio */
+#timeline-proposals {
+    padding-bottom: 20px; 
+}    
 
     
   </style>
