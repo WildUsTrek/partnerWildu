@@ -248,6 +248,9 @@ function checkVipMessages(userData) {
   
 </script>
 
+
+  
+
   <style>
 
 
@@ -456,10 +459,105 @@ body {
     }
 
 
+/* --- WILDU AMAZON FOOTER SLIDER --- */
+body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
+
+#amazon-footer-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 9999;
+    display: none; /* Si accende solo se ci sono prodotti */
+    overflow: hidden;
+}
+
+.amazon-slider {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    height: 100%;
+    align-items: center;
+    padding: 0 10px;
+}
+
+.amazon-slider::-webkit-scrollbar { display: none; } /* Nasconde barra scorrimento */
+
+.amazon-card {
+    flex: 0 0 85%; /* Quasi tutta la larghezza su mobile per farne vedere un pezzetto della successiva */
+    max-width: 320px;
+    height: 80px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    margin-right: 12px;
+    scroll-snap-align: center;
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    text-decoration: none !important;
+    transition: transform 0.2s;
+}
+
+.amazon-card:active { transform: scale(0.97); }
+
+.amazon-card img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    background: white;
+    border-radius: 8px;
+    margin-right: 12px;
+}
+
+.amazon-info { flex: 1; min-width: 0; }
+.amazon-title { 
+    color: white; 
+    font-size: 0.75rem; 
+    font-weight: 800; 
+    margin: 0; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    text-transform: uppercase;
+}
+.amazon-desc { 
+    color: #aaa; 
+    font-size: 0.65rem; 
+    line-height: 1.2; 
+    margin: 2px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.amazon-price { color: #FF9900; font-weight: 800; font-size: 0.8rem; }
+.amazon-tag {
+    font-size: 0.55rem;
+    background: #FF9900;
+    color: black;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+
+    
   </style>
+
+  
 </head>
 <body>
 
+
+  
 <div id="stripe-bridge-overlay">
   <div class="bridge-card">
     <span id="bridge-icon" class="bridge-icon">✅</span>
@@ -2932,7 +3030,11 @@ auth.onAuthStateChanged(async (user) => {
 
         if (authOverlay) authOverlay.style.display = 'none';
         if (profileOverlay) profileOverlay.style.display = 'none';
+        
+        // --- 🟢 INNESTO CHIRURGICO: AVVIO HOME E SLIDER ---
         showPage('home');
+        initAmazonSponsors(); 
+        // --------------------------------------------------
 
         try {
           await checkProposalLimitAtStartup(user.uid);
@@ -6026,9 +6128,87 @@ window.addEventListener('load', function() {
     window.addEventListener('offline', gestisciStatoRete);
     gestisciStatoRete(); 
 });
+
+
+// --- MOTORE AMAZON SPONSOR SLIDER ---
+let autoScrollTimer = null;
+
+async function initAmazonSponsors() {
+    const slider = document.getElementById('amazon-slider-engine');
+    const wrapper = document.getElementById('amazon-footer-wrapper');
+    if (!slider) return;
+
+    try {
+        // 1. Recupero dati (Assumendo collezione 'official_sponsors')
+        const snapshot = await db.collection('official_sponsors')
+                                 .where('active', '==', true)
+                                 .get();
+
+        if (snapshot.empty) {
+            console.log("🛒 Nessuno sponsor Amazon attivo.");
+            return;
+        }
+
+        let html = "";
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            html += `
+                <a href="${p.affiliate_url}" target="_blank" class="amazon-card">
+                    <img src="${p.img_url}" alt="${p.title}">
+                    <div class="amazon-info">
+                        <p class="amazon-title">${p.title}</p>
+                        <p class="amazon-desc">${p.description}</p>
+                        <span class="amazon-price">€${p.price}</span>
+                        <span class="amazon-tag">AMAZON</span>
+                    </div>
+                </a>
+            `;
+        });
+
+        slider.innerHTML = html;
+        wrapper.style.display = 'block';
+
+        // 2. Avvio Auto-Scroll
+        startAutoScroll();
+
+        // 3. Sensore Manuale: Se l'utente tocca, ferma l'auto-scroll per 15 secondi
+        slider.addEventListener('touchstart', stopAutoScrollTemporary, {passive: true});
+        slider.addEventListener('mousedown', stopAutoScrollTemporary);
+
+    } catch (e) {
+        console.error("Errore caricamento sponsor:", e);
+    }
+}
+
+function startAutoScroll() {
+    const slider = document.getElementById('amazon-slider-engine');
+    if (!slider) return;
+
+    if (autoScrollTimer) clearInterval(autoScrollTimer);
+
+    autoScrollTimer = setInterval(() => {
+        const cardWidth = slider.querySelector('.amazon-card').offsetWidth + 12;
+        const isEnd = slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 10;
+
+        if (isEnd) {
+            slider.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+            slider.scrollBy({ left: cardWidth, behavior: 'smooth' });
+        }
+    }, 5000); // Scorrimento ogni 5 secondi
+}
+
+function stopAutoScrollTemporary() {
+    if (autoScrollTimer) clearInterval(autoScrollTimer);
+    // Riparte da solo dopo 15 secondi di inattività utente
+    setTimeout(startAutoScroll, 15000);
+}  
+  
+
   
 </script>
 
+  
 <div id="install-tut-overlay" class="loader-overlay" style="display: none; z-index: 10600 !important; background-color: rgba(0,0,0,0.85);">
     <div class="card bg-white p-4 shadow-lg text-center mx-3 position-relative" style="max-width: 420px; width: 100%; border-radius: 20px;">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -6053,6 +6233,12 @@ window.addEventListener('load', function() {
         <span style="font-size: 0.7rem; font-weight: normal; opacity: 0.9;">In attesa di rete... torna dopo</span>
     </div>
 </div>
+
+
+<div id="amazon-footer-wrapper">
+    <div class="amazon-slider" id="amazon-slider-engine">
+        </div>
+</div>  
   
 </body>
 </html>
