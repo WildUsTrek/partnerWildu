@@ -560,6 +560,127 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     padding-bottom: 20px; 
 }    
 
+
+
+    
+/* --- WILDU AMAZON QUICK VIEW --- */
+#amazon-detail-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Sfondo scuro semitrasparente */
+    backdrop-filter: blur(8px); /* Effetto sfocatura professionale */
+    z-index: 20000; /* Sopra a tutto, anche allo slider */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    padding: 20px;
+}
+
+#amazon-detail-overlay.amazon-overlay-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.amazon-detail-card {
+    background: #1a1a1a;
+    border: 2px solid rgba(255, 153, 0, 0.3); /* Bordo Arancione Amazon tenue */
+    border-radius: 20px;
+    width: 100%;
+    max-width: 400px;
+    padding: 25px;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+    text-align: center;
+}
+
+#amazon-detail-overlay.amazon-overlay-visible .amazon-detail-card {
+    transform: scale(1);
+}
+
+/* Dettagli interni card */
+.amazon-det-img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    background: white;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.amazon-det-title {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+
+.amazon-det-desc {
+    color: #ccc;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 15px;
+}
+
+.amazon-det-price-row {
+    margin-bottom: 20px;
+}
+
+.amazon-det-price {
+    color: #FF9900;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+/* Area Bottoni */
+.amazon-detail-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-amazon-back, .btn-amazon-go {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    border: none;
+    text-decoration: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+/* Bottone Indietro: Grigio Scuro */
+.btn-amazon-back {
+    background: #333;
+    color: white;
+}
+.btn-amazon-back:active { background: #444; }
+
+/* Bottone Vai: Giallo Amazon */
+.btn-amazon-go {
+    background: #FF9900;
+    color: black;
+}
+.btn-amazon-go:active { background: #ffaa33; }    
+
+
+
+
+    
     
   </style>
 
@@ -6141,8 +6262,11 @@ window.addEventListener('load', function() {
 });
 
 
-// --- MOTORE AMAZON SPONSOR SLIDER ---
-let autoScrollTimer = null;
+// --- MOTORE AMAZON SPONSOR SLIDER CON QUICK VIEW ---
+let amazonAutoScrollTimer = null;
+let amazonResumeTimer = null;
+// Memorizziamo i prodotti globalmente per accedervi facilmente al click
+let currentAmazonProducts = []; 
 
 async function initAmazonSponsors() {
     const slider = document.getElementById('amazon-slider-engine');
@@ -6150,22 +6274,22 @@ async function initAmazonSponsors() {
     if (!slider) return;
 
     try {
-
-      
         // 1. Lettura Documento Unico prodotti_wildu
         const docSnap = await db.collection('PARAMETERS_PARTNER').doc('prodotti_wildu').get();
         if (!docSnap.exists) return;
 
         const data = docSnap.data();
-        const prodotti = data.amazon_links || []; // <--- CAMBIA 'payload' SE IL CAMPO HA UN ALTRO NOME
+        currentAmazonProducts = data.payload || []; // <--- CAMBIA 'payload' SE IL CAMPO HA UN ALTRO NOME
 
         let html = "";
-        prodotti.forEach(p => {
+        
+        // Cicliamo con l'indice per reference facile al click
+        currentAmazonProducts.forEach((p, index) => {
             if (p.active !== true) return; // Salta i prodotti disattivati
 
-          
+            // MODIFICA: L'elemento non è più un <a> diretto, ma un <div> cliccabile che chiama JS
             html += `
-                <a href="${p.affiliate_url}" target="_blank" class="amazon-card">
+                <div class="amazon-card" onclick="openAmazonDetail(${index})">
                     <img src="${p.img_url}" alt="${p.title}">
                     <div class="amazon-info">
                         <p class="amazon-title">${p.title}</p>
@@ -6173,41 +6297,85 @@ async function initAmazonSponsors() {
                         <span class="amazon-price">€${p.price}</span>
                         <span class="amazon-tag">AMAZON</span>
                     </div>
-                </a>
+                </div>
             `;
         });
 
         slider.innerHTML = html;
-        wrapper.style.display = 'block';
+        if(html !== "") wrapper.style.display = 'block';
 
-        // 2. Avvio Auto-Scroll
-        startAutoScroll();
+        startAmazonAutoScroll();
 
-        // 3. Sensore Manuale: Se l'utente tocca, ferma l'auto-scroll per 15 secondi
-        slider.addEventListener('touchstart', stopAutoScrollTemporary, {passive: true});
-        slider.addEventListener('mousedown', stopAutoScrollTemporary);
-
-    } catch (e) {
-        console.error("Errore caricamento sponsor:", e);
-    }
+        // Sensore interazione umana per pausa
+        slider.addEventListener('touchstart', pauseAmazonAutoScroll, {passive: true});
+        slider.addEventListener('mousedown', pauseAmazonAutoScroll);
+    } catch (e) { console.error("Errore sponsor:", e); }
 }
 
-function startAutoScroll() {
+// --- GESTIONE QUICK VIEW (MODALE) ---
+
+function openAmazonDetail(index) {
+    // 1. Recuperiamo il prodotto dai dati salvati
+    const p = currentAmazonProducts[index];
+    if (!p) return;
+
+    // 2. Blocchiamo lo scorrimento automatico di fondo
+    if (amazonAutoScrollTimer) clearInterval(amazonAutoScrollTimer);
+    if (amazonResumeTimer) clearTimeout(amazonResumeTimer);
+
+    // 3. Popoliamo l'HTML del modale
+    const content = document.getElementById('amazon-detail-content');
+    const linkBtn = document.getElementById('amazon-detail-link');
+
+    content.innerHTML = `
+        <img src="${p.img_url}" class="amazon-det-img" alt="${p.title}">
+        <p class="amazon-det-title">${p.title}</p>
+        <p class="amazon-det-desc">${p.description}</p>
+        <div class="amazon-det-price-row">
+            <span class="amazon-det-price">€${p.price}</span>
+        </div>
+    `;
+
+    // Impostiamo il link di affiliazione sul bottone "Vedi su Amazon"
+    linkBtn.href = p.affiliate_url;
+
+    // 4. Mostriamo il modale con animazione
+    document.getElementById('amazon-detail-overlay').classList.add('amazon-overlay-visible');
+}
+
+function closeAmazonDetail() {
+    // 1. Nascondiamo il modale
+    document.getElementById('amazon-detail-overlay').classList.remove('amazon-overlay-visible');
+    
+    // 2. Facciamo ripartire l'autoscroll tra 5 secondi
+    amazonResumeTimer = setTimeout(startAmazonAutoScroll, 5000);
+}
+
+// --- LOGICA SCORRIMENTO (INVARIATA) ---
+
+function startAmazonAutoScroll() {
     const slider = document.getElementById('amazon-slider-engine');
     if (!slider) return;
+    if (amazonAutoScrollTimer) clearInterval(amazonAutoScrollTimer);
 
-    if (autoScrollTimer) clearInterval(autoScrollTimer);
-
-    autoScrollTimer = setInterval(() => {
-        const cardWidth = slider.querySelector('.amazon-card').offsetWidth + 12;
+    amazonAutoScrollTimer = setInterval(() => {
+        const firstCard = slider.querySelector('.amazon-card');
+        if (!firstCard) return;
+        const cardWidth = firstCard.offsetWidth + 12;
         const isEnd = slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 10;
 
-        if (isEnd) {
-            slider.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-            slider.scrollBy({ left: cardWidth, behavior: 'smooth' });
-        }
-    }, 5000); // Scorrimento ogni 5 secondi
+        if (isEnd) slider.scrollTo({ left: 0, behavior: 'smooth' });
+        else slider.scrollBy({ left: cardWidth, behavior: 'smooth' });
+    }, 4500);
+}
+
+function pauseAmazonAutoScroll() {
+    // Non mettere in pausa se il modale è aperto
+    if(document.getElementById('amazon-detail-overlay').classList.contains('amazon-overlay-visible')) return;
+
+    if (amazonAutoScrollTimer) clearInterval(amazonAutoScrollTimer);
+    if (amazonResumeTimer) clearTimeout(amazonResumeTimer);
+    amazonResumeTimer = setTimeout(startAmazonAutoScroll, 12000); // Riparte dopo 12s
 }
 
 function stopAutoScrollTemporary() {
@@ -6246,6 +6414,21 @@ function stopAutoScrollTemporary() {
     </div>
 </div>
 
+
+<div id="amazon-detail-overlay" class="amazon-overlay-hidden">
+    <div class="amazon-detail-card">
+        <div id="amazon-detail-content"></div>
+        
+        <div class="amazon-detail-actions">
+            <button onclick="closeAmazonDetail()" class="btn-amazon-back">
+                <i class="fas fa-arrow-left"></i> INDIETRO
+            </button>
+            <a id="amazon-detail-link" href="#" target="_blank" class="btn-amazon-go">
+                VEDI SU AMAZON <i class="fas fa-shopping-cart"></i>
+            </a>
+        </div>
+    </div>
+</div>  
 
 <div id="amazon-footer-wrapper">
     <div class="amazon-slider" id="amazon-slider-engine">
