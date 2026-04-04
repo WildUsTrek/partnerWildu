@@ -6279,7 +6279,7 @@ async function initAmazonSponsors() {
         if (!docSnap.exists) return;
 
         const data = docSnap.data();
-        currentAmazonProducts = data.payload || []; // <--- CAMBIA 'payload' SE IL CAMPO HA UN ALTRO NOME
+        currentAmazonProducts = data.amazon_links || []; // <--- CAMBIA 'payload' SE IL CAMPO HA UN ALTRO NOME
 
         let html = "";
         
