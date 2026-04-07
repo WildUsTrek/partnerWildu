@@ -3249,15 +3249,16 @@ async function saveFirstProfile() {
     // 1. Salva su Firebase: Ora iniettiamo il DNA completo del Partner!
     await db.collection("users_partners").doc(user.uid).set({ 
       nome_cognome: nome_completo, 
-      nome: primoNome,              // 🟢 FIX: Vitale per il gestionale
+      nome: primoNome,              
       whatsapp: tel, 
-      telefono: tel,                // 🟢 FIX: Back-compatibilità per vecchi script
+      telefono: tel,                
       email: user.email,
-      role: "PARTNER",              // 🟢 FIX: Sicurezza e filtri
-      vipStatus: "STANDARD",        // 🟢 FIX: Status di default
-      proposal: 0,                  // 🟢 FIX: Base per matematica rating
-      bannato: false,               // 🟢 FIX: Base per filtri ban
-      creato_il: firebase.firestore.FieldValue.serverTimestamp() 
+      role: "PARTNER",              
+      vipStatus: "STANDARD",        
+      proposal: 0,                  
+      bannato: false,               
+      creato_il: firebase.firestore.FieldValue.serverTimestamp(),
+      ultimo_aggiornamento: firebase.firestore.FieldValue.serverTimestamp() // 🟢 SCUDO ANTI-SPAM
     }, { merge: true });
 
     // 2. Popola i campi nascosti necessari per il Master
@@ -3447,9 +3448,10 @@ async function updateProfileBackend() {
     
     await db.collection("users_partners").doc(user.uid).set({
       nome_cognome: nome,
-      nome: primoNomeAggiornato,  // 🟢 Mantiene allineato il gestionale
+      nome: primoNomeAggiornato,
       whatsapp: tel,
-      telefono: tel               // 🟢 Mantiene allineato il gestionale
+      telefono: tel,
+      ultimo_aggiornamento: firebase.firestore.FieldValue.serverTimestamp() // 🟢 SCUDO ANTI-SPAM
     }, { merge: true });
 
     const token = await user.getIdToken();
