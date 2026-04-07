@@ -3237,30 +3237,38 @@ auth.onAuthStateChanged(async (user) => {
   
 async function saveFirstProfile() {
   const user = auth.currentUser;
-  const nome = document.getElementById('p_nome_completo').value.trim();
+  const nome_completo = document.getElementById('p_nome_completo').value.trim();
   const tel = document.getElementById('p_whatsapp').value.trim();
   
-  if (!nome || !tel) return alert("⚠️ Compila entrambi i campi!");
+  if (!nome_completo || !tel) return alert("⚠️ Compila entrambi i campi!");
 
   try {
-    // 1. Salva su Firebase (con Merge per rispettare le Security Rules e non sovrascrivere il Backend)
+    // 🧠 ESTRAZIONE CHIRURGICA: Prendiamo la prima parola per il campo "nome"
+    const primoNome = nome_completo.split(' ')[0];
+
+    // 1. Salva su Firebase: Ora iniettiamo il DNA completo del Partner!
     await db.collection("users_partners").doc(user.uid).set({ 
-      nome_cognome: nome, 
+      nome_cognome: nome_completo, 
+      nome: primoNome,              // 🟢 FIX: Vitale per il gestionale
       whatsapp: tel, 
+      telefono: tel,                // 🟢 FIX: Back-compatibilità per vecchi script
       email: user.email,
+      role: "PARTNER",              // 🟢 FIX: Sicurezza e filtri
+      vipStatus: "STANDARD",        // 🟢 FIX: Status di default
+      proposal: 0,                  // 🟢 FIX: Base per matematica rating
+      bannato: false,               // 🟢 FIX: Base per filtri ban
       creato_il: firebase.firestore.FieldValue.serverTimestamp() 
     }, { merge: true });
 
     // 2. Popola i campi nascosti necessari per il Master
-    document.getElementById('g_nome').value = nome;
+    document.getElementById('g_nome').value = nome_completo;
     document.getElementById('g_tel').value = tel;
 
     // 🧹 3. IL SEGRETO: DISTRUGGIAMO LA CACHE DEI FANTASMI!
-    // Così forziamo l'App a bussare al Master e imporgli i nuovi dati
     sessionStorage.removeItem('wildu_cache_proposte');
     sessionStorage.removeItem('wildu_cache_time');
 
-    // 🚀 4. SINCRONIZZAZIONE IMMEDIATA: Ora bussa al Master per davvero
+    // 🚀 4. SINCRONIZZAZIONE IMMEDIATA
     await checkProposalLimitAtStartup(user.uid);
 
     document.getElementById('profile-overlay').style.display = 'none';
@@ -3270,7 +3278,6 @@ async function saveFirstProfile() {
     
     alert("✅ Profilo creato! Benvenuto nella famiglia Wildu.");
     
-    // Lo facciamo atterrare sulla Home (nascosta dal modale) e lanciamo subito il tutorial
     showPage('home');
     setTimeout(() => { avviaTutorialWildu(); }, 800); 
     
@@ -3436,9 +3443,13 @@ async function updateProfileBackend() {
   await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
+    const primoNomeAggiornato = nome.split(' ')[0];
+    
     await db.collection("users_partners").doc(user.uid).set({
       nome_cognome: nome,
-      whatsapp: tel
+      nome: primoNomeAggiornato,  // 🟢 Mantiene allineato il gestionale
+      whatsapp: tel,
+      telefono: tel               // 🟢 Mantiene allineato il gestionale
     }, { merge: true });
 
     const token = await user.getIdToken();
