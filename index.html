@@ -5228,24 +5228,81 @@ async function generaLocandinaFinale() {
       ctx.font = "bold 32px 'Inter', sans-serif"; ctx.fillStyle = "#25D366"; ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 10; 
       ctx.fillText("📲 INFO E PRENOTAZIONI: " + telNum, W/2, currentDrawY); ctx.shadowColor = "transparent";
 
-      currentDrawY -= 60; 
-      const desc = item.descrizione || item.desc || ""; 
-      if (desc) {
-          ctx.font = "500 26px 'Inter', sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.95)";
-          const cleanDesc = desc.replace(/\n/g, ' ').trim();
-          const shortDesc = cleanDesc.length > 200 ? cleanDesc.substring(0, 197) + "..." : cleanDesc;
-          const descWords = shortDesc.split(' '); let descLine = ''; let linesArr = [];
-          for(let n = 0; n < descWords.length; n++) {
-              const testDescLine = descLine + descWords[n] + ' ';
-              if (ctx.measureText(testDescLine).width > (W - 200) && n > 0) { linesArr.push(descLine); descLine = descWords[n] + ' '; } 
-              else { descLine = testDescLine; }
-          }
-          linesArr.push(descLine);
-          const lineHeight = 38; currentDrawY -= (linesArr.length - 1) * lineHeight; let tempY = currentDrawY;
-          ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 10; 
-          for(let l=0; l<linesArr.length; l++) { ctx.fillText(linesArr[l], W/2, tempY); tempY += lineHeight; }
-          ctx.shadowColor = "transparent"; currentDrawY -= 60; 
-      }
+      currentDrawY -= 60;
+    
+      const desc = item.descrizione || item.desc || "";
+    if (desc) {
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+
+    const cleanDesc = desc.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+    let shortDesc = cleanDesc.length > 200 ? cleanDesc.substring(0, 197).trim() + "..." : cleanDesc;
+
+    const maxDescWidth = W - 200;   // margini protetti invariati
+    const maxDescLines = 2;         // ora fino a 2 righe
+    const descFontSize = 33;        // fisso: non si autoriduce più
+    const lineHeight = 44;
+    let linesArr = [];
+
+    ctx.font = "500 " + descFontSize + "px 'Inter', sans-serif";
+
+    function wrapDescLines(text) {
+        const words = text.split(' ');
+        let line = '';
+        const out = [];
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            if (ctx.measureText(testLine).width > maxDescWidth && n > 0) {
+                out.push(line.trim());
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+
+        if (line.trim()) out.push(line.trim());
+        return out;
+    }
+
+    function clampDescToLines(text, maxLines) {
+        let candidate = text;
+
+        while (candidate.length > 0) {
+            const wrapped = wrapDescLines(candidate);
+            if (wrapped.length <= maxLines) return wrapped;
+
+            candidate = candidate.replace(/\.\.\.$/, '').trim();
+            candidate = candidate.slice(0, -4).trim();
+            if (!candidate) break;
+            candidate += "...";
+        }
+
+        return [];
+    }
+
+    linesArr = wrapDescLines(shortDesc);
+
+    if (linesArr.length > maxDescLines) {
+        linesArr = clampDescToLines(shortDesc, maxDescLines);
+    }
+
+    // Preserva la logica verticale originale:
+    // la descrizione sale verso l'alto,
+    // così KM / dislivello sopra restano coerenti
+    currentDrawY -= (linesArr.length - 1) * lineHeight;
+    let tempY = currentDrawY;
+
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 10;
+
+    for (let l = 0; l < linesArr.length; l++) {
+        ctx.fillText(linesArr[l], W / 2, tempY);
+        tempY += lineHeight;
+    }
+
+    ctx.shadowColor = "transparent";
+    currentDrawY -= 60;
+}
 
       let techStr = [];
       if(item.km) techStr.push("🥾 " + item.km + " KM");
