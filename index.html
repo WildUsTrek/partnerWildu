@@ -5154,30 +5154,50 @@ async function generaLocandinaFinale() {
           }
       }
     
-      ctx.font = "bold 26px 'Inter', sans-serif";
+      ctx.font = "bold 30px 'Inter', sans-serif";
       let regStr = item.regione ? "🌍 " + item.regione.toUpperCase() : "";
       let luogoRaw = item.luogo ? item.luogo.toUpperCase() : "";
-      let badgeTxt = ""; const maxTextW = 850; 
-      
+      let badgeTxt = "";
+      const maxTextW = 850;
+
       if (regStr && luogoRaw) {
           let testTxt = regStr + "  |  📍 " + luogoRaw;
           if (ctx.measureText(testTxt).width > maxTextW) {
               let tronco = luogoRaw;
-              while (ctx.measureText(regStr + "  |  📍 " + tronco + "...").width > maxTextW && tronco.length > 0) tronco = tronco.slice(0, -1);
+              while (ctx.measureText(regStr + "  |  📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
+                  tronco = tronco.slice(0, -1);
+              }
               badgeTxt = regStr + "  |  📍 " + tronco.trim() + "...";
-          } else badgeTxt = testTxt;
-      } else if (regStr) { badgeTxt = regStr; } 
-      else if (luogoRaw) {
+          } else {
+              badgeTxt = testTxt;
+          }
+      } else if (regStr) {
+          badgeTxt = regStr;
+      } else if (luogoRaw) {
           let tronco = luogoRaw;
           if (ctx.measureText("📍 " + tronco).width > maxTextW) {
-              while (ctx.measureText("📍 " + tronco + "...").width > maxTextW && tronco.length > 0) tronco = tronco.slice(0, -1);
+              while (ctx.measureText("📍 " + tronco + "...").width > maxTextW && tronco.length > 0) {
+                  tronco = tronco.slice(0, -1);
+              }
               badgeTxt = "📍 " + tronco.trim() + "...";
-          } else badgeTxt = "📍 " + tronco;
-      } else badgeTxt = "⭐ OPEN DAY";
+          } else {
+              badgeTxt = "📍 " + tronco;
+          }
+      } else {
+          badgeTxt = "⭐ OPEN DAY";
+      }
 
-      let textW = ctx.measureText(badgeTxt).width; let badgeW = Math.max(450, textW + 80); 
-      ctx.fillStyle = "#0d6efd"; ctx.beginPath(); ctx.roundRect((W - badgeW) / 2, cursorY, badgeW, 60, 30); ctx.fill();
-      ctx.fillStyle = "white"; ctx.fillText(badgeTxt, W/2, cursorY + 40);
+      let textW = ctx.measureText(badgeTxt).width;
+      let badgeW = Math.max(470, textW + 90);
+
+      ctx.fillStyle = "#0d6efd";
+      ctx.beginPath();
+      ctx.roundRect((W - badgeW) / 2, cursorY, badgeW, 60, 30);
+      ctx.fill();
+
+      ctx.fillStyle = "white";
+      ctx.fillText(badgeTxt, W / 2, cursorY + 41);
+
       cursorY += 100;
 
       // 🛠️ FIX DATA: Invertiamo il formato europeo per farlo digerire a JavaScript!
@@ -5185,11 +5205,28 @@ async function generaLocandinaFinale() {
       const dIn = formattaPerCanvas(item.dataInizio);
       const dFine = item.dataFine ? " - " + formattaPerCanvas(item.dataFine) : "";
       const orari = (item.oraIn || item.oraOut) ? ` (${item.oraIn} > ${item.oraOut})` : "";
-      let dateTxt = "📅 " + dIn + dFine + orari; let dateFontSize = 35;
+      
+      let dateTxt = "📅 " + dIn + dFine + orari;
+      let dateFontSize = 36;
+
       ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
-      while(ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 18) { dateFontSize -= 2; ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif"; }
-      ctx.fillStyle = "#00d4ff"; ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 25; ctx.fillText(dateTxt, W/2, cursorY); ctx.shadowColor = "transparent";
-      cursorY += 70; 
+      while (ctx.measureText(dateTxt).width > (W - 160) && dateFontSize > 24) {
+          dateFontSize -= 2;
+          ctx.font = "bold " + dateFontSize + "px 'Inter', sans-serif";
+      }
+
+      ctx.lineJoin = "round";
+      ctx.lineWidth = Math.max(2, Math.floor(dateFontSize * 0.09));
+      ctx.strokeStyle = "rgba(0,0,0,0.44)";
+      ctx.strokeText(dateTxt, W / 2, cursorY + 4);
+
+      ctx.fillStyle = "#00d4ff";
+      ctx.shadowColor = "rgba(0,0,0,0.42)";
+      ctx.shadowBlur = 6;
+      ctx.fillText(dateTxt, W / 2, cursorY + 4);
+      ctx.shadowColor = "transparent";
+
+      cursorY += 78;
 
       ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 30; ctx.fillStyle = "white"; 
       const titleText = (item.titolo || "Evento").toUpperCase();
