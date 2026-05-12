@@ -477,6 +477,17 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
 }
 
+
+.amazon-disclosure-bar {
+    font-size: 0.5rem;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+    width: 100%;
+    padding-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}    
+
 .amazon-slider {
     display: flex;
     overflow-x: auto;
@@ -5996,8 +6007,16 @@ document.addEventListener('input', function (e) {
     <div class="mt-4 pt-3 border-top border-secondary text-center">
       <button type="button" class="btn btn-outline-danger w-100 p-3 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
       <p class="text-muted small mt-2 mb-0">Ritornerai alla schermata di login</p>
-    </div>
-  </div>
+      
+      <!-- INIZIO DISCLOSURE TATTICA -->
+      <div class="mt-4 pt-3 border-top border-secondary text-center opacity-50" style="font-size: 0.55rem; letter-spacing: 0.5px;">
+          <b class="text-info">PROGRAMMA AFFILIAZIONE</b><br>
+          Sosteniamo i costi della piattaforma tramite commissioni Amazon.
+      </div>
+      <!-- FINE DISCLOSURE TATTICA -->
+
+    </div> <!-- Fine card -->
+</div> <!-- Fine overlay -->
 </div>
 
 <input type="file" id="locandina-upload" accept="image/*" style="display: none;" onchange="handleLocandinaSelect(event)">
@@ -6433,7 +6452,12 @@ async function initAmazonSponsors() {
         });
 
         slider.innerHTML = html;
-        if(html !== "") wrapper.style.display = 'block';
+        if(html !== "") {
+            wrapper.style.display = 'block';
+            if(!wrapper.querySelector('.amazon-disclosure-bar')) {
+                wrapper.insertAdjacentHTML('afterbegin', '<div class="amazon-disclosure-bar">Amazon Partners Highlights</div>');
+            }
+        }
 
         startAmazonAutoScroll();
 
@@ -6477,6 +6501,9 @@ function openAmazonDetail(index) {
         <p class="amazon-det-desc">${p.description}</p>
         <div class="amazon-det-price-row">
             <span class="amazon-det-price">€${p.price}</span>
+        </div>
+        <div style="font-size: 0.58rem; color: #666; line-height: 1.2; margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-style: italic;">
+            * In qualità di Affiliato Amazon, Wildu riceve un guadagno dagli acquisti idonei.
         </div>
     `;
 
