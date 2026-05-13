@@ -4192,10 +4192,13 @@ function executeSharePartner() {
     var luogo = ev.luogoNome || ev.luogo || "";
     var link = ev.luogoLink || ev.link || "";
 
-    var descrizioneRaw = ev.desc || ev.descrizione || "";
-    var cleanDesc = descrizioneRaw.replace(/^Guida:.*?\|\s*/i, "").trim();
+    // Recupero Nome Guida in modo sicuro (dai dati dell'evento o dal modulo se aperto)
+    var nomeGuidaRaw = ev.guidaNome || ev.nome_cognome || (document.getElementById('g_nome') ? document.getElementById('g_nome').value : "") || "La tua Guida Wildu";
 
-    var attrezzaturaRaw = ev.eq || ev.attrezzaturaJson || "";
+    var descrizioneRaw = ev.desc || ev.descrizione || "";
+    var cleanDesc = descrizioneRaw.replace(/^Guida:.*?\|\s*/i, "").trim();
+
+    var attrezzaturaRaw = ev.eq || ev.attrezzaturaJson || "";
     var eqStrs = [];
     try {
         var eqList = JSON.parse(attrezzaturaRaw);
@@ -4233,17 +4236,20 @@ function executeSharePartner() {
     }
 
     if (eqStrs.length > 0) {
-        txt += "🎒 " + b + "Attrezzatura necessaria:" + b + "\n" + eqStrs.join(", ") + "\n\n";
-    }
+        txt += "🎒 " + b + "Attrezzatura necessaria:" + b + "\n" + eqStrs.join(", ") + "\n\n";
+    }
 
-    if (cleanDesc) {
-        txt += "📝 " + b + "Info Evento:" + b + "\n" + cleanDesc + "\n\n";
-    }
+    // Inserimento della Guida con spaziatura corretta
+    txt += "👤 " + b + "Guida:" + b + " " + nomeGuidaRaw + "\n\n";
 
-    var infoNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
-    if (infoNum) {
-        txt += "📲 " + b + "Info e Prenotazioni:" + b + " " + infoNum + "\n\n";
-    }
+    if (cleanDesc) {
+        txt += "📝 " + b + "Info Evento:" + b + "\n" + cleanDesc + "\n\n";
+    }
+
+    var infoNum = document.getElementById('g_tel') ? document.getElementById('g_tel').value : "";
+    if (infoNum) {
+        txt += "📲 " + b + "Info e Prenotazioni:" + b + " " + infoNum + "\n\n";
+    }
 
     // Gestione Immagine
     var useOriginal = false;
