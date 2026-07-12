@@ -1112,10 +1112,10 @@ function goToStripe(tipo, btnElement) {
              localStorage.setItem('wildu_partner_logo_url', serverUrl); // Memorizza il nuovo URL ufficiale
          }
          // Se sono uguali, NON FA NULLA: il tuo velocissimo Base64 è salvo e immortale!
-     } else {
-         localStorage.removeItem('wildu_partner_logo');
-         localStorage.removeItem('wildu_partner_logo_url');
-     }
+    } else {
+        // Sync conservativa: una risposta senza p_logo non e' una cancellazione esplicita.
+        // Il logo locale viene rimosso solo da removeProfileLogo() dopo successo server.
+    }
 
    
 } // 🟢 Graffa 2: Finalmente chiude tutta la funzione aggiornaLimiteDalServer!
@@ -3695,17 +3695,19 @@ async function saveProfileLogo(event) {
 
     // ✅ SUCCESSO! SALVATAGGIO DEFINITIVO
     // Aggiorniamo la cache RAM
-    let mem = sessionStorage.getItem('wildu_cache_proposte');
-    if (mem) {
-        let data = JSON.parse(mem);
-        data.p_logo = cloudRes.secure_url; 
-        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(data));
+    const finalLogoUrl = cloudRes.secure_url;
+    localStorage.setItem('wildu_partner_logo', logoData.base64);
+    localStorage.setItem('wildu_partner_logo_url', finalLogoUrl);
+
+    const cacheData = getSafeCacheProposte();
+    if (cacheData) {
+        cacheData.p_logo = finalLogoUrl;
+        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
     }
     
     sessionStorage.removeItem('wildu_skip_logo'); 
     
-    // Togliamo il cartello UPLOADING e mettiamo il VERO link
-    localStorage.setItem('wildu_partner_logo_url', cloudRes.secure_url);
+    // Il cartello UPLOADING e' gia' stato sostituito con finalLogoUrl.
 
     alert("✨ Logo salvato e sincronizzato sul Cloud!");
 
@@ -3748,7 +3750,8 @@ async function removeProfileLogo() {
     const token = await user.getIdToken();
 
     // 🕵️‍♂️ ESTRAZIONE PUBLIC_ID DALL'URL
-    const oldUrl = localStorage.getItem('wildu_partner_logo_url') || "";
+    const storedLogo = localStorage.getItem('wildu_partner_logo') || "";
+    const oldUrl = localStorage.getItem('wildu_partner_logo_url') || (storedLogo.startsWith('http') ? storedLogo : "");
     let publicIdToDestroy = "";
     if (oldUrl.includes('cloudinary')) {
         const parts = oldUrl.split('/');
@@ -4985,12 +4988,61 @@ async function annullaProposta(itemEncoded) {
 }
 
 window.currentLocandinaItem = null;
-window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
+const LOCANDINA_STAGE_W = 270;
+const LOCANDINA_STAGE_H = 480;
+
+function getDefaultLocCropState() {
+  return { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0, isReady: false };
+}
+
+window.locCropState = getDefaultLocCropState();
+
+function resetLocandinaState() {
+  window.locCropState = getDefaultLocCropState();
+
+  const cropImg = document.getElementById('loc-crop-img');
+  if (cropImg) {
+      cropImg.onload = null;
+      cropImg.onerror = null;
+      cropImg.removeAttribute('src');
+      cropImg.style.width = "";
+      cropImg.style.height = "";
+      cropImg.style.transform = "";
+  }
+
+  const slider = document.getElementById('loc-zoom-slider');
+  if (slider) slider.value = 1;
+}
+
+function isLocandinaImageReady(img) {
+  const state = window.locCropState || {};
+  return !!(
+      img &&
+      img.complete &&
+      img.naturalWidth > 0 &&
+      img.naturalHeight > 0 &&
+      state.isReady === true &&
+      state.baseW > 0 &&
+      state.baseH > 0
+  );
+}
+
+function setCanvasFontToFit(ctx, text, maxWidth, startSize, minSize, fontFactory) {
+  let size = startSize;
+  do {
+      ctx.font = fontFactory(size);
+      if (ctx.measureText(text).width <= maxWidth) return size;
+      size -= 2;
+  } while (size >= minSize);
+
+  size = minSize;
+  ctx.font = fontFactory(size);
+  return size;
+}
 
 function generaLocandina(itemEncoded) {
   // 🧹 SVUOTAMENTO GASTRICO: Elimina foto precedenti per evitare i bug avanti-indietro
-  const cropImg = document.getElementById('loc-crop-img');
-  if (cropImg) cropImg.removeAttribute('src');
+  resetLocandinaState();
   document.getElementById('locandina-upload').value = "";
 
   window.currentLocandinaItem = JSON.parse(decodeURIComponent(itemEncoded));
@@ -5073,11 +5125,11 @@ function handleLocandinaSelect(event) {
         img.onload = function() {
             clearTimeout(fallbackTimer); // Annulla il timer se ce la fa!
             
-            window.locCropState = { isDragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, scale: 1, baseW: 0, baseH: 0 };
+            window.locCropState = getDefaultLocCropState();
             const slider = document.getElementById('loc-zoom-slider');
             if(slider) slider.value = 1;
             
-            const stageW = 270; const stageH = 480;
+            const stageW = LOCANDINA_STAGE_W; const stageH = LOCANDINA_STAGE_H;
             const ratioStage = stageW / stageH;
             const ratioImg = img.naturalWidth / img.naturalHeight;
             let baseW, baseH;
@@ -5085,7 +5137,7 @@ function handleLocandinaSelect(event) {
             if(ratioImg > ratioStage) { baseH = stageH; baseW = stageH * ratioImg; } 
             else { baseW = stageW; baseH = stageW / ratioImg; }
             
-            window.locCropState.baseW = baseW; window.locCropState.baseH = baseH;
+            window.locCropState.baseW = baseW; window.locCropState.baseH = baseH; window.locCropState.isReady = true;
             img.style.width = baseW + "px"; img.style.height = baseH + "px";
             window.locCropState.currentX = (stageW - baseW) / 2; window.locCropState.currentY = (stageH - baseH) / 2;
             img.style.transform = `translate(${window.locCropState.currentX}px, ${window.locCropState.currentY}px) scale(1)`;
@@ -5150,14 +5202,24 @@ async function generaLocandinaFinale() {
       canvas.width = W; canvas.height = H;
 
       const imgHTML = document.getElementById('loc-crop-img');
+      if (!isLocandinaImageReady(imgHTML)) {
+          return alert("Scegli una foto di sfondo valida prima di generare la locandina.");
+      }
+
       const scale = window.locCropState.scale;
       const trueX = window.locCropState.currentX + (window.locCropState.baseW / 2) * (1 - scale);
       const trueY = window.locCropState.currentY + (window.locCropState.baseH / 2) * (1 - scale);
+      const scaleX = W / LOCANDINA_STAGE_W;
+      const scaleY = H / LOCANDINA_STAGE_H;
 
       ctx.save(); 
-      const M = 4; ctx.translate(trueX * M, trueY * M); ctx.scale(scale, scale);
-      ctx.drawImage(imgHTML, 0, 0, window.locCropState.baseW * M, window.locCropState.baseH * M);
-      ctx.restore(); 
+      try {
+          ctx.translate(trueX * scaleX, trueY * scaleY);
+          ctx.scale(scale, scale);
+          ctx.drawImage(imgHTML, 0, 0, window.locCropState.baseW * scaleX, window.locCropState.baseH * scaleY);
+      } finally {
+          ctx.restore();
+      }
 
       const gradTop = ctx.createLinearGradient(0, 0, 0, 600);
       gradTop.addColorStop(0, "rgba(0,0,0,0.85)"); gradTop.addColorStop(1, "rgba(0,0,0,0)");
@@ -5386,8 +5448,10 @@ async function generaLocandinaFinale() {
       if(item.km) techStr.push("🥾 " + item.km + " KM");
       if(item.dislivello) techStr.push("⛰️ " + item.dislivello + " M D+");
       if(techStr.length > 0) {
-        ctx.fillStyle = "#FFD700"; ctx.font = "bold 42px 'Inter', sans-serif"; ctx.shadowColor = "black"; ctx.shadowBlur = 15; 
-        ctx.fillText(techStr.join("    |    "), W/2, currentDrawY); ctx.shadowColor = "transparent";
+        const technicalLine = techStr.join("    |    ");
+        ctx.fillStyle = "#FFD700"; ctx.textAlign = "center"; ctx.shadowColor = "black"; ctx.shadowBlur = 15;
+        setCanvasFontToFit(ctx, technicalLine, W - 160, 42, 28, size => "bold " + size + "px 'Inter', sans-serif");
+        ctx.fillText(technicalLine, W/2, currentDrawY, W - 160); ctx.shadowColor = "transparent";
       }
 
 // 🧹 GESTIONE MODALE PULITA: Usiamo il modale statico HTML!
