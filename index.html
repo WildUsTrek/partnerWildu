@@ -1339,12 +1339,14 @@ function goToStripe(tipo, btnElement) {
 
      try {
          const localUrl = localStorage.getItem('wildu_partner_logo_url');
-         if (localUrl === 'UPLOADING...') return false;
+         if (localUrl === 'UPLOADING...' && options.force !== true) return false;
 
          if (remoteUrl !== localUrl) {
              localStorage.setItem('wildu_partner_logo', remoteUrl);
              localStorage.setItem('wildu_partner_logo_url', remoteUrl);
          }
+         localStorage.removeItem('wildu_partner_logo_remote_deleted_at');
+         setPartnerLogoInProposalCache(remoteUrl);
 
          if (options.refreshProfile === true && typeof refreshProfileLogoUI === "function") {
              refreshProfileLogoUI();
@@ -1353,6 +1355,41 @@ function goToStripe(tipo, btnElement) {
          return true;
      } catch (e) {
          console.warn("Sync logo partner da remoto saltata:", e);
+         return false;
+     }
+ }
+
+ function setPartnerLogoInProposalCache(logoUrl) {
+     try {
+         const cacheData = getSafeCacheProposte();
+         if (!cacheData) return false;
+         cacheData.p_logo = String(logoUrl || '').trim();
+         sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
+         return true;
+     } catch (e) {
+         console.warn("Sync cache logo partner saltata:", e);
+         return false;
+     }
+ }
+
+ function clearPartnerLogoFromRemoteDelete(options = {}) {
+     try {
+         const localUrl = localStorage.getItem('wildu_partner_logo_url');
+         if (localUrl === 'UPLOADING...' && options.force !== true) return false;
+
+         localStorage.removeItem('wildu_partner_logo');
+         localStorage.removeItem('wildu_partner_logo_url');
+         localStorage.setItem('wildu_partner_logo_remote_deleted_at', String(Date.now()));
+         sessionStorage.removeItem('wildu_skip_logo');
+         setPartnerLogoInProposalCache('');
+
+         if (options.refreshProfile === true && typeof refreshProfileLogoUI === "function") {
+             refreshProfileLogoUI();
+         }
+
+         return true;
+     } catch (e) {
+         console.warn("Cancellazione logo partner da remoto saltata:", e);
          return false;
      }
  }
@@ -3474,10 +3511,19 @@ auth.onAuthStateChanged(async (user) => {
           // Manteniamo fresco il fallback locale
           if (nomeProfilo) localStorage.setItem('wildu_p_nome', nomeProfilo);
           if (telProfilo) localStorage.setItem('wildu_p_tel', telProfilo);
-          if (data.logoUrl) {
-            syncPartnerLogoFromRemote(data.logoUrl, {
-              refreshProfile: !!(profileOverlay && profileOverlay.style.display === 'flex')
-            });
+          if (Object.prototype.hasOwnProperty.call(data, 'logoUrl')) {
+            const remoteLogoUrl = String(data.logoUrl || '').trim();
+            const shouldRefreshLogoUi = !!(profileOverlay && profileOverlay.style.display === 'flex');
+
+            if (remoteLogoUrl) {
+              syncPartnerLogoFromRemote(remoteLogoUrl, {
+                refreshProfile: shouldRefreshLogoUi
+              });
+            } else {
+              clearPartnerLogoFromRemoteDelete({
+                refreshProfile: shouldRefreshLogoUi
+              });
+            }
           }
         }
       } catch (firestoreError) {
@@ -4008,6 +4054,7 @@ async function saveProfileLogo(event) {
     const finalLogoUrl = cloudRes.secure_url;
     localStorage.setItem('wildu_partner_logo', logoData.base64);
     localStorage.setItem('wildu_partner_logo_url', finalLogoUrl);
+    localStorage.removeItem('wildu_partner_logo_remote_deleted_at');
 
     const cacheData = getSafeCacheProposte();
     if (cacheData) {
@@ -4088,15 +4135,7 @@ async function removeProfileLogo() {
     if (!data.success) throw new Error(data.error || "Rifiutato dal Server");
 
     // 🗡️ CHIRURGIA RAM PROTETTA
-    let cacheData = getSafeCacheProposte();
-    if (cacheData) {
-        cacheData.p_logo = ""; 
-        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
-    }
-    
-    sessionStorage.removeItem('wildu_skip_logo');
-    localStorage.removeItem('wildu_partner_logo');
-    localStorage.removeItem('wildu_partner_logo_url'); 
+    clearPartnerLogoFromRemoteDelete({ force: true });
     alert("Logo rimosso dal profilo. La pulizia del file Cloud viene tentata in automatico.");
     
   } catch(e) { 
