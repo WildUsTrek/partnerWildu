@@ -1014,6 +1014,283 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
   window.wilduNinjaCounter = 0; // 🥷 Contatore isolato per le ronde di background
   window.SYNC_COOLDOWN = 45000; // 45s di respiro tra fetch di startup
 
+const WilduPartnerRemotePolicy = (() => {
+    const CONFIG_COLLECTION = 'PARAMETERS_PARTNER';
+    const CACHE_CONFIG_DOC = 'cache_config';
+    const CLIENT_CONFIG_DOC = 'client_config';
+    const POLICY_CACHE_KEY = 'wildu_partner_remote_policy_v1';
+    const POLICY_CACHE_TTL_MS = 3 * 60 * 60 * 1000;
+    const EPOCH_SEEN_KEY = 'wildu_partner_cache_epoch_seen';
+    const EPOCH_RELOAD_LOCK_KEY = 'wildu_partner_cache_epoch_reload_lock';
+    const EPOCH_RELOAD_LOCK_MS = 5 * 60 * 1000;
+    const MIN_TTL_MS = 1000;
+
+    const FALLBACKS = {
+        proposalsSessionTtl: 30 * 60 * 1000,
+        pastEventsTtl: 8 * 60 * 60 * 1000,
+        silentCheckTtl: 60 * 1000,
+        silentCheckPaymentTtl: 3 * 1000,
+        stripePendingTtl: 940000
+    };
+
+    let memoryPolicy = null;
+    let memoryLoadedAt = 0;
+    let loadPromise = null;
+    let epochCheckPromise = null;
+    let lastEpochCheckAt = 0;
+
+    function now() {
+        return Date.now();
+    }
+
+    function normalizeEpoch(raw) {
+        const s = String(raw || '').trim();
+        return s || '';
+    }
+
+    function ttlFromObject(obj, fallbackMs) {
+        const fallback = Math.max(MIN_TTL_MS, Number(fallbackMs || 0) || MIN_TTL_MS);
+        if (!obj || typeof obj !== 'object') return fallback;
+        const ms = Number(obj.ms);
+        if (Number.isFinite(ms) && ms > 0) return Math.max(MIN_TTL_MS, Math.floor(ms));
+        const seconds = Number(obj.seconds);
+        if (Number.isFinite(seconds) && seconds > 0) return Math.max(MIN_TTL_MS, Math.floor(seconds * 1000));
+        return fallback;
+    }
+
+    function readLocalPolicy() {
+        try {
+            const raw = localStorage.getItem(POLICY_CACHE_KEY);
+            if (!raw) return null;
+            const box = JSON.parse(raw);
+            const savedAt = Number(box && box.savedAt);
+            if (!savedAt || now() - savedAt > POLICY_CACHE_TTL_MS) return null;
+            const policy = box && box.policy;
+            return policy && typeof policy === 'object' ? policy : null;
+        } catch (e) {
+            try { localStorage.removeItem(POLICY_CACHE_KEY); } catch (_) {}
+            return null;
+        }
+    }
+
+    function writeLocalPolicy(policy) {
+        try {
+            if (!policy || typeof policy !== 'object') return;
+            localStorage.setItem(POLICY_CACHE_KEY, JSON.stringify({
+                savedAt: now(),
+                policy
+            }));
+        } catch (e) {
+            console.warn('Policy cache partner non salvata:', e);
+        }
+    }
+
+    function setMemoryPolicy(policy) {
+        if (!policy || typeof policy !== 'object') return null;
+        memoryPolicy = policy;
+        memoryLoadedAt = now();
+        return memoryPolicy;
+    }
+
+    function getCachedPolicy() {
+        if (memoryPolicy && now() - memoryLoadedAt < POLICY_CACHE_TTL_MS) return memoryPolicy;
+        const local = readLocalPolicy();
+        if (local) return setMemoryPolicy(local);
+        return null;
+    }
+
+    async function loadPolicy(reason) {
+        if (loadPromise) return loadPromise;
+        loadPromise = (async () => {
+            try {
+                if (!navigator.onLine) return getCachedPolicy();
+                if (typeof db === 'undefined' || !db || typeof db.collection !== 'function') return getCachedPolicy();
+                const snap = await db.collection(CONFIG_COLLECTION).doc(CACHE_CONFIG_DOC).get({ source: 'server' });
+                const data = snap && snap.exists ? (snap.data() || {}) : {};
+                const partner = data && data.partner && typeof data.partner === 'object' ? data.partner : {};
+                setMemoryPolicy(partner);
+                writeLocalPolicy(partner);
+                return partner;
+            } catch (e) {
+                console.warn('Policy cache partner non letta, uso fallback:', reason || '', e);
+            } finally {
+                loadPromise = null;
+            }
+            return getCachedPolicy();
+        })();
+        return loadPromise;
+    }
+
+    function prime(reason) {
+        const cached = getCachedPolicy();
+        const policyPromise = cached ? Promise.resolve(cached) : loadPolicy(reason || 'prime');
+        const result = Promise.allSettled([
+            policyPromise,
+            checkGlobalCacheEpoch(reason || 'prime')
+        ]);
+        result.finally(cleanOneShotUrlParams);
+        return result;
+    }
+
+    function ms(key, fallbackMs) {
+        const fallback = Math.max(MIN_TTL_MS, Number(fallbackMs || FALLBACKS[key] || 0) || MIN_TTL_MS);
+        const policy = getCachedPolicy();
+        if (!policy) {
+            loadPolicy('ttl:' + String(key || ''));
+            return fallback;
+        }
+        return ttlFromObject(policy[key], fallback);
+    }
+
+    function clearLocalPolicy() {
+        memoryPolicy = null;
+        memoryLoadedAt = 0;
+        loadPromise = null;
+        try { localStorage.removeItem(POLICY_CACHE_KEY); } catch (e) {}
+    }
+
+    async function clearCacheStorage() {
+        try {
+            if (!('caches' in window)) return;
+            const names = await caches.keys();
+            await Promise.all(names
+                .filter(name => /^wildu-/i.test(String(name || '')))
+                .map(name => caches.delete(name)));
+        } catch (e) {
+            console.warn('Pulizia CacheStorage partner saltata:', e);
+        }
+    }
+
+    function clearKnownRuntimeCaches() {
+        const localPrefixes = [
+            'wildu_past_meta_',
+            'wildu_past_events_',
+            'wildu_partner_remote_policy'
+        ];
+        const sessionPrefixes = [
+            'wildu_cache_',
+            'wildu_global_cooldown',
+            'wildu_ultimo_check_silenzioso'
+        ];
+        try {
+            Object.keys(localStorage).forEach(key => {
+                if (localPrefixes.some(prefix => key.indexOf(prefix) === 0)) {
+                    localStorage.removeItem(key);
+                }
+            });
+        } catch (e) {}
+        try {
+            Object.keys(sessionStorage).forEach(key => {
+                if (sessionPrefixes.some(prefix => key.indexOf(prefix) === 0)) {
+                    sessionStorage.removeItem(key);
+                }
+            });
+        } catch (e) {}
+        clearLocalPolicy();
+    }
+
+    function readSeenEpoch() {
+        try { return normalizeEpoch(localStorage.getItem(EPOCH_SEEN_KEY)); } catch (e) { return ''; }
+    }
+
+    function writeSeenEpoch(epoch) {
+        try { localStorage.setItem(EPOCH_SEEN_KEY, normalizeEpoch(epoch)); } catch (e) {}
+    }
+
+    function hasRecentReloadLock(epoch) {
+        try {
+            const raw = sessionStorage.getItem(EPOCH_RELOAD_LOCK_KEY);
+            if (!raw) return false;
+            const lock = JSON.parse(raw);
+            return lock && normalizeEpoch(lock.epoch) === normalizeEpoch(epoch) && now() - Number(lock.ts || 0) < EPOCH_RELOAD_LOCK_MS;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setReloadLock(epoch) {
+        try {
+            sessionStorage.setItem(EPOCH_RELOAD_LOCK_KEY, JSON.stringify({
+                epoch: normalizeEpoch(epoch),
+                ts: now()
+            }));
+        } catch (e) {}
+    }
+
+    async function checkGlobalCacheEpoch(reason) {
+        if (epochCheckPromise) return epochCheckPromise;
+        if (lastEpochCheckAt && now() - lastEpochCheckAt < 30000) return false;
+        epochCheckPromise = (async () => {
+        try {
+            lastEpochCheckAt = now();
+            if (!navigator.onLine) return false;
+            if (typeof db === 'undefined' || !db || typeof db.collection !== 'function') return false;
+            const snap = await db.collection(CONFIG_COLLECTION).doc(CLIENT_CONFIG_DOC).get({ source: 'server' });
+            const data = snap && snap.exists ? (snap.data() || {}) : {};
+            const remoteEpoch = normalizeEpoch(data.global_cache_epoch);
+            if (!remoteEpoch || remoteEpoch === readSeenEpoch()) return false;
+            if (hasRecentReloadLock(remoteEpoch)) return false;
+
+            setReloadLock(remoteEpoch);
+            clearKnownRuntimeCaches();
+            await clearCacheStorage();
+            writeSeenEpoch(remoteEpoch);
+
+            const nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.set('partnerCacheEpoch', remoteEpoch);
+            nextUrl.searchParams.set('nocache', '1');
+            nextUrl.searchParams.set('cache', 'off');
+            nextUrl.searchParams.set('partnerRefresh', '1');
+            nextUrl.searchParams.set('partnerAdminRefresh', String(now()));
+            window.location.replace(nextUrl.toString());
+            return true;
+        } catch (e) {
+            console.warn('Controllo global_cache_epoch partner saltato:', reason || '', e);
+            return false;
+        } finally {
+            epochCheckPromise = null;
+        }
+        })();
+        return epochCheckPromise;
+    }
+
+    function cleanOneShotUrlParams() {
+        try {
+            const url = new URL(window.location.href);
+            const params = url.searchParams;
+            const oneShotKeys = [
+                'partnerCacheEpoch',
+                'partnerRefresh',
+                'partnerAdminRefresh',
+                'nocache',
+                'cache'
+            ];
+            const shouldClean = oneShotKeys.some(key => params.has(key));
+            if (!shouldClean) return;
+            oneShotKeys.forEach(key => params.delete(key));
+            const cleanUrl = url.pathname + (params.toString() ? '?' + params.toString() : '') + url.hash;
+            if (window.history && typeof window.history.replaceState === 'function') {
+                window.history.replaceState(window.history.state || {}, document.title, cleanUrl);
+            }
+        } catch (e) {}
+    }
+
+    return {
+        prime,
+        ms,
+        clearLocalPolicy,
+        clearKnownRuntimeCaches,
+        checkGlobalCacheEpoch,
+        keys: {
+            policyCache: POLICY_CACHE_KEY,
+            epochSeen: EPOCH_SEEN_KEY
+        }
+    };
+})();
+
+window.WilduPartnerRemotePolicy = WilduPartnerRemotePolicy;
+WilduPartnerRemotePolicy.prime('boot');
+
 function goToStripe(tipo, btnElement) {
     const user = firebase.auth().currentUser;
     if (!user) return alert("⚠️ Attendi il caricamento dell'utente...");
@@ -2197,7 +2474,7 @@ function checkFridgeState(uid) {
     try {
         const meta = JSON.parse(metaStr);
         if (meta.v !== 1) throw new Error("Version mismatch");
-        if (meta.day !== getLocalDayStr() || Date.now() - meta.timestamp > 28800000) return 'EXPIRED';
+        if (meta.day !== getLocalDayStr() || Date.now() - meta.timestamp > WilduPartnerRemotePolicy.ms('pastEventsTtl', 28800000)) return 'EXPIRED';
 
         const cacheStr = localStorage.getItem('wildu_past_events_' + uid);
         if (!cacheStr) return 'EXPIRED';
@@ -3150,6 +3427,14 @@ auth.onAuthStateChanged(async (user) => {
 
   try {
     if (user) {
+      try {
+        if (window.WilduPartnerRemotePolicy && typeof WilduPartnerRemotePolicy.prime === 'function') {
+          await WilduPartnerRemotePolicy.prime('auth');
+        }
+      } catch (policyError) {
+        console.warn("Policy cache partner non disponibile all'avvio:", policyError);
+      }
+
       let profiloValido = false;
       let nomeProfilo = "";
       let telProfilo = "";
@@ -3787,7 +4072,7 @@ async function removeProfileLogo() {
     sessionStorage.removeItem('wildu_skip_logo');
     localStorage.removeItem('wildu_partner_logo');
     localStorage.removeItem('wildu_partner_logo_url'); 
-    alert("🗑️ Logo rimosso definitivamente dal Cloud e dal Profilo.");
+    alert("Logo rimosso dal profilo. La pulizia del file Cloud viene tentata in automatico.");
     
   } catch(e) { 
     console.warn("Errore durante la rimozione:", e); 
@@ -3906,7 +4191,7 @@ async function checkProposalLimitAtStartup(uid) {
         const memoria = sessionStorage.getItem('wildu_cache_proposte');
         const timestamp = sessionStorage.getItem('wildu_cache_time');
         
-        if (memoria && timestamp && (now - parseInt(timestamp) < 1800000)) {
+        if (memoria && timestamp && (now - parseInt(timestamp) < WilduPartnerRemotePolicy.ms('proposalsSessionTtl', 1800000))) {
             try {
                 const datiCache = JSON.parse(memoria);
                 aggiornaLimiteDalServer(datiCache);     
@@ -4015,7 +4300,7 @@ async function openMyProposals() {
   const timestamp = sessionStorage.getItem('wildu_cache_time');
   const adesso = new Date().getTime();
 
-  if (memoria && timestamp && (adesso - parseInt(timestamp) < 1800000)) {
+  if (memoria && timestamp && (adesso - parseInt(timestamp) < WilduPartnerRemotePolicy.ms('proposalsSessionTtl', 1800000))) {
     try {
       const data = JSON.parse(memoria);
       if (data && !data.error) {
@@ -5747,7 +6032,7 @@ document.addEventListener("visibilitychange", function() {
 
     // 2. Controllo e Pulizia del Bigliettino (15 minuti di validità)
     let bigliettinoStripe = localStorage.getItem('attesa_novita_stripe');
-    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > 940000)) {
+    if (bigliettinoStripe && (now - parseInt(bigliettinoStripe) > WilduPartnerRemotePolicy.ms('stripePendingTtl', 940000))) {
         console.log("🗑️ Tempo scaduto (15 min). Disarmo l'Allarme Rosso.");
         localStorage.removeItem('attesa_novita_stripe');
         bigliettinoStripe = null;
@@ -5755,7 +6040,9 @@ document.addEventListener("visibilitychange", function() {
 
     // 3. SCUDO DINAMICO: 3s se stiamo aspettando un pagamento, 60s altrimenti
     const isRumoroso = (bigliettinoStripe !== null);
-    const cooldownLimit = isRumoroso ? 3000 : 60000;
+    const cooldownLimit = isRumoroso
+        ? WilduPartnerRemotePolicy.ms('silentCheckPaymentTtl', 3000)
+        : WilduPartnerRemotePolicy.ms('silentCheckTtl', 60000);
 
     const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
     if (now - ultimoControllo < cooldownLimit) return; 
@@ -5873,7 +6160,7 @@ async function controllaSicurezzaNinja() {
 
     // 1. Lo Scudo: Manteniamo i 60 secondi in comune con l'altro Ninja!
     const ultimoControllo = parseInt(sessionStorage.getItem('wildu_ultimo_check_silenzioso') || '0');
-    if (Date.now() - ultimoControllo < 60000) return; 
+    if (Date.now() - ultimoControllo < WilduPartnerRemotePolicy.ms('silentCheckTtl', 60000)) return; 
     
     const user = firebase.auth().currentUser;
     if (!user) return;
