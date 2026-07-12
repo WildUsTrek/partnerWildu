@@ -1333,6 +1333,30 @@ function goToStripe(tipo, btnElement) {
     }
 }
 
+ function syncPartnerLogoFromRemote(serverLogoUrl, options = {}) {
+     const remoteUrl = String(serverLogoUrl || '').trim();
+     if (!remoteUrl) return false;
+
+     try {
+         const localUrl = localStorage.getItem('wildu_partner_logo_url');
+         if (localUrl === 'UPLOADING...') return false;
+
+         if (remoteUrl !== localUrl) {
+             localStorage.setItem('wildu_partner_logo', remoteUrl);
+             localStorage.setItem('wildu_partner_logo_url', remoteUrl);
+         }
+
+         if (options.refreshProfile === true && typeof refreshProfileLogoUI === "function") {
+             refreshProfileLogoUI();
+         }
+
+         return true;
+     } catch (e) {
+         console.warn("Sync logo partner da remoto saltata:", e);
+         return false;
+     }
+ }
+
  function aggiornaLimiteDalServer(data) {
      if (data && data.config && data.config.limiteProposte && !isNaN(data.config.limiteProposte)) {
          MAX_PROPOSTE_ATTIVE = parseInt(data.config.limiteProposte, 10);
@@ -1380,14 +1404,10 @@ function goToStripe(tipo, btnElement) {
      if (localUrl === 'UPLOADING...') {
          // 🛑 CANTIERE IN CORSO: Upload in corso, il Ninja non tocca il tuo amato Base64!
      } else if (data && data.p_logo && data.p_logo.trim() !== "") {
-         const serverUrl = data.p_logo.trim();
+         syncPartnerLogoFromRemote(data.p_logo);
          
          // 🛡️ IL MURO: Se l'URL del server è diverso da quello che il telefono "conosce",
          // significa che hai cambiato logo da un ALTRO dispositivo o pulito la cache. Solo in questo caso sovrascrive.
-         if (serverUrl !== localUrl) {
-             localStorage.setItem('wildu_partner_logo', serverUrl); // Fallback al link Cloudinary
-             localStorage.setItem('wildu_partner_logo_url', serverUrl); // Memorizza il nuovo URL ufficiale
-         }
          // Se sono uguali, NON FA NULLA: il tuo velocissimo Base64 è salvo e immortale!
     } else {
         // Sync conservativa: una risposta senza p_logo non e' una cancellazione esplicita.
@@ -3454,6 +3474,11 @@ auth.onAuthStateChanged(async (user) => {
           // Manteniamo fresco il fallback locale
           if (nomeProfilo) localStorage.setItem('wildu_p_nome', nomeProfilo);
           if (telProfilo) localStorage.setItem('wildu_p_tel', telProfilo);
+          if (data.logoUrl) {
+            syncPartnerLogoFromRemote(data.logoUrl, {
+              refreshProfile: !!(profileOverlay && profileOverlay.style.display === 'flex')
+            });
+          }
         }
       } catch (firestoreError) {
         console.error("Errore lettura profilo Firestore:", firestoreError);
@@ -5325,6 +5350,63 @@ function setCanvasFontToFit(ctx, text, maxWidth, startSize, minSize, fontFactory
   return size;
 }
 
+function drawCenteredTechnicalLine(ctx, parts, centerX, y, maxWidth) {
+  const cleanParts = (parts || [])
+      .map(part => String(part || '').trim())
+      .filter(Boolean);
+
+  if (!cleanParts.length) return;
+
+  const fontFactory = size => "bold " + size + "px 'Inter', sans-serif";
+  const minSize = 28;
+  let fontSize = 42;
+  const separator = "|";
+  const sideGap = 28;
+
+  function measureTotal() {
+      ctx.font = fontFactory(fontSize);
+      const partWidths = cleanParts.map(part => ctx.measureText(part).width);
+      const separatorWidth = cleanParts.length > 1 ? ctx.measureText(separator).width : 0;
+      const separatorsWidth = cleanParts.length > 1
+          ? (cleanParts.length - 1) * (separatorWidth + sideGap * 2)
+          : 0;
+      return {
+          partWidths,
+          separatorWidth,
+          totalWidth: partWidths.reduce((sum, width) => sum + width, 0) + separatorsWidth
+      };
+  }
+
+  let metrics = measureTotal();
+  while (metrics.totalWidth > maxWidth && fontSize > minSize) {
+      fontSize -= 2;
+      metrics = measureTotal();
+  }
+
+  ctx.save();
+  if ('direction' in ctx) ctx.direction = 'ltr';
+  ctx.font = fontFactory(fontSize);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#FFD700";
+  ctx.shadowColor = "black";
+  ctx.shadowBlur = 15;
+
+  let x = Math.round(centerX - metrics.totalWidth / 2);
+
+  cleanParts.forEach((part, index) => {
+      if (index > 0) {
+          x += sideGap;
+          ctx.fillText(separator, x, y);
+          x += metrics.separatorWidth + sideGap;
+      }
+
+      ctx.fillText(part, x, y);
+      x += metrics.partWidths[index];
+  });
+
+  ctx.restore();
+}
+
 function generaLocandina(itemEncoded) {
   // 🧹 SVUOTAMENTO GASTRICO: Elimina foto precedenti per evitare i bug avanti-indietro
   resetLocandinaState();
@@ -5733,10 +5815,7 @@ async function generaLocandinaFinale() {
       if(item.km) techStr.push("🥾 " + item.km + " KM");
       if(item.dislivello) techStr.push("⛰️ " + item.dislivello + " M D+");
       if(techStr.length > 0) {
-        const technicalLine = techStr.join("    |    ");
-        ctx.fillStyle = "#FFD700"; ctx.textAlign = "center"; ctx.shadowColor = "black"; ctx.shadowBlur = 15;
-        setCanvasFontToFit(ctx, technicalLine, W - 160, 42, 28, size => "bold " + size + "px 'Inter', sans-serif");
-        ctx.fillText(technicalLine, W/2, currentDrawY, W - 160); ctx.shadowColor = "transparent";
+        drawCenteredTechnicalLine(ctx, techStr, W / 2, currentDrawY, W - 160);
       }
 
 // 🧹 GESTIONE MODALE PULITA: Usiamo il modale statico HTML!
