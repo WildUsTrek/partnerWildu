@@ -136,6 +136,15 @@ document.addEventListener("DOMContentLoaded", function() {
   const auth = firebase.auth();
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
+
+  const WILDU_PARTNER_LEGAL_CONSENT_VERSIONS = {
+    privacy: 'partner_privacy_2026_07_15',
+    cookies: 'partner_cookies_2026_07_15',
+    operations: 'partner_operations_2026_07_15',
+    fiscal: 'partner_fiscal_admin_2026_07_15'
+  };
+
+  let wilduPartnerLegalConsents = {};
   
 
 // 👑 SENSORE EVOLUTO: SINCRONIZZAZIONE STRIPE & MESSAGGI UTENTE
@@ -695,6 +704,239 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     color: black;
 }
 .btn-amazon-go:active { background: #ffaa33; }    
+
+.wildu-partner-legal-card {
+    border: 1px solid rgba(13,110,253,.34);
+    border-left: 4px solid #0d6efd;
+    border-radius: 18px;
+    padding: 14px;
+    margin: 14px 0;
+    background: linear-gradient(135deg, rgba(13,110,253,.10), rgba(255,255,255,.025));
+}
+
+.wildu-partner-legal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wildu-partner-legal-title {
+    color: #fff;
+    font-size: .98rem;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.wildu-partner-legal-subtitle {
+    color: rgba(255,255,255,.62);
+    font-size: .76rem;
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+.wildu-partner-legal-pill {
+    flex: 0 0 auto;
+    border: 1px solid rgba(13,202,240,.38);
+    border-radius: 999px;
+    padding: 5px 9px;
+    background: rgba(13,202,240,.10);
+    color: #9eeaf9;
+    font-size: .62rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.wildu-partner-legal-summary {
+    color: rgba(255,255,255,.68);
+    font-size: .76rem;
+    line-height: 1.42;
+    margin: 11px 0;
+}
+
+.wildu-partner-legal-manage {
+    width: 100%;
+    border: 1px solid rgba(13,110,253,.55);
+    border-radius: 999px;
+    padding: 11px 14px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(13,110,253,.90), rgba(16,16,16,.92));
+    font-size: .78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.wildu-partner-legal-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 30050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+    background: rgba(0,0,0,.78);
+    backdrop-filter: blur(10px);
+}
+
+.wildu-partner-legal-modal.is-open {
+    display: flex;
+}
+
+.wildu-partner-legal-modal-card {
+    width: min(94vw, 680px);
+    max-height: min(88vh, 780px);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(13,110,253,.55);
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(8,19,31,.98), rgba(16,16,16,.99));
+    box-shadow: 0 24px 80px rgba(0,0,0,.78);
+    overflow: hidden;
+}
+
+.wildu-partner-legal-modal-top,
+.wildu-partner-legal-modal-bottom {
+    flex: 0 0 auto;
+    padding: 14px;
+    background: rgba(9,12,18,.96);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.wildu-partner-legal-modal-bottom {
+    border-top: 1px solid rgba(255,255,255,.08);
+    border-bottom: 0;
+}
+
+.wildu-partner-legal-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.wildu-partner-legal-kicker {
+    color: #6ea8fe;
+    font-size: .68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+
+.wildu-partner-legal-modal-title {
+    color: #fff;
+    font-size: clamp(18px, 4.8vw, 24px);
+    font-weight: 950;
+    line-height: 1.08;
+    margin: 4px 0 0;
+}
+
+.wildu-partner-legal-modal-subtitle {
+    color: rgba(255,255,255,.70);
+    font-size: .78rem;
+    line-height: 1.45;
+    margin: 8px 0 0;
+}
+
+.wildu-partner-legal-scroll-btn {
+    flex: 0 0 auto;
+    border: 1px solid rgba(13,202,240,.42);
+    border-radius: 999px;
+    padding: 8px 10px;
+    background: rgba(13,202,240,.10);
+    color: #9eeaf9;
+    font-size: .62rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.wildu-partner-legal-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 10px;
+}
+
+.wildu-partner-legal-actions button {
+    min-height: 44px;
+    border-radius: 13px;
+    border: 1px solid rgba(255,255,255,.14);
+    padding: 11px 10px;
+    font-size: .74rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.wildu-partner-legal-cancel {
+    background: rgba(255,255,255,.07);
+    color: #ddd;
+}
+
+.wildu-partner-legal-accept {
+    background: linear-gradient(135deg, #0d6efd, #22c55e);
+    color: #fff;
+    border-color: rgba(34,197,94,.60) !important;
+}
+
+.wildu-partner-legal-body {
+    overflow-y: auto;
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wildu-partner-legal-section {
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 16px;
+    padding: 13px;
+    background: rgba(255,255,255,.035);
+}
+
+.wildu-partner-legal-section h4 {
+    color: #fff;
+    margin: 0 0 7px;
+    font-size: .9rem;
+    line-height: 1.2;
+}
+
+.wildu-partner-legal-section p,
+.wildu-partner-legal-section li {
+    color: rgba(255,255,255,.78);
+    font-size: .76rem;
+    line-height: 1.5;
+}
+
+.wildu-partner-legal-section p {
+    margin: 0 0 8px;
+}
+
+.wildu-partner-legal-section ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.wildu-partner-legal-emphasis {
+    border-color: rgba(13,110,253,.38);
+    background: rgba(13,110,253,.08);
+}
+
+@media (max-width: 520px) {
+    .wildu-partner-legal-modal-card {
+        width: 96vw;
+        max-height: 91vh;
+    }
+
+    .wildu-partner-legal-title-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .wildu-partner-legal-scroll-btn {
+        align-self: flex-start;
+    }
+}
 
 
 
@@ -3454,6 +3696,7 @@ auth.onAuthStateChanged(async (user) => {
   const homeView = document.getElementById('home-view');
   const gNome = document.getElementById('g_nome');
   const gTel = document.getElementById('g_tel');
+  wilduPartnerLegalConsents = {};
 
   function showBootToast(title, text, icon = 'warning') {
     try {
@@ -3502,6 +3745,7 @@ auth.onAuthStateChanged(async (user) => {
 
         if (doc.exists) {
           const data = doc.data() || {};
+          wilduPartnerLegalConsents = (data.legalConsents && typeof data.legalConsents === 'object') ? data.legalConsents : {};
           nomeProfilo = (data.nome_cognome || "").trim();
           telProfilo = (String(data.whatsapp || "")).trim();
 
@@ -3693,6 +3937,7 @@ function openProfile() {
       
       // 2. Refresh dell'interfaccia Logo (se la funzione esiste)
       if (typeof refreshProfileLogoUI === "function") refreshProfileLogoUI(); 
+      if (typeof renderWilduPartnerLegalConsentStatus === "function") renderWilduPartnerLegalConsentStatus();
 
       // 3. Recupero stato VIP e Prezzo dalla cache
       let isVip = false;
@@ -3802,6 +4047,159 @@ function openProfile() {
 
 function closeProfile() { 
     document.getElementById('edit-profile-overlay').style.display = 'none'; 
+}
+
+function getWilduPartnerLegalConsents() {
+  return (wilduPartnerLegalConsents && typeof wilduPartnerLegalConsents === 'object')
+    ? wilduPartnerLegalConsents
+    : {};
+}
+
+function isWilduPartnerConsentCurrent(key) {
+  const item = getWilduPartnerLegalConsents()[key] || {};
+  return item.accepted === true && item.version === WILDU_PARTNER_LEGAL_CONSENT_VERSIONS[key];
+}
+
+function renderWilduPartnerLegalConsentStatus() {
+  const status = document.getElementById('wildu-partner-legal-status');
+  const summary = document.getElementById('wildu-partner-legal-summary');
+  const privacyOk = isWilduPartnerConsentCurrent('privacy');
+  const cookiesOk = isWilduPartnerConsentCurrent('cookies');
+  const operationsOk = isWilduPartnerConsentCurrent('operations');
+  const fiscalOk = isWilduPartnerConsentCurrent('fiscal');
+  const complete = privacyOk && cookiesOk && operationsOk && fiscalOk;
+
+  if (status) {
+    status.innerText = complete ? 'completo' : 'da completare';
+    status.style.color = complete ? '#9dffbd' : '#9eeaf9';
+    status.style.borderColor = complete ? 'rgba(34,197,94,.42)' : 'rgba(13,202,240,.38)';
+    status.style.background = complete ? 'rgba(34,197,94,.12)' : 'rgba(13,202,240,.10)';
+  }
+
+  if (summary) {
+    summary.innerText = complete
+      ? 'Consensi partner registrati. Li aggiorneremo solo se cambia il testo o la finalita del trattamento.'
+      : 'Gestisci in un unico popup privacy, memoria tecnica, dati partner, materiali promozionali ed eventuali dati fiscali.';
+  }
+}
+
+function notifyWilduPartnerLegal(message, icon) {
+  if (typeof Swal !== 'undefined' && Swal.fire) {
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: icon || 'success',
+      title: message,
+      showConfirmButton: false,
+      timer: 2200
+    });
+    return;
+  }
+
+  if (icon === 'error') alert(message);
+}
+
+function buildWilduPartnerLegalConsentPatch(source) {
+  const now = new Date().toISOString();
+  const consentSource = source || 'profile';
+  const statement = "Autorizzo Wild-U a trattare le informazioni necessarie a gestire il mio profilo partner, le proposte, le comunicazioni operative, i materiali promozionali, eventuali dati fiscali/amministrativi e le funzioni collegate all'uso dell'app partner.";
+
+  return {
+    privacy: {
+      accepted: true,
+      version: WILDU_PARTNER_LEGAL_CONSENT_VERSIONS.privacy,
+      acceptedAt: now,
+      source: consentSource,
+      controller: 'Wildu S.r.l.',
+      contact: 'wildusrl@pec.it'
+    },
+    cookies: {
+      accepted: true,
+      technicalNoticeSeen: true,
+      analytics: false,
+      marketing: false,
+      version: WILDU_PARTNER_LEGAL_CONSENT_VERSIONS.cookies,
+      updatedAt: now,
+      source: consentSource
+    },
+    operations: {
+      accepted: true,
+      version: WILDU_PARTNER_LEGAL_CONSENT_VERSIONS.operations,
+      acceptedAt: now,
+      source: consentSource,
+      statement: statement
+    },
+    fiscal: {
+      accepted: true,
+      version: WILDU_PARTNER_LEGAL_CONSENT_VERSIONS.fiscal,
+      acceptedAt: now,
+      source: consentSource,
+      scope: 'eventuali dati fiscali, amministrativi o di fatturazione necessari'
+    }
+  };
+}
+
+async function saveWilduPartnerLegalConsentPatch(patch) {
+  const user = auth.currentUser;
+  if (!user) {
+    notifyWilduPartnerLegal('Accedi per salvare i consensi.', 'error');
+    return false;
+  }
+
+  const finalConsents = {
+    ...getWilduPartnerLegalConsents(),
+    ...(patch || {})
+  };
+
+  await db.collection("users_partners").doc(user.uid).set({
+    legalConsents: finalConsents,
+    legalConsentsUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  wilduPartnerLegalConsents = finalConsents;
+  renderWilduPartnerLegalConsentStatus();
+  return true;
+}
+
+function openWilduPartnerLegalConsentModal(source) {
+  const modal = document.getElementById('wildu-partner-legal-modal');
+  const body = document.getElementById('wildu-partner-legal-body');
+  if (!modal) return;
+
+  modal.dataset.source = source || 'profile';
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+  if (body) body.scrollTop = 0;
+}
+
+function closeWilduPartnerLegalConsentModal() {
+  const modal = document.getElementById('wildu-partner-legal-modal');
+  if (!modal) return;
+
+  modal.classList.remove('is-open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+async function confirmWilduPartnerLegalConsentModal() {
+  const modal = document.getElementById('wildu-partner-legal-modal');
+  const source = modal ? (modal.dataset.source || 'profile') : 'profile';
+
+  try {
+    const saved = await saveWilduPartnerLegalConsentPatch(buildWilduPartnerLegalConsentPatch(source));
+    if (!saved) return;
+    closeWilduPartnerLegalConsentModal();
+    notifyWilduPartnerLegal('Consensi partner salvati.', 'success');
+  } catch (err) {
+    console.error('Errore salvataggio consensi partner:', err);
+    notifyWilduPartnerLegal('Consensi non salvati. Riprova.', 'error');
+  }
+}
+
+function scrollWilduPartnerLegalConsentToEnd() {
+  const end = document.getElementById('wildu-partner-legal-end');
+  if (end && typeof end.scrollIntoView === 'function') {
+    end.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 
@@ -6483,6 +6881,20 @@ document.addEventListener('input', function (e) {
     <input type="file" id="profile-logo-upload" accept="image/png, image/jpeg" style="display:none;" onchange="saveProfileLogo(event)">
     
     <button id="btn-update-profile" type="button" class="btn btn-primary w-100 p-3 rounded-pill fw-bold" onclick="updateProfileBackend()">AGGIORNA DATI</button>
+
+    <div id="wildu-partner-legal-card" class="wildu-partner-legal-card">
+      <div class="wildu-partner-legal-head">
+        <div style="min-width:0;">
+          <div class="wildu-partner-legal-title">Consensi, privacy e preferenze</div>
+          <div class="wildu-partner-legal-subtitle">Informativa privacy, memoria tecnica, dati partner e preferenze operative.</div>
+        </div>
+        <span id="wildu-partner-legal-status" class="wildu-partner-legal-pill">da verificare</span>
+      </div>
+      <div class="wildu-partner-legal-summary">
+        <span id="wildu-partner-legal-summary">Gestisci in un unico popup i consensi e le informazioni obbligatorie per l'app partner.</span>
+      </div>
+      <button type="button" class="wildu-partner-legal-manage" onclick="openWilduPartnerLegalConsentModal('profile')">Gestisci consensi</button>
+    </div>
     
     <div class="mt-4 pt-3 border-top border-secondary text-center">
       <button type="button" class="btn btn-outline-danger w-100 p-3 rounded-pill fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right"></i> ESCI DALL'ACCOUNT</button>
@@ -6497,6 +6909,73 @@ document.addEventListener('input', function (e) {
 
     </div> <!-- Fine card -->
 </div> <!-- Fine overlay -->
+
+<div id="wildu-partner-legal-modal" class="wildu-partner-legal-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="wildu-partner-legal-title">
+  <div class="wildu-partner-legal-modal-card">
+    <div class="wildu-partner-legal-modal-top">
+      <div class="wildu-partner-legal-title-row">
+        <div>
+          <div class="wildu-partner-legal-kicker">Privacy Wild-U Partner</div>
+          <h3 id="wildu-partner-legal-title" class="wildu-partner-legal-modal-title">Consensi, privacy e preferenze</h3>
+          <p class="wildu-partner-legal-modal-subtitle">Leggi le informazioni essenziali e scegli se dare il consenso. Puoi annullare senza bloccare l'uso dell'app.</p>
+        </div>
+        <button type="button" class="wildu-partner-legal-scroll-btn" onclick="scrollWilduPartnerLegalConsentToEnd()">Vai al consenso</button>
+      </div>
+      <div class="wildu-partner-legal-actions">
+        <button type="button" class="wildu-partner-legal-cancel" onclick="closeWilduPartnerLegalConsentModal(false)">Annulla</button>
+        <button type="button" class="wildu-partner-legal-accept" onclick="confirmWilduPartnerLegalConsentModal()">Dai il tuo consenso</button>
+      </div>
+    </div>
+    <div id="wildu-partner-legal-body" class="wildu-partner-legal-body">
+      <section class="wildu-partner-legal-section wildu-partner-legal-emphasis">
+        <h4>Titolare del trattamento</h4>
+        <p>Il titolare del trattamento è Wildu S.r.l. Il referente indicato per la gestione operativa è Andrea Cignarelli. Per comunicazioni formali puoi usare la PEC <b>wildusrl@pec.it</b>.</p>
+        <p>Le informazioni sono rese ai sensi del Regolamento UE 2016/679 (GDPR) e servono a rendere trasparente l'uso dei dati nell'app Wild-U Partner.</p>
+      </section>
+      <section class="wildu-partner-legal-section">
+        <h4>Dati trattati e finalità</h4>
+        <p>Wild-U Partner usa i dati necessari a gestire profilo partner, accesso, pubblicazione proposte, calendario, comunicazioni operative, logo, locandine, condivisioni e funzioni collegate all'attività svolta sulla piattaforma.</p>
+        <ul>
+          <li>dati identificativi e di contatto: nome, email account, telefono/WhatsApp e identificativo utente;</li>
+          <li>dati professionali/operativi: profilo partner, stato VIP, limiti pubblicazione, proposte, eventi, calendario, disponibilità e materiali promozionali;</li>
+          <li>logo, immagini e contenuti caricati o generati per locandine, card e condivisioni;</li>
+          <li>eventuali dati fiscali, amministrativi o di fatturazione quando necessari per pagamenti, abbonamenti, ricevute, adempimenti contabili o rapporti con Wild-U;</li>
+          <li>dati tecnici: cache PWA, preferenze app, log essenziali, stato online/offline e informazioni necessarie alla sicurezza.</li>
+        </ul>
+      </section>
+      <section class="wildu-partner-legal-section wildu-partner-legal-emphasis">
+        <h4>Consenso partner</h4>
+        <p><b>Autorizzo Wild-U a trattare le informazioni necessarie a gestire il mio profilo partner, le proposte, le comunicazioni operative, i materiali promozionali, eventuali dati fiscali/amministrativi e le funzioni collegate all'uso dell'app partner.</b></p>
+        <p>Il consenso viene registrato nel profilo partner con data, versione dell'informativa e origine della scelta. Puoi revocarlo o chiedere chiarimenti usando i contatti indicati.</p>
+      </section>
+      <section class="wildu-partner-legal-section">
+        <h4>Cookie, cache e memoria tecnica</h4>
+        <p>L'app usa memoria locale, cache PWA e strumenti tecnici necessari per login, sessione, prestazioni, contenuti offline, stato app, sicurezza e riduzione delle letture. Questi strumenti tecnici non sono usati per profilazione pubblicitaria.</p>
+        <p>Eventuali strumenti non tecnici, di analytics, marketing o profilazione restano disattivati salvo consenso separato e specifico.</p>
+      </section>
+      <section class="wildu-partner-legal-section">
+        <h4>Link affiliati Amazon</h4>
+        <p>Alcune sezioni possono mostrare prodotti o link affiliati Amazon. In qualità di Affiliato Amazon, Wild-U riceve un guadagno dagli acquisti idonei.</p>
+        <p>Se apri un link Amazon esci dall'app Wild-U Partner: Amazon potrà trattare dati secondo le proprie informative. Wild-U non riceve dati di pagamento o spedizione Amazon.</p>
+      </section>
+      <section class="wildu-partner-legal-section">
+        <h4>Servizi tecnici e destinatari</h4>
+        <p>I dati possono transitare su servizi tecnici usati per erogare l'app, come Firebase/Google, Cloudinary, Cloudflare/R2, Stripe, Apps Script o backend Wild-U. WhatsApp, Telegram, Facebook o Amazon vengono coinvolti solo quando apri volontariamente collegamenti o condivisioni verso quei servizi.</p>
+      </section>
+      <section class="wildu-partner-legal-section">
+        <h4>Conservazione, diritti e revoca</h4>
+        <p>I dati sono conservati per il tempo necessario a gestire il profilo partner, obblighi organizzativi, contrattuali, fiscali, contabili, sicurezza e tutela della piattaforma. Puoi chiedere accesso, rettifica, cancellazione, limitazione, opposizione e revoca del consenso. La revoca non rende illecito ciò che è stato trattato prima della revoca.</p>
+        <p id="wildu-partner-legal-end">Dando il consenso registriamo nel tuo profilo partner data, versione dell'informativa e origine della scelta.</p>
+      </section>
+    </div>
+    <div class="wildu-partner-legal-modal-bottom">
+      <div class="wildu-partner-legal-actions">
+        <button type="button" class="wildu-partner-legal-cancel" onclick="closeWilduPartnerLegalConsentModal(false)">Annulla</button>
+        <button type="button" class="wildu-partner-legal-accept" onclick="confirmWilduPartnerLegalConsentModal()">Dai il tuo consenso</button>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <input type="file" id="locandina-upload" accept="image/*" style="display: none;" onchange="handleLocandinaSelect(event)">
