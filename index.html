@@ -38,7 +38,7 @@ const APP_VERSION = window.APP_VERSION || "v?";
 // =========================================================
   // 🧠 SISTEMA NERVOSO CENTRALE (Logger Globale Intelligente)
   // =========================================================
-  const WILDU_DEBUG = true; // 🔴 Metti a 'false' prima di pubblicare per silenziare tutto e risparmiare RAM ------------->>>>>>>>>>>
+  let WILDU_DEBUG = false; // Default produzione: il debug partner si abilita solo da client_config.partner_console_switch.
   
   (function() {
       const originalLog = console.log;
@@ -50,6 +50,19 @@ const APP_VERSION = window.APP_VERSION || "v?";
       function canLog() {
           return WILDU_DEBUG && navigator.onLine;
       }
+
+      window.setWilduPartnerDebugEnabled = function(value, reason) {
+          const next = value === true;
+          const changed = WILDU_DEBUG !== next;
+          WILDU_DEBUG = next;
+          if (next && changed) {
+              originalLog.apply(console, [`%c🚀 WILDU PARTNER DEBUG REMOTO ATTIVO (Versione ${APP_VERSION})`, 'background: #000; color: #0dcaf0; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 1.2em;', { reason: reason || 'remote' }]);
+          }
+      };
+
+      window.getWilduPartnerDebugEnabled = function() {
+          return WILDU_DEBUG === true;
+      };
 
       // Genera il timestamp al millisecondo per tracciare l'ordine esatto degli eventi
       function getTimestamp() {
@@ -145,6 +158,10 @@ document.addEventListener("DOMContentLoaded", function() {
   };
 
   let wilduPartnerLegalConsents = {};
+  let wilduPartnerLegalConsentModalState = {
+    source: 'profile',
+    mode: 'accept'
+  };
   
 
 // 👑 SENSORE EVOLUTO: SINCRONIZZAZIONE STRIPE & MESSAGGI UTENTE
@@ -879,6 +896,11 @@ body { padding-bottom: 120px !important; } /* Crea spazio per il footer */
     border-color: rgba(34,197,94,.60) !important;
 }
 
+.wildu-partner-legal-modal.is-revoke-mode .wildu-partner-legal-accept {
+    background: linear-gradient(135deg, #b91c1c, #ef4444);
+    border-color: rgba(248,113,113,.70) !important;
+}
+
 .wildu-partner-legal-body {
     overflow-y: auto;
     padding: 14px;
@@ -1469,6 +1491,9 @@ const WilduPartnerRemotePolicy = (() => {
             if (typeof db === 'undefined' || !db || typeof db.collection !== 'function') return false;
             const snap = await db.collection(CONFIG_COLLECTION).doc(CLIENT_CONFIG_DOC).get({ source: 'server' });
             const data = snap && snap.exists ? (snap.data() || {}) : {};
+            if (typeof window.setWilduPartnerDebugEnabled === 'function') {
+                window.setWilduPartnerDebugEnabled(data.partner_console_switch === true, reason || 'epoch-check');
+            }
             const remoteEpoch = normalizeEpoch(data.global_cache_epoch);
             if (!remoteEpoch || remoteEpoch === readSeenEpoch()) return false;
             if (hasRecentReloadLock(remoteEpoch)) return false;
@@ -4060,26 +4085,52 @@ function isWilduPartnerConsentCurrent(key) {
   return item.accepted === true && item.version === WILDU_PARTNER_LEGAL_CONSENT_VERSIONS[key];
 }
 
-function renderWilduPartnerLegalConsentStatus() {
-  const status = document.getElementById('wildu-partner-legal-status');
-  const summary = document.getElementById('wildu-partner-legal-summary');
+function isWilduPartnerConsentRevoked(key) {
+  const item = getWilduPartnerLegalConsents()[key] || {};
+  return item.accepted === false && !!item.revokedAt;
+}
+
+function getWilduPartnerLegalConsentState() {
   const privacyOk = isWilduPartnerConsentCurrent('privacy');
   const cookiesOk = isWilduPartnerConsentCurrent('cookies');
   const operationsOk = isWilduPartnerConsentCurrent('operations');
   const fiscalOk = isWilduPartnerConsentCurrent('fiscal');
-  const complete = privacyOk && cookiesOk && operationsOk && fiscalOk;
+  const revoked = ['privacy', 'cookies', 'operations', 'fiscal'].some(key => isWilduPartnerConsentRevoked(key));
+
+  return {
+    privacyOk,
+    cookiesOk,
+    operationsOk,
+    fiscalOk,
+    revoked,
+    complete: privacyOk && cookiesOk && operationsOk && fiscalOk
+  };
+}
+
+function hasWilduPartnerCompleteLegalConsent() {
+  return getWilduPartnerLegalConsentState().complete === true;
+}
+
+function renderWilduPartnerLegalConsentStatus() {
+  const status = document.getElementById('wildu-partner-legal-status');
+  const summary = document.getElementById('wildu-partner-legal-summary');
+  const state = getWilduPartnerLegalConsentState();
+  const complete = state.complete === true;
+  const revoked = state.revoked === true;
 
   if (status) {
-    status.innerText = complete ? 'completo' : 'da completare';
-    status.style.color = complete ? '#9dffbd' : '#9eeaf9';
-    status.style.borderColor = complete ? 'rgba(34,197,94,.42)' : 'rgba(13,202,240,.38)';
-    status.style.background = complete ? 'rgba(34,197,94,.12)' : 'rgba(13,202,240,.10)';
+    status.innerText = complete ? 'completo' : (revoked ? 'revocato' : 'da completare');
+    status.style.color = complete ? '#9dffbd' : (revoked ? '#ffb1b1' : '#9eeaf9');
+    status.style.borderColor = complete ? 'rgba(34,197,94,.42)' : (revoked ? 'rgba(248,113,113,.42)' : 'rgba(13,202,240,.38)');
+    status.style.background = complete ? 'rgba(34,197,94,.12)' : (revoked ? 'rgba(248,113,113,.12)' : 'rgba(13,202,240,.10)');
   }
 
   if (summary) {
     summary.innerText = complete
-      ? 'Consensi partner registrati. Li aggiorneremo solo se cambia il testo o la finalita del trattamento.'
-      : 'Gestisci in un unico popup privacy, memoria tecnica, dati partner, materiali promozionali ed eventuali dati fiscali.';
+      ? 'Consensi partner registrati. Puoi rileggerli o revocarli quando vuoi.'
+      : (revoked
+        ? 'Consenso revocato. Puoi ridarlo dal profilo partner quando vuoi.'
+        : 'Gestisci privacy, memoria tecnica, dati partner, materiali promozionali ed eventuali dati fiscali.');
   }
 }
 
@@ -4139,6 +4190,34 @@ function buildWilduPartnerLegalConsentPatch(source) {
   };
 }
 
+function buildWilduPartnerLegalConsentRevocationPatch(source) {
+  const revokedAt = new Date().toISOString();
+  const revokedSource = source || 'profile';
+  const current = getWilduPartnerLegalConsents();
+
+  function revokeEntry(key) {
+    return {
+      ...((current && current[key]) || {}),
+      accepted: false,
+      version: WILDU_PARTNER_LEGAL_CONSENT_VERSIONS[key],
+      revokedAt: revokedAt,
+      revokedSource: revokedSource,
+      revocationNotice: "Consenso revocato dall'utente partner. La revoca non incide sui trattamenti gia effettuati prima della revoca."
+    };
+  }
+
+  return {
+    privacy: revokeEntry('privacy'),
+    cookies: {
+      ...revokeEntry('cookies'),
+      analytics: false,
+      marketing: false
+    },
+    operations: revokeEntry('operations'),
+    fiscal: revokeEntry('fiscal')
+  };
+}
+
 async function saveWilduPartnerLegalConsentPatch(patch) {
   const user = auth.currentUser;
   if (!user) {
@@ -4153,7 +4232,8 @@ async function saveWilduPartnerLegalConsentPatch(patch) {
 
   await db.collection("users_partners").doc(user.uid).set({
     legalConsents: finalConsents,
-    legalConsentsUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    legalConsentsUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    ultimo_aggiornamento: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
   wilduPartnerLegalConsents = finalConsents;
@@ -4161,37 +4241,97 @@ async function saveWilduPartnerLegalConsentPatch(patch) {
   return true;
 }
 
+function isWilduPartnerLegalPermissionError(err) {
+  return !!(err && (err.code === 'permission-denied' || /permission/i.test(String(err.message || ''))));
+}
+
+async function saveWilduPartnerLegalConsentPatchWithRetry(patch) {
+  try {
+    return await saveWilduPartnerLegalConsentPatch(patch);
+  } catch (err) {
+    if (!isWilduPartnerLegalPermissionError(err)) throw err;
+
+    notifyWilduPartnerLegal('Attendo il blocco anti-spam e riprovo il salvataggio.', 'warning');
+    await new Promise(resolve => setTimeout(resolve, 5400));
+    return await saveWilduPartnerLegalConsentPatch(patch);
+  }
+}
+
 function openWilduPartnerLegalConsentModal(source) {
   const modal = document.getElementById('wildu-partner-legal-modal');
   const body = document.getElementById('wildu-partner-legal-body');
+  const subtitle = document.getElementById('wildu-partner-legal-modal-subtitle');
   if (!modal) return;
 
-  modal.dataset.source = source || 'profile';
+  const revokeMode = hasWilduPartnerCompleteLegalConsent();
+  wilduPartnerLegalConsentModalState = {
+    source: source || 'profile',
+    mode: revokeMode ? 'revoke' : 'accept'
+  };
+
+  modal.dataset.source = wilduPartnerLegalConsentModalState.source;
+  modal.classList.toggle('is-revoke-mode', revokeMode);
+  modal.querySelectorAll('.wildu-partner-legal-accept').forEach(btn => {
+    btn.innerText = revokeMode ? 'Revoca il tuo consenso' : 'Dai il tuo consenso';
+  });
+  modal.querySelectorAll('.wildu-partner-legal-cancel').forEach(btn => {
+    btn.innerText = 'Annulla';
+  });
+
+  if (subtitle) {
+    subtitle.innerText = revokeMode
+      ? 'Hai gia dato il consenso. Da qui puoi rileggere le informazioni oppure revocarlo: la revoca non cancella quanto gia trattato prima.'
+      : "Leggi le informazioni essenziali e scegli se dare il consenso. Puoi annullare senza bloccare l'uso dell'app.";
+  }
+
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
-  if (body) body.scrollTop = 0;
+  if (body) {
+    body.scrollTop = 0;
+    requestAnimationFrame(() => { body.scrollTop = 0; });
+  }
 }
 
 function closeWilduPartnerLegalConsentModal() {
   const modal = document.getElementById('wildu-partner-legal-modal');
   if (!modal) return;
 
-  modal.classList.remove('is-open');
+  modal.classList.remove('is-open', 'is-revoke-mode');
   modal.setAttribute('aria-hidden', 'true');
+  wilduPartnerLegalConsentModalState = {
+    source: 'profile',
+    mode: 'accept'
+  };
 }
 
 async function confirmWilduPartnerLegalConsentModal() {
-  const modal = document.getElementById('wildu-partner-legal-modal');
-  const source = modal ? (modal.dataset.source || 'profile') : 'profile';
+  const state = wilduPartnerLegalConsentModalState || {};
+  const source = state.source || 'profile';
 
   try {
-    const saved = await saveWilduPartnerLegalConsentPatch(buildWilduPartnerLegalConsentPatch(source));
+    if (state.mode === 'revoke') {
+      const ok = window.confirm('Revocare il consenso registrato nel profilo partner Wild-U? Potrai ridarlo in qualsiasi momento dal profilo.');
+      if (!ok) return;
+      const revoked = await saveWilduPartnerLegalConsentPatchWithRetry(buildWilduPartnerLegalConsentRevocationPatch(source));
+      if (!revoked) return;
+      closeWilduPartnerLegalConsentModal();
+      notifyWilduPartnerLegal('Consenso partner revocato.', 'success');
+      return;
+    }
+
+    const saved = await saveWilduPartnerLegalConsentPatchWithRetry(buildWilduPartnerLegalConsentPatch(source));
     if (!saved) return;
     closeWilduPartnerLegalConsentModal();
     notifyWilduPartnerLegal('Consensi partner salvati.', 'success');
   } catch (err) {
     console.error('Errore salvataggio consensi partner:', err);
-    notifyWilduPartnerLegal('Consensi non salvati. Riprova.', 'error');
+    const permissionError = isWilduPartnerLegalPermissionError(err);
+    notifyWilduPartnerLegal(
+      permissionError
+        ? 'Consensi non salvati. Se hai appena aggiornato profilo o logo, attendi qualche secondo e riprova.'
+        : 'Consensi non salvati. Riprova.',
+      'error'
+    );
   }
 }
 
@@ -6886,12 +7026,12 @@ document.addEventListener('input', function (e) {
       <div class="wildu-partner-legal-head">
         <div style="min-width:0;">
           <div class="wildu-partner-legal-title">Consensi, privacy e preferenze</div>
-          <div class="wildu-partner-legal-subtitle">Informativa privacy, memoria tecnica, dati partner e preferenze operative.</div>
+          <div class="wildu-partner-legal-subtitle">Privacy, dati partner, cache tecnica e dati fiscali quando necessari.</div>
         </div>
         <span id="wildu-partner-legal-status" class="wildu-partner-legal-pill">da verificare</span>
       </div>
       <div class="wildu-partner-legal-summary">
-        <span id="wildu-partner-legal-summary">Gestisci in un unico popup i consensi e le informazioni obbligatorie per l'app partner.</span>
+        <span id="wildu-partner-legal-summary">Gestisci i consensi e le informazioni obbligatorie per l'app partner.</span>
       </div>
       <button type="button" class="wildu-partner-legal-manage" onclick="openWilduPartnerLegalConsentModal('profile')">Gestisci consensi</button>
     </div>
@@ -6917,7 +7057,7 @@ document.addEventListener('input', function (e) {
         <div>
           <div class="wildu-partner-legal-kicker">Privacy Wild-U Partner</div>
           <h3 id="wildu-partner-legal-title" class="wildu-partner-legal-modal-title">Consensi, privacy e preferenze</h3>
-          <p class="wildu-partner-legal-modal-subtitle">Leggi le informazioni essenziali e scegli se dare il consenso. Puoi annullare senza bloccare l'uso dell'app.</p>
+          <p id="wildu-partner-legal-modal-subtitle" class="wildu-partner-legal-modal-subtitle">Leggi le informazioni essenziali e scegli se dare il consenso. Puoi annullare senza bloccare l'uso dell'app.</p>
         </div>
         <button type="button" class="wildu-partner-legal-scroll-btn" onclick="scrollWilduPartnerLegalConsentToEnd()">Vai al consenso</button>
       </div>
