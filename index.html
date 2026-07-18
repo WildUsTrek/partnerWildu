@@ -3473,8 +3473,6 @@ if (compressedFile.size > 5 * 1024 * 1024) {
       signatureData = await resRetry.json();
     }
 
-  console.log("SIGNATURE RESPONSE:", signatureData);
-
   if (!signatureData.signature) {
     alert(signatureData.error || "Errore firma upload");
     return "";
@@ -4526,7 +4524,6 @@ async function saveProfileLogo(event) {
   const oldUrl = localStorage.getItem('wildu_partner_logo_url');
 
   try {
-    console.log("🚀 [DEBUG LOGO] Inizio processo upload...");
     const user = firebase.auth().currentUser;
     const token = await user.getIdToken();
     
@@ -4539,17 +4536,13 @@ async function saveProfileLogo(event) {
     localStorage.setItem('wildu_partner_logo_url', 'UPLOADING...'); // ...Ma mettiamo il cartello per far girare la rotella!
     refreshProfileLogoUI(); // Attiva visivamente la rotellina
     
-    console.log("📦 [DEBUG LOGO] Immagine compressa e cartello UPLOADING piazzato.");
-
     // 3. Richiesta Firma
-    console.log("📡 [DEBUG LOGO] Richiesta firma al Postino...");
     const resSign = await fetch(MOTORE_API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "GET_CLOUDINARY_SIGNATURE", token: token, tags: 'LOGO_PRIVATE_PARTNER' })
     });
     
     const signatureData = await resSign.json();
-    console.log("🔑 [DEBUG LOGO] Risposta firma:", signatureData);
 
     if (!signatureData.success) throw new Error("Firma fallita: " + signatureData.error);
 
@@ -4562,28 +4555,21 @@ async function saveProfileLogo(event) {
     formData.append('folder', signatureData.folder); 
     formData.append('tags', signatureData.tags);
 
-    console.log("📤 [DEBUG LOGO] Invio pacchetto a Cloudinary...");
-
     // 5. Volo verso Cloudinary
     const resp = await fetch(`https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`, { 
       method: 'POST', body: formData 
     });
     
     const cloudRes = await resp.json();
-    console.log("☁️ [DEBUG LOGO] Risposta Cloudinary:", cloudRes);
 
     if (!cloudRes.secure_url) throw new Error(cloudRes.error ? cloudRes.error.message : "Errore Cloudinary");
 
-    console.log("✅ [DEBUG LOGO] URL ricevuto:", cloudRes.secure_url);
-      
     // 6. Scrittura nel Master (Per backup sul Database)
-    console.log("💾 [DEBUG LOGO] Notifica al Master Script...");
     const updateRes = await fetch(MOTORE_API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "UPDATE_PERSONAL_LOGO", token: token, logoUrl: cloudRes.secure_url })
     });
     const updateData = await updateRes.json();
-    console.log("📊 [DEBUG LOGO] Risposta Master:", updateData);
 
     if (!updateData.success) throw new Error("Rifiutato dal Server: " + updateData.error);
 
@@ -4607,7 +4593,7 @@ async function saveProfileLogo(event) {
     alert("✨ Logo salvato e sincronizzato sul Cloud!");
 
   } catch (e) {
-    console.error("❌ [DEBUG LOGO] ERRORE CRITICO:", e);
+    console.error("Errore upload logo:", e);
     
     // 🚨 PROTOCOLLO ROLLBACK: L'upload è fallito. Ripristiniamo il cassetto ESATTAMENTE come l'abbiamo trovato
     if (oldBase64) localStorage.setItem('wildu_partner_logo', oldBase64);
