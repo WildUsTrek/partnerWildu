@@ -2933,6 +2933,15 @@ function sanitizeHttpUrl(value, maxLen = 2000) {
 
   // 🟢 FIX CRITICO: Dichiariamo SUBITO la chiave utente, prima di qualsiasi calcolo!
   const currentUserKey = user.uid;
+  const earlyTitleRaw = document.getElementById('od_titolo').value.trim();
+  const earlyDateInizioRaw = document.getElementById('od_data_inizio').value;
+  let earlyCalculatedId = "";
+  if (earlyTitleRaw && earlyDateInizioRaw) {
+      const earlySlug = earlyTitleRaw.replace(/\s+/g, '_').replace(/[^\w]/gi, '').toLowerCase();
+      const earlyDataItaliana = formatToItalianDate(earlyDateInizioRaw);
+      const earlyDataFormattata = earlyDataItaliana.replace(/\//g, '-');
+      earlyCalculatedId = `${earlySlug}_${earlyDataFormattata}_${currentUserKey.substring(0,6)}`;
+  }
 
   const memoria = sessionStorage.getItem('wildu_cache_proposte');
   let datiCache = null;
@@ -2940,8 +2949,13 @@ function sanitizeHttpUrl(value, maxLen = 2000) {
     try {
         datiCache = JSON.parse(memoria);
         aggiornaLimiteDalServer(datiCache);
-        const totaleAttive = datiCache.pending ? datiCache.pending.length : 0;
-        if (totaleAttive >= MAX_PROPOSTE_ATTIVE) {
+        const pendingCache = Array.isArray(datiCache.pending) ? datiCache.pending : [];
+        const totaleAttive = pendingCache.length;
+        const isEditingCachedPending = !!(
+            earlyCalculatedId &&
+            pendingCache.some(p => p.tempId === earlyCalculatedId || p.idEvento === earlyCalculatedId)
+        );
+        if (totaleAttive >= MAX_PROPOSTE_ATTIVE && !isEditingCachedPending) {
             alert(`🛑 INVIO BLOCCATO: Hai raggiunto il limite massimo di ${MAX_PROPOSTE_ATTIVE} proposte in attesa. Modifica quelle esistenti o attendi.`);
             return; 
         }
@@ -2949,15 +2963,12 @@ function sanitizeHttpUrl(value, maxLen = 2000) {
   }
 
   // --- PRE-FLIGHT INTEGRITY CHECK (The "Muro di Cemento") ---
-  const titoloRaw = document.getElementById('od_titolo').value.trim();
-  const dataInizioRaw = document.getElementById('od_data_inizio').value;
+  const titoloRaw = earlyTitleRaw;
+  const dataInizioRaw = earlyDateInizioRaw;
   
   if (titoloRaw && dataInizioRaw && datiCache) {
       // 1. Calculate the deterministic ID exactly as the backend does
-      const slug = titoloRaw.replace(/\s+/g, '_').replace(/[^\w]/gi, '').toLowerCase();
-      const dataItaliana = formatToItalianDate(dataInizioRaw);
-      const dataFormattata = dataItaliana.replace(/\//g, '-'); 
-      const calculatedId = `${slug}_${dataFormattata}_${currentUserKey.substring(0,6)}`;
+      const calculatedId = earlyCalculatedId;
 
       // 2. Search for existing proposals
       const allProposals = (datiCache.pending || []).concat(datiCache.accepted || []);
@@ -2997,6 +3008,7 @@ function sanitizeHttpUrl(value, maxLen = 2000) {
       }
   }
   
+  const forceUpdateConfirmed = window.wilduForceUpdateConfirmed === true;
   // Reset the flag for future submissions
   window.wilduForceUpdateConfirmed = false;
   // --- END INTEGRITY CHECK ---
@@ -3077,10 +3089,33 @@ try {
     // 🛡️ GENERA TOKEN SICURO
   const safeToken = await user.getIdToken();
     
-    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: safeToken, payload: payload }) })
+    fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: safeToken, payload: payload, forceUpdate: forceUpdateConfirmed }) })
     .then(r => r.json())
       
-    .then(res => {
+    .then(async res => {
+      if (!res.success && res.code === 'NEED_CONFIRMATION') {
+        loader.style.display = 'none';
+        const confirmResult = await Swal.fire({
+          icon: 'warning',
+          title: 'Bozza Esistente',
+          text: res.message || res.error || 'Hai gia una bozza in revisione con questo titolo e questa data. Vuoi aggiornarla con i nuovi dati?',
+          showCancelButton: true,
+          confirmButtonText: 'Si, Aggiorna',
+          cancelButtonText: 'Annulla',
+          confirmButtonColor: '#0d6efd',
+          cancelButtonColor: '#6c757d'
+        });
+
+        if (!confirmResult.isConfirmed) return;
+
+        loader.style.display = 'flex';
+        const retryResponse = await fetch(MOTORE_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: safeToken, payload: payload, forceUpdate: true })
+        });
+        res = await retryResponse.json();
+      }
+
       if(res.success) {
         localStorage.setItem('wildu_p_nome', payload.guidaNome);
         localStorage.setItem('wildu_p_tel', payload.guidaTel);
@@ -3091,6 +3126,8 @@ try {
         location.reload(); 
       } else {
         loader.style.display = 'none'; 
+        if (!res.error && res.message) res.error = res.message;
+        if (!res.error) res.error = 'Operazione non riuscita';
         alert("❌ Errore: " + res.error);
       }
     })
