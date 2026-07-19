@@ -2008,6 +2008,7 @@ function goToStripe(tipo, btnElement) {
     <button class="filter-btn active" id="f-all" onclick="setProposalFilter('ALL')">Tutte</button>
     <button class="filter-btn" id="f-pending" onclick="setProposalFilter('PENDING')">Pendenti</button>
     <button class="filter-btn" id="f-accepted" onclick="setProposalFilter('ACCEPTED')">Accettate</button>
+    <button class="filter-btn" id="f-rejected" onclick="setProposalFilter('REJECTED')">Rifiutate</button>
     <button class="filter-btn" id="f-past" onclick="setProposalFilter('PAST')">Passate</button>
   </div>
 
@@ -5592,7 +5593,7 @@ async function setProposalFilter(filter) {
         
         if (fridgeState === 'VALID') {
              console.log("🧊 Frigo Valido: bypass rete.");
-             let currentData = getSafeCacheProposte() || { pending: [], accepted: [] };
+             let currentData = getSafeCacheProposte() || { pending: [], accepted: [], rejected: [] };
              currentData = mergeFuturesWithFridge(currentData, user.uid);
              sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(currentData));
              lastProposalsData = currentData;
@@ -5649,7 +5650,8 @@ function renderProposals(data) {
 
     let pending = (data.pending || []).map(p => ({ ...p, uiStatus: 'PENDING' }));
     let accepted = (data.accepted || []).map(a => ({ ...a, uiStatus: 'ACCEPTED' }));
-    let rawAll = [...pending, ...accepted];
+    let rejected = (data.rejected || []).map(r => ({ ...r, uiStatus: 'REJECTED' }));
+    let rawAll = [...pending, ...accepted, ...rejected];
 
     let futureItems = [];
     let pastItems = [];
@@ -5697,7 +5699,7 @@ function renderProposals(data) {
         const itemStr = encodeURIComponent(JSON.stringify(item)).replace(/'/g, "%27");
 
         const isPaid = (item.tipo === 'PAID' || (item.prezzo && item.prezzo != "0"));
-        const colorClass = item.uiStatus === 'PENDING' ? 'warning' : 'success';
+        const colorClass = item.uiStatus === 'PENDING' ? 'warning' : (item.uiStatus === 'REJECTED' ? 'danger' : 'success');
 
         const safeTitle = safeHtmlText(item.titolo || "Senza Titolo", 160);
         const safeDateLine = safeHtmlText(`${dIn}${dFine}${orari}`, 120);
@@ -5708,7 +5710,13 @@ function renderProposals(data) {
 
         const labelStato = item.uiStatus === 'PENDING'
             ? `<span class="status-label status-pendente">Pendente</span>`
-            : `<span class="status-label status-approvata">Approvata</span>`;
+            : (item.uiStatus === 'REJECTED'
+                ? `<span class="status-label text-danger">Rifiutata</span>`
+                : `<span class="status-label status-approvata">Approvata</span>`);
+        const safeRejectReason = safeHtmlMultiline(item.rejectReason || item.noteDiSistema || "Proposta rifiutata. Puoi correggerla e riproporla.", 1200);
+        const rejectedNotice = item.uiStatus === 'REJECTED'
+            ? `<div class="alert alert-danger border-0 rounded-4 py-2 px-3 small fw-bold mt-3 mb-2"><i class="bi bi-exclamation-triangle me-1"></i> Motivo rifiuto<br><span class="fw-normal">${safeRejectReason}</span></div>`
+            : '';
 
         let conteggioIscritti = (item.iscritti && Array.isArray(item.iscritti)) ? item.iscritti.length : 0;
         let badgeIscritti = "";
@@ -5770,13 +5778,18 @@ function renderProposals(data) {
                     <div class="card-body-expanded">
                         <div class="pt-3 mt-3 border-top border-secondary">
                             <p class="small text-light opacity-75 mb-3">${safeDesc}</p>
+                            ${rejectedNotice}
                             <div class="d-flex gap-2">
                                 <a href="${safeMapUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-light rounded-pill flex-grow-1" onclick="event.stopPropagation()"><i class="bi bi-map"></i> Mappa</a>
                                 <button class="btn btn-sm btn-dark rounded-pill px-3" type="button" onclick="event.stopPropagation(); mostraInfoKit('${itemStr}')"><i class="bi bi-info-circle"></i> Info</button>
                             </div>
                             <button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="event.stopPropagation(); riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi</button>
                             
-                            ${item.uiStatus === 'PENDING' ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')">Ritira</button>` : ''}
+                            ${item.uiStatus === 'PENDING'
+                                ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')">Ritira</button>`
+                                : (item.uiStatus === 'REJECTED'
+                                    ? `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')">Rimuovi</button>`
+                                    : '')}
                             <button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); generaLocandina('${itemStr}')">Locandina</button>
                             
                             <button class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); openSharePartner('${itemStr}')"><i class="bi bi-whatsapp"></i> Post</button>
@@ -5875,7 +5888,12 @@ async function annullaProposta(itemEncoded) {
   const user = auth.currentUser;
   if (!user) return;
   if (!item.tempId) return alert("⚠️ ERRORE: Dati vecchi in memoria. Forza l'aggiornamento tenendo premuto il testo in basso!");
-  if(!confirm(`⚠️ ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}"?\nEliminazione irreversibile.`)) return;
+  const itemStatus = String(item.uiStatus || '').trim().toUpperCase();
+  const isRejectedRemoval = itemStatus === 'REJECTED';
+  const confirmText = isRejectedRemoval
+    ? `ATTENZIONE\nVuoi rimuovere dalla lista la proposta rifiutata "${item.titolo}"?\nL'eliminazione e' irreversibile.`
+    : `ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}"?\nL'eliminazione e' irreversibile.`;
+  if(!confirm(confirmText)) return;
 
   document.getElementById('loader').style.display = 'flex';
   try {
@@ -5888,11 +5906,11 @@ async function annullaProposta(itemEncoded) {
     if(res.success) {
       sessionStorage.removeItem('wildu_cache_proposte');
       sessionStorage.removeItem('wildu_cache_time');
-      document.querySelector('#loader h5').innerText = "Proposta ritirata!";
-      alert("Proposta eliminata con successo."); location.reload();
+      document.querySelector('#loader h5').innerText = isRejectedRemoval ? "Proposta rimossa!" : "Proposta ritirata!";
+      alert(isRejectedRemoval ? "Proposta rifiutata rimossa dalla lista." : "Proposta eliminata con successo."); location.reload();
     } else {
       document.getElementById('loader').style.display = 'none';
-      alert("Impossibile annullare: " + res.error);
+      alert("Impossibile completare l'operazione: " + res.error);
     }
   } catch(e) { document.getElementById('loader').style.display = 'none'; alert("Errore di connessione."); }
 }
