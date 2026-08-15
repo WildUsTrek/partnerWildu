@@ -3928,6 +3928,21 @@ auth.onAuthStateChanged(async (user) => {
 });
 
   
+async function writeWilduPartnerProfilePatchWithRetry(docRef, patch) {
+  const writePatch = () => docRef.set({
+    ...(patch || {}),
+    ultimo_aggiornamento: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  try {
+    await writePatch();
+  } catch (err) {
+    if (!isWilduPartnerLegalPermissionError(err)) throw err;
+    await new Promise(resolve => setTimeout(resolve, 5400));
+    await writePatch();
+  }
+}
+
 async function saveFirstProfile() {
   const user = auth.currentUser;
   const nome_completo = document.getElementById('p_nome_completo').value.trim();
@@ -3938,21 +3953,30 @@ async function saveFirstProfile() {
   try {
     // 🧠 ESTRAZIONE CHIRURGICA: Prendiamo la prima parola per il campo "nome"
     const primoNome = nome_completo.split(' ')[0];
+    const docRef = db.collection("users_partners").doc(user.uid);
+    const existingProfile = await docRef.get();
 
-    // 1. Salva su Firebase: Ora iniettiamo il DNA completo del Partner!
-    await db.collection("users_partners").doc(user.uid).set({ 
+    const profilePatch = {
       nome_cognome: nome_completo, 
       nome: primoNome,              
       whatsapp: tel, 
       telefono: tel,                
       email: user.email,
-      role: "PARTNER",              
-      vipStatus: "STANDARD",        
-      proposal: 0,                  
-      bannato: false,               
-      creato_il: firebase.firestore.FieldValue.serverTimestamp(),
-      ultimo_aggiornamento: firebase.firestore.FieldValue.serverTimestamp() // 🟢 SCUDO ANTI-SPAM
-    }, { merge: true });
+    };
+
+    // I campi protetti appartengono soltanto alla creazione. Su un profilo
+    // storico incompleto preserviamo esattamente ruolo, stato e contatori.
+    if (!existingProfile.exists) {
+      Object.assign(profilePatch, {
+        role: "PARTNER",
+        vipStatus: "STANDARD",
+        proposal: 0,
+        bannato: false,
+        creato_il: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    await writeWilduPartnerProfilePatchWithRetry(docRef, profilePatch);
 
     // 2. Popola i campi nascosti necessari per il Master
     document.getElementById('g_nome').value = nome_completo;
@@ -4408,13 +4432,12 @@ async function updateProfileBackend() {
   try {
     const primoNomeAggiornato = nome.split(' ')[0];
     
-    await db.collection("users_partners").doc(user.uid).set({
+    await writeWilduPartnerProfilePatchWithRetry(db.collection("users_partners").doc(user.uid), {
       nome_cognome: nome,
       nome: primoNomeAggiornato,
       whatsapp: tel,
-      telefono: tel,
-      ultimo_aggiornamento: firebase.firestore.FieldValue.serverTimestamp() // 🟢 SCUDO ANTI-SPAM
-    }, { merge: true });
+      telefono: tel
+    });
 
     const token = await user.getIdToken();
 
