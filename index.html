@@ -2924,7 +2924,39 @@ function sanitizeHttpUrl(value, maxLen = 2000) {
 }
 
   
+let wilduPartnerProposalSubmitInProgress = false;
+const wilduPartnerProposalDeleteInProgress = new Set();
+let wilduPartnerImageDeleteInProgress = false;
+
+function setWilduPartnerProposalSubmitState(active) {
+  wilduPartnerProposalSubmitInProgress = active === true;
+  const button = document.getElementById('final_submit_btn');
+  if (!button) return;
+
+  if (active) {
+    if (!button.dataset.wilduOriginalHtml) button.dataset.wilduOriginalHtml = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Invio in corso...';
+    return;
+  }
+
+  if (navigator.onLine) {
+    button.disabled = false;
+    button.innerHTML = button.dataset.wilduOriginalHtml || 'INVIA PROPOSTA';
+  }
+}
+
+function finishWilduPartnerProposalSubmit() {
+  setWilduPartnerProposalSubmitState(false);
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'none';
+}
+
   async function sendToWildu() {
+  if (wilduPartnerProposalSubmitInProgress) {
+    showBootToast('Invio in corso', 'Attendi la conferma prima di inviare di nuovo la proposta.', 'warning');
+    return;
+  }
   // PRE-FLIGHT CHECK: Controllo di Sicurezza con oggetto Auth corretto
   const user = typeof auth !== 'undefined' ? auth.currentUser : null;
   if (!user) return alert("⚠️ Rilevata disconnessione. Ricarica la pagina.");
@@ -3011,6 +3043,8 @@ function sanitizeHttpUrl(value, maxLen = 2000) {
   window.wilduForceUpdateConfirmed = false;
   // --- END INTEGRITY CHECK ---
 
+  setWilduPartnerProposalSubmitState(true);
+
   const loader = document.getElementById('loader');
   loader.style.display = 'flex';
 
@@ -3043,12 +3077,13 @@ try {
     if (scelta) {
       fotoUrl = ""; // 🔥 invia senza immagine
     } else {
+      finishWilduPartnerProposalSubmit();
       return; // 🔥 annulla invio
     }
 
   } else {
     console.error("Errore foto:", e);
-    loader.style.display = 'none';
+    finishWilduPartnerProposalSubmit();
     return;
   }
 }
@@ -3085,7 +3120,15 @@ try {
     payload.attrezzaturaJson = JSON.stringify(eqArray);
 
     // 🛡️ GENERA TOKEN SICURO
-  const safeToken = await user.getIdToken();
+  let safeToken;
+  try {
+    safeToken = await user.getIdToken();
+  } catch (tokenError) {
+    console.error('Token partner non disponibile per invio proposta:', tokenError);
+    finishWilduPartnerProposalSubmit();
+    alert('Sessione non pronta. Riprova tra un momento.');
+    return;
+  }
     
     fetch(MOTORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'PARTNER_SUBMIT', token: safeToken, payload: payload, forceUpdate: forceUpdateConfirmed }) })
     .then(r => r.json())
@@ -3104,7 +3147,10 @@ try {
           cancelButtonColor: '#6c757d'
         });
 
-        if (!confirmResult.isConfirmed) return;
+        if (!confirmResult.isConfirmed) {
+          finishWilduPartnerProposalSubmit();
+          return;
+        }
 
         loader.style.display = 'flex';
         const retryResponse = await fetch(MOTORE_API_URL, {
@@ -3115,21 +3161,31 @@ try {
       }
 
       if(res.success) {
-        localStorage.setItem('wildu_p_nome', payload.guidaNome);
-        localStorage.setItem('wildu_p_tel', payload.guidaTel);
-        sessionStorage.removeItem('wildu_cache_proposte');
-        sessionStorage.removeItem('wildu_cache_time');
-        document.querySelector('#loader h5').innerText = "Completato! Ritorno alla home...";
+        try {
+          localStorage.setItem('wildu_p_nome', payload.guidaNome);
+          localStorage.setItem('wildu_p_tel', payload.guidaTel);
+          sessionStorage.removeItem('wildu_cache_proposte');
+          sessionStorage.removeItem('wildu_cache_time');
+        } catch (cacheError) {
+          console.warn('Proposta salvata, ma cache partner non aggiornata:', cacheError);
+        }
+        const loaderTitle = document.querySelector('#loader h5');
+        if (loaderTitle) loaderTitle.innerText = "Completato! Ritorno alla home...";
         alert("🚀 Proposta inviata con successo!"); 
+        setWilduPartnerProposalSubmitState(false);
         location.reload(); 
       } else {
-        loader.style.display = 'none'; 
+        finishWilduPartnerProposalSubmit();
         if (!res.error && res.message) res.error = res.message;
         if (!res.error) res.error = 'Operazione non riuscita';
         alert("❌ Errore: " + res.error);
       }
     })
-    .catch(() => { loader.style.display = 'none'; alert("❌ Errore di rete."); });
+    .catch((error) => {
+      console.error('Invio proposta non completato:', error);
+      finishWilduPartnerProposalSubmit();
+      alert("❌ Errore di rete.");
+    });
   }
 
 // 🟢 CONDIVISIONE APP: Scelta intelligente (Nativa vs Copia Link)
@@ -3950,6 +4006,7 @@ async function saveFirstProfile() {
   
   if (!nome_completo || !tel) return alert("⚠️ Compila entrambi i campi!");
 
+  let profileCommitted = false;
   try {
     // 🧠 ESTRAZIONE CHIRURGICA: Prendiamo la prima parola per il campo "nome"
     const primoNome = nome_completo.split(' ')[0];
@@ -3977,6 +4034,7 @@ async function saveFirstProfile() {
     }
 
     await writeWilduPartnerProfilePatchWithRetry(docRef, profilePatch);
+    profileCommitted = true;
 
     // 2. Popola i campi nascosti necessari per il Master
     document.getElementById('g_nome').value = nome_completo;
@@ -3999,8 +4057,14 @@ async function saveFirstProfile() {
     showPage('home');
     setTimeout(() => { avviaTutorialWildu(); }, 800); 
     
-  } catch (e) { 
+  } catch (e) {
     console.error(e);
+    if (profileCommitted) {
+      try { document.getElementById('profile-overlay').style.display = 'none'; } catch (_) {}
+      try { showPage('home'); } catch (_) {}
+      showBootToast('Profilo salvato', 'Il profilo e stato registrato. Riapri la pagina se i dati non compaiono subito.', 'success');
+      return;
+    }
     alert("Errore nel salvataggio: " + e.message); 
   }
 }
@@ -4294,7 +4358,11 @@ async function saveWilduPartnerLegalConsentPatch(patch) {
   }, { merge: true });
 
   wilduPartnerLegalConsents = finalConsents;
-  renderWilduPartnerLegalConsentStatus();
+  try {
+    renderWilduPartnerLegalConsentStatus();
+  } catch (uiError) {
+    console.warn('Consensi partner salvati, ma stato UI non aggiornato:', uiError);
+  }
   return true;
 }
 
@@ -4429,6 +4497,7 @@ async function updateProfileBackend() {
 
   await new Promise(resolve => setTimeout(resolve, 50));
 
+  let profileCommitted = false;
   try {
     const primoNomeAggiornato = nome.split(' ')[0];
     
@@ -4438,21 +4507,24 @@ async function updateProfileBackend() {
       whatsapp: tel,
       telefono: tel
     });
+    profileCommitted = true;
 
-    const token = await user.getIdToken();
-
-    const res = await fetch(MOTORE_API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "UPDATE_USER_PROFILE",
-        token: token,
-        nome: nome,
-        tel: tel
-      })
-    });
-
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || "Aggiornamento rifiutato dal server");
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(MOTORE_API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "UPDATE_USER_PROFILE",
+          token: token,
+          nome: nome,
+          tel: tel
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Aggiornamento rifiutato dal server");
+    } catch (backendSyncError) {
+      console.warn('Profilo Firestore salvato; riallineamento backend non completato:', backendSyncError);
+    }
 
     // ✅ 1. Aggiorna subito il DOM vivo
     const gNome = document.getElementById('g_nome');
@@ -4461,8 +4533,12 @@ async function updateProfileBackend() {
     if (gTel) gTel.value = tel;
 
     // ✅ 2. Aggiorna i riferimenti locali semplici
-    localStorage.setItem('wildu_p_nome', nome);
-    localStorage.setItem('wildu_p_tel', tel);
+    try {
+      localStorage.setItem('wildu_p_nome', nome);
+      localStorage.setItem('wildu_p_tel', tel);
+    } catch (localCacheError) {
+      console.warn('Profilo salvato, ma cache locale non aggiornata:', localCacheError);
+    }
 
     // ✅ 3. Patch conservativa della cache sessione, se esiste
     try {
@@ -4491,7 +4567,12 @@ async function updateProfileBackend() {
     if (typeof closeProfile === "function") closeProfile();
 
   } catch (e) {
-    alert("Errore durante l'aggiornamento: " + e.message);
+    console.error('Aggiornamento profilo partner non completato:', e);
+    if (profileCommitted) {
+      showBootToast('Profilo salvato', 'I dati sono registrati. Riapri il profilo se la schermata non si aggiorna subito.', 'success');
+    } else {
+      alert("Errore durante l'aggiornamento: " + e.message);
+    }
   } finally {
     if (btnUpdate) {
       btnUpdate.disabled = false;
@@ -4580,6 +4661,7 @@ async function saveProfileLogo(event) {
   // 🚨 MEMORIA PER IL ROLLBACK: Salviamo lo stato attuale prima di iniziare
   const oldBase64 = localStorage.getItem('wildu_partner_logo');
   const oldUrl = localStorage.getItem('wildu_partner_logo_url');
+  let remoteLogoCommitted = false;
 
   try {
     const user = firebase.auth().currentUser;
@@ -4630,21 +4712,25 @@ async function saveProfileLogo(event) {
     const updateData = await updateRes.json();
 
     if (!updateData.success) throw new Error("Rifiutato dal Server: " + updateData.error);
+    remoteLogoCommitted = true;
 
     // ✅ SUCCESSO! SALVATAGGIO DEFINITIVO
     // Aggiorniamo la cache RAM
     const finalLogoUrl = cloudRes.secure_url;
-    localStorage.setItem('wildu_partner_logo', logoData.base64);
-    localStorage.setItem('wildu_partner_logo_url', finalLogoUrl);
-    localStorage.removeItem('wildu_partner_logo_remote_deleted_at');
+    try {
+      localStorage.setItem('wildu_partner_logo', logoData.base64);
+      localStorage.setItem('wildu_partner_logo_url', finalLogoUrl);
+      localStorage.removeItem('wildu_partner_logo_remote_deleted_at');
 
-    const cacheData = getSafeCacheProposte();
-    if (cacheData) {
-        cacheData.p_logo = finalLogoUrl;
-        sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
+      const cacheData = getSafeCacheProposte();
+      if (cacheData) {
+          cacheData.p_logo = finalLogoUrl;
+          sessionStorage.setItem('wildu_cache_proposte', JSON.stringify(cacheData));
+      }
+      sessionStorage.removeItem('wildu_skip_logo');
+    } catch (cacheError) {
+      console.warn('Logo salvato sul server, ma cache locale non aggiornata:', cacheError);
     }
-    
-    sessionStorage.removeItem('wildu_skip_logo'); 
     
     // Il cartello UPLOADING e' gia' stato sostituito con finalLogoUrl.
 
@@ -4652,6 +4738,11 @@ async function saveProfileLogo(event) {
 
   } catch (e) {
     console.error("Errore upload logo:", e);
+
+    if (remoteLogoCommitted) {
+      showBootToast('Logo salvato', 'Il logo e registrato sul server. Riapri il profilo se non compare subito.', 'success');
+      return;
+    }
     
     // 🚨 PROTOCOLLO ROLLBACK: L'upload è fallito. Ripristiniamo il cassetto ESATTAMENTE come l'abbiamo trovato
     if (oldBase64) localStorage.setItem('wildu_partner_logo', oldBase64);
@@ -4684,6 +4775,7 @@ async function removeProfileLogo() {
   if(btnUpdate) btnUpdate.disabled = true; 
   if(btnLogout) btnLogout.disabled = true; 
 
+  let remoteDeleteCommitted = false;
   try {
     const user = firebase.auth().currentUser;
     const token = await user.getIdToken();
@@ -4715,14 +4807,19 @@ async function removeProfileLogo() {
     
     const data = await res.json();
     if (!data.success) throw new Error(data.error || "Rifiutato dal Server");
+    remoteDeleteCommitted = true;
 
     // 🗡️ CHIRURGIA RAM PROTETTA
     clearPartnerLogoFromRemoteDelete({ force: true });
     alert("Logo rimosso dal profilo. La pulizia del file Cloud viene tentata in automatico.");
     
   } catch(e) { 
-    console.warn("Errore durante la rimozione:", e); 
-    alert("⚠️ Errore: non è stato possibile rimuovere il logo. " + e.message);
+    console.warn("Errore durante la rimozione:", e);
+    if (remoteDeleteCommitted) {
+      showBootToast('Logo rimosso', 'La rimozione server e conclusa. Riapri il profilo se la schermata non si aggiorna subito.', 'success');
+    } else {
+      alert("⚠️ Errore: non è stato possibile rimuovere il logo. " + e.message);
+    }
   } finally { 
     if(removeBtn) { removeBtn.disabled = false; removeBtn.innerHTML = originalHtml; }
     if(btnUpdate) btnUpdate.disabled = false; 
@@ -5806,9 +5903,9 @@ function renderProposals(data) {
                             <button class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-3 fw-bold" type="button" onclick="event.stopPropagation(); riproponiEvento('${itemStr}')"><i class="bi bi-arrow-repeat"></i> Riproponi</button>
                             
                             ${item.uiStatus === 'PENDING'
-                                ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')">Ritira</button>`
+                                ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}', this)">Ritira</button>`
                                 : (item.uiStatus === 'REJECTED'
-                                    ? `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}')">Rimuovi</button>`
+                                    ? `<button class="btn btn-sm btn-outline-secondary rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); annullaProposta('${itemStr}', this)">Rimuovi</button>`
                                     : '')}
                             <button class="btn btn-sm btn-outline-success rounded-pill w-100 mt-2 fw-bold" type="button" onclick="event.stopPropagation(); generaLocandina('${itemStr}')">Locandina</button>
                             
@@ -5903,11 +6000,15 @@ function riproponiEvento(itemEncoded) {
   }
 }
 
-async function annullaProposta(itemEncoded) {
+async function annullaProposta(itemEncoded, buttonElement) {
   const item = JSON.parse(decodeURIComponent(itemEncoded));
   const user = auth.currentUser;
   if (!user) return;
   if (!item.tempId) return alert("⚠️ ERRORE: Dati vecchi in memoria. Forza l'aggiornamento tenendo premuto il testo in basso!");
+  if (wilduPartnerProposalDeleteInProgress.has(item.tempId)) {
+    showBootToast('Operazione in corso', 'Attendi la conferma prima di riprovare.', 'warning');
+    return;
+  }
   const itemStatus = String(item.uiStatus || '').trim().toUpperCase();
   const isRejectedRemoval = itemStatus === 'REJECTED';
   const confirmText = isRejectedRemoval
@@ -5915,7 +6016,15 @@ async function annullaProposta(itemEncoded) {
     : `ATTENZIONE\nVuoi davvero ritirare la proposta "${item.titolo}"?\nL'eliminazione e' irreversibile.`;
   if(!confirm(confirmText)) return;
 
+  wilduPartnerProposalDeleteInProgress.add(item.tempId);
+  const originalButtonHtml = buttonElement ? buttonElement.innerHTML : '';
+  if (buttonElement) {
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Attendi...';
+  }
+
   document.getElementById('loader').style.display = 'flex';
+  let deleteCommitted = false;
   try {
     
 // 🛡️ GENERA TOKEN SICURO
@@ -5924,15 +6033,36 @@ async function annullaProposta(itemEncoded) {
     
     const res = await response.json();
     if(res.success) {
-      sessionStorage.removeItem('wildu_cache_proposte');
-      sessionStorage.removeItem('wildu_cache_time');
-      document.querySelector('#loader h5').innerText = isRejectedRemoval ? "Proposta rimossa!" : "Proposta ritirata!";
+      deleteCommitted = true;
+      try {
+        sessionStorage.removeItem('wildu_cache_proposte');
+        sessionStorage.removeItem('wildu_cache_time');
+      } catch (cacheError) {
+        console.warn('Proposta rimossa, ma cache partner non pulita:', cacheError);
+      }
+      const loaderTitle = document.querySelector('#loader h5');
+      if (loaderTitle) loaderTitle.innerText = isRejectedRemoval ? "Proposta rimossa!" : "Proposta ritirata!";
       alert(isRejectedRemoval ? "Proposta rifiutata rimossa dalla lista." : "Proposta eliminata con successo."); location.reload();
     } else {
       document.getElementById('loader').style.display = 'none';
       alert("Impossibile completare l'operazione: " + res.error);
     }
-  } catch(e) { document.getElementById('loader').style.display = 'none'; alert("Errore di connessione."); }
+  } catch(e) {
+    console.error('Ritiro proposta non completato:', e);
+    document.getElementById('loader').style.display = 'none';
+    if (deleteCommitted) {
+      alert(isRejectedRemoval ? "Proposta rifiutata rimossa dalla lista." : "Proposta eliminata con successo.");
+      location.reload();
+    } else {
+      alert("Errore di connessione.");
+    }
+  } finally {
+    wilduPartnerProposalDeleteInProgress.delete(item.tempId);
+    if (buttonElement && buttonElement.isConnected) {
+      buttonElement.disabled = false;
+      buttonElement.innerHTML = originalButtonHtml;
+    }
+  }
 }
 
 window.currentLocandinaItem = null;
@@ -6950,6 +7080,17 @@ async function deleteSelectedImage() {
 
   if (!confirm("Vuoi eliminare questa immagine?")) return;
 
+  if (wilduPartnerImageDeleteInProgress) {
+    showBootToast('Eliminazione in corso', 'Attendi la conferma prima di riprovare.', 'warning');
+    return;
+  }
+
+  const selectedPublicId = String(window.selectedPublicId || '').trim();
+  const deleteButton = document.getElementById('delete_image_btn');
+  wilduPartnerImageDeleteInProgress = true;
+  if (deleteButton) deleteButton.disabled = true;
+  let imageDeleteCommitted = false;
+
   try {
 
 const user = firebase.auth().currentUser;
@@ -6966,7 +7107,7 @@ const user = firebase.auth().currentUser;
       method: "POST",
       body: JSON.stringify({
         action: "DELETE_IMAGE",
-        public_id: window.selectedPublicId,
+        public_id: selectedPublicId,
         token: token
       })
     });
@@ -6977,6 +7118,7 @@ const user = firebase.auth().currentUser;
       alert(data.error || "Errore eliminazione");
       return;
     }
+    imageDeleteCommitted = true;
 
     if (typeof Swal !== 'undefined') {
        Swal.fire({
@@ -6987,10 +7129,14 @@ const user = firebase.auth().currentUser;
     }
 
     // 🧟‍♂️ FIX ZOMBIE PROTETTO: Aggiungiamo l'ID alla lista nera!
-    let deletedList = [];
-    try { deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]'); } catch(e) {}
-    deletedList.push(window.selectedPublicId);
-    sessionStorage.setItem('wildu_deleted_images', JSON.stringify(deletedList));
+    try {
+      let deletedList = [];
+      try { deletedList = JSON.parse(sessionStorage.getItem('wildu_deleted_images') || '[]'); } catch(e) {}
+      deletedList.push(selectedPublicId);
+      sessionStorage.setItem('wildu_deleted_images', JSON.stringify(deletedList));
+    } catch (cacheError) {
+      console.warn('Immagine eliminata, ma cache galleria non aggiornata:', cacheError);
+    }
 
     // Ricarichiamo la galleria (ora il filtro anti-fantasma bloccherà lo zombie)
     setTimeout(() => {
@@ -7003,7 +7149,15 @@ const user = firebase.auth().currentUser;
     if (btn) btn.style.display = "none";
 
   } catch (e) {
-    alert("Errore connessione");
+    console.error('Eliminazione immagine non completata:', e);
+    if (imageDeleteCommitted) {
+      showBootToast('Immagine eliminata', 'La rimozione server e conclusa. Riapri la galleria se la schermata non si aggiorna subito.', 'success');
+    } else {
+      alert("Errore connessione");
+    }
+  } finally {
+    wilduPartnerImageDeleteInProgress = false;
+    if (deleteButton && deleteButton.isConnected) deleteButton.disabled = false;
   }
 }
 
