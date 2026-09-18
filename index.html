@@ -1553,7 +1553,9 @@ const WilduPartnerRemotePolicy = (() => {
 })();
 
 window.WilduPartnerRemotePolicy = WilduPartnerRemotePolicy;
-WilduPartnerRemotePolicy.prime('boot');
+// Il popup Auth non puo' partire mentre un epoch remoto puo' sostituire il
+// documento. La promessa e' consultata dal solo ingresso Google Partner.
+window.wilduPartnerBootPolicyPromise = WilduPartnerRemotePolicy.prime('boot');
 
 function goToStripe(tipo, btnElement) {
     const user = firebase.auth().currentUser;
@@ -2727,6 +2729,14 @@ const getEventKey = (e) => {
     return e ? (e.idEvento || e.tempId || null) : null;
 };
 
+// Il checkpoint epoch e' metadato tecnico Partner: cancellarlo al logout
+// riarmava il reload policy del boot successivo, concorrente al primo popup.
+// Non contiene dati profilo, token o stato Firebase e non estende questa
+// eccezione a cache TTL, policy o chiavi di altre app.
+const WILDU_PARTNER_LOGOUT_PRESERVED_LOCAL_KEYS = new Set([
+    'wildu_partner_cache_epoch_seen'
+]);
+
 const clearWilduNamespace = () => {
     const pfx = 'wildu_';
 
@@ -2743,7 +2753,9 @@ const clearWilduNamespace = () => {
     try {
         // 1. Pulizia namespace Wildu
         Object.keys(localStorage).forEach(k => {
-            if (k.startsWith(pfx)) localStorage.removeItem(k);
+            if (k.startsWith(pfx) && !WILDU_PARTNER_LOGOUT_PRESERVED_LOCAL_KEYS.has(k)) {
+                localStorage.removeItem(k);
+            }
         });
 
         Object.keys(sessionStorage).forEach(k => {
@@ -3783,7 +3795,49 @@ function clearGallerySelection() {
   document.querySelectorAll('.gallery-img').forEach(el => el.style.borderColor = 'transparent');
 }
 
-function loginGoogle() { 
+let wilduPartnerLoginAttempt = 0;
+let wilduPartnerLoginInFlight = false;
+let wilduPartnerAuthGeneration = 0;
+const WILDU_PARTNER_LOGIN_POLICY_TIMEOUT_MS = 8000;
+
+function wilduPartnerPolicyRequestsReload(policyResult) {
+  const epochResult = Array.isArray(policyResult) ? policyResult[1] : null;
+  return !!(epochResult && epochResult.status === 'fulfilled' && epochResult.value === true);
+}
+
+function waitForWilduPartnerLoginPolicy(policyPromise) {
+  let timeoutId = null;
+  const settled = Promise.resolve(policyPromise).then(
+    result => ({ kind: 'settled', result }),
+    error => ({ kind: 'failed', error })
+  );
+  const timedOut = new Promise(resolve => {
+    timeoutId = setTimeout(() => resolve({ kind: 'timeout' }), WILDU_PARTNER_LOGIN_POLICY_TIMEOUT_MS);
+  });
+  return Promise.race([settled, timedOut]).finally(() => {
+    if (timeoutId !== null) clearTimeout(timeoutId);
+  });
+}
+
+function invalidateWilduPartnerAuthRun() {
+  wilduPartnerAuthGeneration += 1;
+  wilduPartnerLoginAttempt += 1;
+  wilduPartnerLoginInFlight = false;
+}
+
+function isWilduPartnerAuthRunCurrent(generation, user) {
+  if (generation !== wilduPartnerAuthGeneration) return false;
+  const currentUser = auth.currentUser;
+  if (!user) return !currentUser;
+  return !!(currentUser && currentUser.uid === user.uid);
+}
+
+async function loginGoogle() {
+  if (wilduPartnerLoginInFlight) return;
+
+  const loginAttempt = ++wilduPartnerLoginAttempt;
+  wilduPartnerLoginInFlight = true;
+
   // 🛡️ 1. SCUDO ANTI-PANICO: Blocchiamo subito il bottone al click
   const btn = document.getElementById('btn-login-google');
   if (btn) {
@@ -3791,19 +3845,54 @@ function loginGoogle() {
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Accesso in corso...';
   }
 
-  // Forza Google a chiedere quale account usare
-  provider.setCustomParameters({ prompt: 'select_account' });
-  auth.signInWithPopup(provider).catch(e => {
-      // Se l'utente chiude la finestra o c'è un errore, sblocchiamo il bottone
+  try {
+      const bootPolicyState = await waitForWilduPartnerLoginPolicy(window.wilduPartnerBootPolicyPromise);
+      if (loginAttempt !== wilduPartnerLoginAttempt) return;
+      if (bootPolicyState.kind !== 'settled') {
+          throw new Error('La verifica tecnica iniziale sta impiegando troppo tempo. Riprova tra poco.');
+      }
+
+      if (wilduPartnerPolicyRequestsReload(bootPolicyState.result)) {
+          // La policy ha gia' richiesto il reload: non creare un popup nel
+          // documento uscente. Il nuovo documento rendera' il login.
+          return;
+      }
+
+      // Un epoch puo' cambiare dopo il boot: rifacciamo il controllo al gesto
+      // utente. Il controllo interno e' coalescente e mantiene il proprio TTL.
+      const gesturePolicyState = await waitForWilduPartnerLoginPolicy(
+          WilduPartnerRemotePolicy.prime('login-gesture')
+      );
+      if (loginAttempt !== wilduPartnerLoginAttempt) return;
+      if (gesturePolicyState.kind !== 'settled') {
+          throw new Error('La verifica tecnica prima dell’accesso non ha risposto. Riprova tra poco.');
+      }
+      if (wilduPartnerPolicyRequestsReload(gesturePolicyState.result)) {
+          return;
+      }
+
+      // Forza Google a chiedere quale account usare
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await auth.signInWithPopup(provider);
+  } catch (e) {
+      if (loginAttempt !== wilduPartnerLoginAttempt) return;
+
+      // Se l'utente chiude la finestra o c'e' un errore, sblocchiamo il bottone
       if (btn) {
           btn.disabled = false;
           btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2"> Accedi con Google';
       }
       alert("Errore: " + e.message);
-  }); 
+  } finally {
+      if (loginAttempt === wilduPartnerLoginAttempt) {
+          wilduPartnerLoginInFlight = false;
+      }
+  }
 }
 
 auth.onAuthStateChanged(async (user) => {
+  const authGeneration = ++wilduPartnerAuthGeneration;
+  const isCurrentAuthRun = () => isWilduPartnerAuthRunCurrent(authGeneration, user);
   const initScreen = document.getElementById('init-screen');
   const authOverlay = document.getElementById('auth-overlay');
   const profileOverlay = document.getElementById('profile-overlay');
@@ -3840,6 +3929,8 @@ auth.onAuthStateChanged(async (user) => {
   }
 
   try {
+    if (!isCurrentAuthRun()) return;
+
     if (user) {
       try {
         if (window.WilduPartnerRemotePolicy && typeof WilduPartnerRemotePolicy.prime === 'function') {
@@ -3848,6 +3939,7 @@ auth.onAuthStateChanged(async (user) => {
       } catch (policyError) {
         console.warn("Policy cache partner non disponibile all'avvio:", policyError);
       }
+      if (!isCurrentAuthRun()) return;
 
       let profiloValido = false;
       let nomeProfilo = "";
@@ -3856,6 +3948,7 @@ auth.onAuthStateChanged(async (user) => {
       try {
         const docRef = db.collection("users_partners").doc(user.uid);
         const doc = await docRef.get();
+        if (!isCurrentAuthRun()) return;
 
         if (doc.exists) {
           const data = doc.data() || {};
@@ -3885,6 +3978,7 @@ auth.onAuthStateChanged(async (user) => {
           }
         }
       } catch (firestoreError) {
+        if (!isCurrentAuthRun()) return;
         console.error("Errore lettura profilo Firestore:", firestoreError);
 
         nomeProfilo = (localStorage.getItem('wildu_p_nome') || user.displayName || "").trim();
@@ -3908,6 +4002,8 @@ auth.onAuthStateChanged(async (user) => {
         }
       }
 
+      if (!isCurrentAuthRun()) return;
+
       if (profiloValido) {
         if (gNome) gNome.value = nomeProfilo;
         if (gTel) gTel.value = telProfilo;
@@ -3922,7 +4018,9 @@ auth.onAuthStateChanged(async (user) => {
 
         try {
           await checkProposalLimitAtStartup(user.uid);
+          if (!isCurrentAuthRun()) return;
         } catch (startupSyncError) {
+          if (!isCurrentAuthRun()) return;
           console.error("Errore bootstrap checkProposalLimitAtStartup:", startupSyncError);
           showBootToast(
             "Sincronizzazione iniziale incompleta",
@@ -3931,10 +4029,12 @@ auth.onAuthStateChanged(async (user) => {
           );
         }
       } else {
+        if (!isCurrentAuthRun()) return;
         if (authOverlay) authOverlay.style.display = 'none';
         if (profileOverlay) profileOverlay.style.display = 'flex';
       }
     } else {
+      if (!isCurrentAuthRun()) return;
       if (authOverlay) authOverlay.style.display = 'flex';
       if (profileOverlay) profileOverlay.style.display = 'none';
       if (homeView) homeView.style.display = 'none';
@@ -3956,6 +4056,7 @@ auth.onAuthStateChanged(async (user) => {
       }
     }
   } catch (e) {
+    if (!isCurrentAuthRun()) return;
     console.error("Errore generale onAuthStateChanged:", e);
 
     showBootToast(
@@ -3972,6 +4073,7 @@ auth.onAuthStateChanged(async (user) => {
       if (profileOverlay) profileOverlay.style.display = 'none';
     }
   } finally {
+    if (!isCurrentAuthRun()) return;
     if (initScreen) {
       setTimeout(() => {
         initScreen.style.opacity = '0';
@@ -6611,6 +6713,9 @@ async function generaLocandinaFinale() {
 function logout() {
   if(confirm("Vuoi davvero uscire dall'account?")) {
     auth.signOut().then(() => { 
+      // Invalida callback Auth avviati prima del logout prima di pulire UI e
+      // fallback locali; nessun callback vecchio puo' riscriverli.
+      invalidateWilduPartnerAuthRun();
       // ☢️ PULIZIA NUCLEARE CHIRURGICA (Isolata su namespace wildu)
       clearWilduNamespace();
       
