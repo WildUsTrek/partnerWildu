@@ -3832,6 +3832,256 @@ function isWilduPartnerAuthRunCurrent(generation, user) {
   return !!(currentUser && currentUser.uid === user.uid);
 }
 
+// iOS/iPadOS cannot safely keep Firebase's direct popup transaction alive while
+// the standalone PWA is backgrounded.  The bridge stores only a random
+// verifier locally; identity is completed by Firebase in this app origin.
+const WILDU_PARTNER_AUTH_BRIDGE_URL = 'https://wild-u-server.firebaseapp.com/auth-bridge/';
+const WILDU_PARTNER_AUTH_BRIDGE_STORAGE_KEY = 'wildu_partner_auth_bridge_attempt:v1';
+const WILDU_PARTNER_AUTH_BRIDGE_TTL_MS = 5 * 60 * 1000;
+const WILDU_PARTNER_AUTH_BRIDGE_TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
+const WILDU_PARTNER_AUTH_BRIDGE_POLL_DELAYS_MS = [0, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000];
+let wilduPartnerAuthBridgeInProgress = false;
+const wilduPartnerAuthBridgeRuntime = { popup: null, returning: false, away: false, leaving: false, installed: false };
+
+function isWilduPartnerIOSDevice() {
+  try {
+    const ua = String(navigator.userAgent || '');
+    const platform = String(navigator.platform || '');
+    return /iPad|iPhone|iPod/i.test(ua + ' ' + platform) ||
+      (platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1);
+  } catch (e) {
+    return false;
+  }
+}
+
+function wilduPartnerBridgeError(code, status) {
+  const error = new Error(code);
+  error.code = code;
+  if (status) error.status = status;
+  return error;
+}
+
+function wilduPartnerBridgeRandomToken() {
+  if (!window.crypto?.getRandomValues) throw wilduPartnerBridgeError('AUTH_BRIDGE_SECURE_RANDOM_UNAVAILABLE');
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+  let binary = '';
+  bytes.forEach((value) => { binary += String.fromCharCode(value); });
+  return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function wilduPartnerBridgeChallenge(verifier) {
+  if (!window.crypto?.subtle || typeof TextEncoder !== 'function') {
+    throw wilduPartnerBridgeError('AUTH_BRIDGE_SHA256_UNAVAILABLE');
+  }
+  const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(verifier || '')));
+  let binary = '';
+  new Uint8Array(digest).forEach((value) => { binary += String.fromCharCode(value); });
+  return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function clearWilduPartnerAuthBridgeAttempt() {
+  try { localStorage.removeItem(WILDU_PARTNER_AUTH_BRIDGE_STORAGE_KEY); } catch (e) {}
+}
+
+function readWilduPartnerAuthBridgeAttempt() {
+  try {
+    const state = JSON.parse(localStorage.getItem(WILDU_PARTNER_AUTH_BRIDGE_STORAGE_KEY) || 'null');
+    const attemptId = String(state?.attemptId || '');
+    const verifier = String(state?.verifier || '');
+    const createdAt = Number(state?.createdAt || 0);
+    if (!WILDU_PARTNER_AUTH_BRIDGE_TOKEN_SHAPE.test(attemptId) ||
+        !WILDU_PARTNER_AUTH_BRIDGE_TOKEN_SHAPE.test(verifier) ||
+        !createdAt || Date.now() - createdAt >= WILDU_PARTNER_AUTH_BRIDGE_TTL_MS) {
+      clearWilduPartnerAuthBridgeAttempt();
+      return null;
+    }
+    return { attemptId, verifier, createdAt, phase: String(state?.phase || 'STARTING') };
+  } catch (e) {
+    clearWilduPartnerAuthBridgeAttempt();
+    return null;
+  }
+}
+
+function writeWilduPartnerAuthBridgeAttempt(state) {
+  const safe = {
+    attemptId: String(state?.attemptId || ''),
+    verifier: String(state?.verifier || ''),
+    createdAt: Number(state?.createdAt || Date.now()),
+    phase: String(state?.phase || 'STARTING')
+  };
+  if (!WILDU_PARTNER_AUTH_BRIDGE_TOKEN_SHAPE.test(safe.attemptId) ||
+      !WILDU_PARTNER_AUTH_BRIDGE_TOKEN_SHAPE.test(safe.verifier)) {
+    throw wilduPartnerBridgeError('AUTH_BRIDGE_STATE_INVALID');
+  }
+  localStorage.setItem(WILDU_PARTNER_AUTH_BRIDGE_STORAGE_KEY, JSON.stringify(safe));
+  return safe;
+}
+
+function wilduPartnerAssertCurrentBridgeAttempt(state) {
+  const current = readWilduPartnerAuthBridgeAttempt();
+  if (!current || current.attemptId !== state?.attemptId || current.verifier !== state?.verifier) {
+    throw wilduPartnerBridgeError('AUTH_BRIDGE_STALE_ATTEMPT');
+  }
+}
+
+function buildWilduPartnerAuthBridgeUrl(attemptId, launchMode) {
+  const url = new URL(WILDU_PARTNER_AUTH_BRIDGE_URL);
+  url.searchParams.set('attempt', String(attemptId || ''));
+  if (launchMode === 'popup' || launchMode === 'same') url.searchParams.set('launch', launchMode);
+  return url.toString();
+}
+
+async function postWilduPartnerAuthBridgeAction(action, payload) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(MOTORE_API_URL, {
+      method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store', signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'X-WILDU-CHANNEL': 'WEB' },
+      body: JSON.stringify({ action, payload, clientContext: { channel: 'WEB' } })
+    });
+    let data = null;
+    try { data = await response.json(); } catch (e) {}
+    if (!response.ok || data?.success === false) {
+      throw wilduPartnerBridgeError(String(data?.code || `AUTH_BRIDGE_HTTP_${response.status}`), response.status);
+    }
+    return data;
+  } catch (error) {
+    if (controller.signal.aborted) throw wilduPartnerBridgeError('AUTH_BRIDGE_REQUEST_TIMEOUT');
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function ensureWilduPartnerAuthBridgeStarted(state) {
+  wilduPartnerAssertCurrentBridgeAttempt(state);
+  if (state.phase !== 'STARTING') return state;
+  const started = await postWilduPartnerAuthBridgeAction('AUTH_BRIDGE_START', {
+    attemptId: state.attemptId,
+    challenge: await wilduPartnerBridgeChallenge(state.verifier),
+    target: 'partner'
+  });
+  wilduPartnerAssertCurrentBridgeAttempt(state);
+  const bridgeUrl = new URL(String(started?.bridgeUrl || buildWilduPartnerAuthBridgeUrl(state.attemptId)));
+  if (bridgeUrl.origin !== 'https://wild-u-server.firebaseapp.com' ||
+      bridgeUrl.pathname !== '/auth-bridge/' || bridgeUrl.searchParams.get('attempt') !== state.attemptId) {
+    throw wilduPartnerBridgeError('AUTH_BRIDGE_URL_REJECTED');
+  }
+  state.phase = 'PENDING';
+  return writeWilduPartnerAuthBridgeAttempt(state);
+}
+
+function installWilduPartnerAuthBridgeLifecycle() {
+  const runtime = wilduPartnerAuthBridgeRuntime;
+  if (runtime.installed) return;
+  runtime.installed = true;
+  const noteAway = () => { if (runtime.returning) runtime.away = true; };
+  const noteReturn = () => {
+    if (document.visibilityState === 'hidden') return noteAway();
+    if (runtime.away && runtime.returning) runtime.returning = false;
+  };
+  window.addEventListener('blur', noteAway, { passive: true });
+  window.addEventListener('focus', noteReturn, { passive: true });
+  document.addEventListener('visibilitychange', noteReturn, { passive: true });
+  window.addEventListener('pagehide', () => { runtime.leaving = true; }, { passive: true });
+  window.addEventListener('pageshow', () => {
+    runtime.leaving = false;
+    window.setTimeout(() => {
+      if (!auth.currentUser && document.visibilityState !== 'hidden') resumeWilduPartnerAuthBridgeAttempt().catch(() => {});
+    }, 0);
+  }, { passive: true });
+}
+
+async function waitForWilduPartnerAuthBridgeReturn() {
+  const runtime = wilduPartnerAuthBridgeRuntime;
+  const deadline = Date.now() + WILDU_PARTNER_AUTH_BRIDGE_TTL_MS;
+  while (runtime.returning && Date.now() < deadline) {
+    if (runtime.leaving || document.visibilityState === 'hidden') throw wilduPartnerBridgeError('AUTH_BRIDGE_RETURN_DEFERRED');
+    try { if (runtime.popup && !runtime.popup.closed) { await new Promise(resolve => setTimeout(resolve, 250)); continue; } } catch (e) {}
+    if (!runtime.away) { await new Promise(resolve => setTimeout(resolve, 250)); continue; }
+    runtime.returning = false;
+  }
+  if (runtime.returning) throw wilduPartnerBridgeError('AUTH_BRIDGE_RETURN_TIMEOUT');
+}
+
+async function redeemWilduPartnerAuthBridgeAttempt(state) {
+  await waitForWilduPartnerAuthBridgeReturn();
+  wilduPartnerAssertCurrentBridgeAttempt(state);
+  if (auth.currentUser) { clearWilduPartnerAuthBridgeAttempt(); return true; }
+  const response = await postWilduPartnerAuthBridgeAction('AUTH_BRIDGE_REDEEM', {
+    attemptId: state.attemptId, verifier: state.verifier
+  });
+  const customToken = String(response?.customToken || '');
+  if (!customToken || customToken.split('.').length !== 3) throw wilduPartnerBridgeError('AUTH_BRIDGE_CUSTOM_TOKEN_INVALID');
+  const result = await auth.signInWithCustomToken(customToken);
+  if (!result?.user && !auth.currentUser) throw wilduPartnerBridgeError('AUTH_BRIDGE_FIREBASE_USER_MISSING');
+  clearWilduPartnerAuthBridgeAttempt();
+  return true;
+}
+
+async function pollWilduPartnerAuthBridgeAttempt(state) {
+  for (const delay of WILDU_PARTNER_AUTH_BRIDGE_POLL_DELAYS_MS) {
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+    wilduPartnerAssertCurrentBridgeAttempt(state);
+    if (auth.currentUser) { clearWilduPartnerAuthBridgeAttempt(); return true; }
+    const status = await postWilduPartnerAuthBridgeAction('AUTH_BRIDGE_STATUS', { attemptId: state.attemptId });
+    wilduPartnerAssertCurrentBridgeAttempt(state);
+    if (status?.status === 'COMPLETED') return redeemWilduPartnerAuthBridgeAttempt(state);
+    if (status?.status === 'REDEEMED') throw wilduPartnerBridgeError('AUTH_BRIDGE_REDEEMED_WITHOUT_SESSION', 410);
+  }
+  throw wilduPartnerBridgeError('AUTH_BRIDGE_POLL_TIMEOUT');
+}
+
+async function resumeWilduPartnerAuthBridgeAttempt() {
+  if (wilduPartnerAuthBridgeInProgress || auth.currentUser) return false;
+  const state = readWilduPartnerAuthBridgeAttempt();
+  if (!state) return false;
+  wilduPartnerAuthBridgeInProgress = true;
+  try {
+    return await pollWilduPartnerAuthBridgeAttempt(await ensureWilduPartnerAuthBridgeStarted(state));
+  } finally {
+    wilduPartnerAuthBridgeInProgress = false;
+  }
+}
+
+async function loginWithWilduPartnerDurableAuthBridge(reservedWindow) {
+  if (wilduPartnerAuthBridgeInProgress) return false;
+  installWilduPartnerAuthBridgeLifecycle();
+  wilduPartnerAuthBridgeInProgress = true;
+  let state = readWilduPartnerAuthBridgeAttempt();
+  try {
+    if (!state) state = writeWilduPartnerAuthBridgeAttempt({
+      attemptId: wilduPartnerBridgeRandomToken(), verifier: wilduPartnerBridgeRandomToken(), createdAt: Date.now(), phase: 'STARTING'
+    });
+    wilduPartnerAuthBridgeRuntime.popup = reservedWindow || null;
+    wilduPartnerAuthBridgeRuntime.returning = true;
+    wilduPartnerAuthBridgeRuntime.away = false;
+    state = await ensureWilduPartnerAuthBridgeStarted(state);
+    if (!reservedWindow) {
+      wilduPartnerAuthBridgeRuntime.leaving = true;
+      window.location.assign(buildWilduPartnerAuthBridgeUrl(state.attemptId, 'same'));
+      return true;
+    }
+    reservedWindow.location.replace(buildWilduPartnerAuthBridgeUrl(state.attemptId, 'popup'));
+    return await pollWilduPartnerAuthBridgeAttempt(state);
+  } finally {
+    wilduPartnerAuthBridgeInProgress = false;
+  }
+}
+
+// A same-tab fallback or iOS process recreation starts a new document. Resume
+// only the already persisted, expiring attempt; this never opens Google again.
+if (isWilduPartnerIOSDevice()) {
+  installWilduPartnerAuthBridgeLifecycle();
+  window.setTimeout(() => {
+    if (!auth.currentUser && document.visibilityState !== 'hidden') {
+      resumeWilduPartnerAuthBridgeAttempt().catch(() => {});
+    }
+  }, 0);
+}
+
 async function loginGoogle() {
   if (wilduPartnerLoginInFlight) return;
 
@@ -3845,6 +4095,15 @@ async function loginGoogle() {
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Accesso in corso...';
   }
 
+  // Reserve the window in the direct click task. iOS otherwise turns a popup
+  // opened after policy awaits into the fragile direct Firebase flow.
+  const useDurablePartnerBridge = isWilduPartnerIOSDevice();
+  const reservedBridgeWindow = useDurablePartnerBridge ? window.open('', '_blank') : null;
+  try { if (reservedBridgeWindow) reservedBridgeWindow.opener = null; } catch (e) {}
+  const closeUnusedReservedBridgeWindow = () => {
+      try { if (reservedBridgeWindow && !reservedBridgeWindow.closed) reservedBridgeWindow.close(); } catch (e) {}
+  };
+
   try {
       const bootPolicyState = await waitForWilduPartnerLoginPolicy(window.wilduPartnerBootPolicyPromise);
       if (loginAttempt !== wilduPartnerLoginAttempt) return;
@@ -3855,6 +4114,7 @@ async function loginGoogle() {
       if (wilduPartnerPolicyRequestsReload(bootPolicyState.result)) {
           // La policy ha gia' richiesto il reload: non creare un popup nel
           // documento uscente. Il nuovo documento rendera' il login.
+          closeUnusedReservedBridgeWindow();
           return;
       }
 
@@ -3868,10 +4128,16 @@ async function loginGoogle() {
           throw new Error('La verifica tecnica prima dell’accesso non ha risposto. Riprova tra poco.');
       }
       if (wilduPartnerPolicyRequestsReload(gesturePolicyState.result)) {
+          closeUnusedReservedBridgeWindow();
           return;
       }
 
-      // Forza Google a chiedere quale account usare
+      if (useDurablePartnerBridge) {
+          await loginWithWilduPartnerDurableAuthBridge(reservedBridgeWindow);
+          return;
+      }
+
+      // Fallback storico non-iOS: invariato.
       provider.setCustomParameters({ prompt: 'select_account' });
       await auth.signInWithPopup(provider);
   } catch (e) {
@@ -3883,6 +4149,7 @@ async function loginGoogle() {
           btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2"> Accedi con Google';
       }
       alert("Errore: " + e.message);
+      try { if (reservedBridgeWindow && !reservedBridgeWindow.closed) reservedBridgeWindow.close(); } catch (closeError) {}
   } finally {
       if (loginAttempt === wilduPartnerLoginAttempt) {
           wilduPartnerLoginInFlight = false;
