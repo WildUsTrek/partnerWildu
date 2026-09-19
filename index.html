@@ -4063,6 +4063,38 @@ async function reconcileWilduPartnerAuthBridgeTimeout(state) {
   }
 }
 
+function isWilduPartnerRecoverableIOSBridgeLoadFailure(error, state) {
+  // WebKit can reject an in-flight return/status request while replacing the
+  // standalone PWA document.  This is intentionally narrower than generic
+  // network handling: a persisted, current PENDING attempt is required and
+  // all bridge/server codes keep their existing terminal behavior.
+  if (!isWilduPartnerIOSDevice() || state?.phase !== 'PENDING') return false;
+  const current = readWilduPartnerAuthBridgeAttempt();
+  if (!current || current.attemptId !== state.attemptId || current.verifier !== state.verifier) return false;
+  const code = String(error?.code || '').trim();
+  const message = String(error?.message || '').trim().toLowerCase();
+  return !code && message === 'load failed';
+}
+
+async function recoverWilduPartnerIOSBridgeLoadFailure(state) {
+  // Reconcile exactly the persisted attempt once.  Do not create a new Google
+  // flow, retry a redeem blindly, or hide a real terminal bridge result.
+  const reconciliation = await reconcileWilduPartnerAuthBridgeTimeout(state);
+  if (reconciliation === 'AUTHENTICATED') return true;
+  if (reconciliation === 'COMPLETED') return redeemWilduPartnerAuthBridgeAttempt(state);
+  if (reconciliation === 'REDEEMED') {
+    clearWilduPartnerAuthBridgeAttempt();
+    restoreWilduPartnerLoginButton("Accesso concluso in un'altra sessione. Riapri Partner per continuare.");
+    return false;
+  }
+  restoreWilduPartnerLoginButton(
+    reconciliation === 'PENDING'
+      ? 'Accesso ancora in verifica. Tocca Accedi con Google per riprendere il tentativo esistente.'
+      : 'Connessione instabile: il tentativo resta valido. Tocca Accedi con Google per riprenderlo.'
+  );
+  return false;
+}
+
 async function pollWilduPartnerAuthBridgeAttempt(state) {
   for (const delay of WILDU_PARTNER_AUTH_BRIDGE_POLL_DELAYS_MS) {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay));
@@ -4127,6 +4159,11 @@ async function loginWithWilduPartnerDurableAuthBridge(reservedWindow) {
     }
     reservedWindow.location.replace(buildWilduPartnerAuthBridgeUrl(state.attemptId, 'popup'));
     return await pollWilduPartnerAuthBridgeAttempt(state);
+  } catch (error) {
+    if (isWilduPartnerRecoverableIOSBridgeLoadFailure(error, state)) {
+      return recoverWilduPartnerIOSBridgeLoadFailure(state);
+    }
+    throw error;
   } finally {
     wilduPartnerAuthBridgeInProgress = false;
   }
