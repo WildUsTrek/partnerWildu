@@ -4021,12 +4021,73 @@ async function redeemWilduPartnerAuthBridgeAttempt(state) {
   return true;
 }
 
+function restoreWilduPartnerLoginButton(message) {
+  const btn = document.getElementById('btn-login-google');
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" class="me-2"> Accedi con Google';
+  }
+  try {
+    if (typeof Swal !== 'undefined' && Swal.fire) {
+      Swal.fire({
+        toast: true,
+        position: 'top',
+        icon: 'info',
+        title: message,
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true
+      });
+    } else {
+      console.info(message);
+    }
+  } catch (e) {
+    console.info(message);
+  }
+}
+
+async function reconcileWilduPartnerAuthBridgeTimeout(state) {
+  try {
+    wilduPartnerAssertCurrentBridgeAttempt(state);
+    if (auth.currentUser) {
+      clearWilduPartnerAuthBridgeAttempt();
+      return 'AUTHENTICATED';
+    }
+    const status = await postWilduPartnerAuthBridgeAction('AUTH_BRIDGE_STATUS', { attemptId: state.attemptId });
+    wilduPartnerAssertCurrentBridgeAttempt(state);
+    if (status?.status === 'COMPLETED') return 'COMPLETED';
+    if (status?.status === 'REDEEMED') return auth.currentUser ? 'AUTHENTICATED' : 'REDEEMED';
+    return 'PENDING';
+  } catch (e) {
+    return 'UNKNOWN';
+  }
+}
+
 async function pollWilduPartnerAuthBridgeAttempt(state) {
   for (const delay of WILDU_PARTNER_AUTH_BRIDGE_POLL_DELAYS_MS) {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay));
     wilduPartnerAssertCurrentBridgeAttempt(state);
     if (auth.currentUser) { clearWilduPartnerAuthBridgeAttempt(); return true; }
-    const status = await postWilduPartnerAuthBridgeAction('AUTH_BRIDGE_STATUS', { attemptId: state.attemptId });
+    let status;
+    try {
+      status = await postWilduPartnerAuthBridgeAction('AUTH_BRIDGE_STATUS', { attemptId: state.attemptId });
+    } catch (error) {
+      if (String(error?.code || '') !== 'AUTH_BRIDGE_REQUEST_TIMEOUT') throw error;
+      const reconciliation = await reconcileWilduPartnerAuthBridgeTimeout(state);
+      if (reconciliation === 'AUTHENTICATED') return true;
+      if (reconciliation === 'COMPLETED') return redeemWilduPartnerAuthBridgeAttempt(state);
+      if (reconciliation === 'REDEEMED') {
+        clearWilduPartnerAuthBridgeAttempt();
+        restoreWilduPartnerLoginButton("Accesso concluso in un'altra sessione. Riapri Partner per continuare.");
+        return false;
+      }
+      restoreWilduPartnerLoginButton(
+        reconciliation === 'PENDING'
+          ? 'Accesso ancora in verifica. Tocca Accedi con Google per riprendere il tentativo esistente.'
+          : 'Connessione instabile: il tentativo resta valido. Tocca Accedi con Google per riprenderlo.'
+      );
+      return false;
+    }
     wilduPartnerAssertCurrentBridgeAttempt(state);
     if (status?.status === 'COMPLETED') return redeemWilduPartnerAuthBridgeAttempt(state);
     if (status?.status === 'REDEEMED') throw wilduPartnerBridgeError('AUTH_BRIDGE_REDEEMED_WITHOUT_SESSION', 410);
